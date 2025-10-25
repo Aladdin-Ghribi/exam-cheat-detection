@@ -51,31 +51,31 @@ class YOLODetector:
                         })
             yield detections, r.orig_img
 
-if __name__ == "__main__":
-    detector = YOLODetector()
+# if __name__ == "__main__":
+#     detector = YOLODetector()
     
-    video_source = 0     
-    '''
-    use 0 for webcam as integer      ### use app called droidcam for using phone as webcam 
-    use path to video file for video example 'data/sample/test4.mp4'
-    use path to image file for image example 'data/sample/test1.jpg'
+#     video_source = 0     
+#     '''
+#     use 0 for webcam as integer      ### use app called droidcam for using phone as webcam 
+#     use path to video file for video example 'data/sample/test4.mp4'
+#     use path to image file for image example 'data/sample/test1.jpg'
     
-    '''
+#     '''
 
-    for detections, img in detector.detect(source=video_source):
-        print(f'Detections in current frame: {detections}')
+#     for detections, img in detector.detect(source=video_source):
+#         print(f'Detections in current frame: {detections}')
 
     
 
-        for det in detections:
-            x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"{detector.model.names[det['class_id']]} {det['confidence']:.2f}"
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+#         for det in detections:
+#             x1, y1, x2, y2 = map(int, det['bbox'])
+#             label = f"{detector.model.names[det['class_id']]} {det['confidence']:.2f}"
+#             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+#             cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-        cv2.imshow('YOLO Detection', img)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            print("User interrupted the video playback.")
-            break
-cv2.destroyAllWindows()
-print("video playback finished or stopped.")
+#         cv2.imshow('YOLO Detection', img)
+#         if cv2.waitKey(1) & 0xFF == ord('q'):
+#             print("User interrupted the video playback.")
+#             break
+# cv2.destroyAllWindows()
+# print("video playback finished or stopped.")

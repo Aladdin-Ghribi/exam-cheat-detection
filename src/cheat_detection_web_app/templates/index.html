@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cheat Detection Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+  <!-- Use url_for to get the correct path to the CSS file in the 'static' folder -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <h1>Cheat Detection Dashboard</h1>
+  <div id="container">
+    <div id="video-container">
+      <video id="videoElement" autoplay playsinline></video>
+      <canvas id="canvasElement" style="display:none;"></canvas> <!-- Hidden canvas for processing -->
+    </div>
+    <div id="metrics-container">
+      <h2>Detection Metrics</h2>
+      <div id="metrics-content">
+        <!-- Metrics will be updated here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Use url_for to get the correct path to the JS file in the 'static' folder -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
