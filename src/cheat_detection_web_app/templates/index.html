@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cheat Detection Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <h1>Cheat Detection Dashboard</h1>
+  <div id="container">
+    <div id="video-container">
+      <!-- Only ONE canvas needed: for display -->
+      <canvas id="displayCanvas" width="640" height="480"></canvas>
+    </div>
+    <div id="metrics-container">
+      <h2>Detection Metrics</h2>
+      <div id="metrics-content">
+        <!-- Metrics will be updated here -->
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
