@@ -16,14 +16,16 @@ CHEATING_RELATED_CLASSES = {
   'laptop' : 63,
   'backpack' : 24,
   'handbag': 26,
+  'person' : 0
   }
 
 PERSON_CLASS_ID = 0
-
 class YOLODetector:
     def __init__(self, model_path=YOLO_MODEL):
         self.model = YOLO(model_path)
         self.target_class_ids= [PERSON_CLASS_ID] + list(CHEATING_RELATED_CLASSES.values())
+        # now accessible via detector.CHEATING_RELATED_CLASSES
+        self.CHEATING_RELATED_CLASSES = CHEATING_RELATED_CLASSES
 
     def detect(self, source, save_image=False, save_path=None):
         results = self.model.predict(
@@ -50,6 +52,39 @@ class YOLODetector:
                             'bbox': [x1, y1, x2, y2]
                         })
             yield detections, r.orig_img
+
+
+    # ✅ NEW: Method for single-frame detection (used by Flask)
+    def detect_frame(self, frame):
+        """
+        Run detection on a single frame (NumPy array).
+        Returns: list of detections (dicts)
+        """
+        results = self.model.predict(
+            source=frame,
+            conf=CONFIDENCE_THRESHOLD,
+            imgsz=IMG_SIZE,
+            classes=self.target_class_ids,
+            verbose=False
+        )
+
+        detections = []
+        if results[0].boxes is not None:
+            for box, cls_id_tensor, conf_tensor in zip(
+                results[0].boxes.xyxy,
+                results[0].boxes.cls,
+                results[0].boxes.conf
+            ):
+                cls_id = int(cls_id_tensor)
+                conf = float(conf_tensor)
+                x1, y1, x2, y2 = box.tolist()
+                if cls_id in self.target_class_ids:
+                    detections.append({
+                        'class_id': cls_id,
+                        'confidence': conf,
+                        'bbox': [x1, y1, x2, y2]
+                    })
+        return detections
 
 # if __name__ == "__main__":
 #     detector = YOLODetector()

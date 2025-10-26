@@ -1,132 +1,101 @@
 // script.js
-const socket = io(); // Connect to the Socket.IO server
-
-const videoElement = document.getElementById('videoElement');
-const canvasElement = document.getElementById('canvasElement');
+const socket = io(); // Connect to Flask-SocketIO server
+const displayCanvas = document.getElementById('displayCanvas');
+const displayCtx = displayCanvas.getContext('2d');
 const metricsContent = document.getElementById('metrics-content');
-const ctx = canvasElement.getContext('2d');
 
 let stream = null;
-let isProcessing = false; // Prevent overlapping processing calls
+let isProcessing = false;
+let lastProcessedTime = 0;
+const PROCESS_INTERVAL_MS = 50; // Target ~10 FPS (adjust as needed)
 
-// Function to start the webcam
+// --- Start Webcam ---
 async function startWebcam() {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    videoElement.srcObject = stream;
-    console.log("Webcam access granted.");
+    const constraints = { video: true, audio: false };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    // Create a hidden video element to capture frames
+    const hiddenVideo = document.createElement('video');
+    hiddenVideo.srcObject = stream;
+    hiddenVideo.play();
+
+    // Start processing frames
+    processFrame(hiddenVideo);
   } catch (err) {
-    console.error("Error accessing webcam: ", err);
-    alert("Could not access the webcam. Please check permissions and try again.");
+    console.error('Webcam access denied:', err);
+    alert('Camera access required. Please allow and refresh.');
   }
 }
 
-/// script.js
-// ... (existing code)
-
-// ... (existing code in script.js)
-
-let lastProcessedTime = 0;
-// Adjust this value (milliseconds) to control the target processing rate
-// e.g., 100ms = ~10 FPS, 66ms = ~15 FPS, 50ms = ~20 FPS
-// Start with a conservative value and adjust based on your system's performance.
-const PROCESS_INTERVAL_MS = 100;
-
-// Function to capture frame, process, and send via WebSocket
-function processFrame() {
-  if (!stream || isProcessing) return;
-
-  const now = Date.now();
-  // Only proceed if enough time has passed since the last processed frame
-  if (now - lastProcessedTime < PROCESS_INTERVAL_MS) {
-    // Skip this frame, schedule the next check
-    requestAnimationFrame(processFrame);
+// --- Capture & Send Frame ---
+function processFrame(videoElement) {
+  if (!stream || isProcessing) {
+    requestAnimationFrame(() => processFrame(videoElement));
     return;
   }
 
-  // Mark the time *before* starting processing
+  const now = Date.now();
+  if (now - lastProcessedTime < PROCESS_INTERVAL_MS) {
+    requestAnimationFrame(() => processFrame(videoElement));
+    return;
+  }
+
   lastProcessedTime = now;
-  isProcessing = true; // Prevent overlapping processing calls
+  isProcessing = true;
 
-  // Set canvas dimensions to match video
-  canvasElement.width = videoElement.videoWidth;
-  canvasElement.height = videoElement.videoHeight;
+  // Create capture canvas
+  const captureCanvas = document.createElement('canvas');
+  captureCanvas.width = videoElement.videoWidth || 640;
+  captureCanvas.height = videoElement.videoHeight || 480;
+  const captureCtx = captureCanvas.getContext('2d');
+  captureCtx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
 
-  // Draw current video frame onto the hidden canvas
-  ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-
-  // Convert canvas content to base64 JPEG data URL
-  const frameDataUrl = canvasElement.toDataURL('image/jpeg', 0.8); // Adjust quality (0.8) as needed
-
-  // Send the frame data to the backend via WebSocket
+  // Convert to base64 and send
+  const frameDataUrl = captureCanvas.toDataURL('image/jpeg', 0.85);
   socket.emit('video_frame', frameDataUrl);
 
-  // Schedule the *next* attempt to process a frame
-  // This happens *after* sending the current one.
-  requestAnimationFrame(processFrame);
-  // Note: The actual processing result comes back asynchronously via the 'processed_frame' event handler.
-  // The isProcessing flag helps prevent sending new frames while waiting for the backend.
+  // Schedule next frame
+  requestAnimationFrame(() => processFrame(videoElement));
 }
 
-// Update the 'processed_frame' handler to reset the flag
-socket.on('processed_frame', function (data) {
-  // Update the video element with the annotated frame received from the backend
-  videoElement.src = 'data:image/jpeg;base64,' + data.annotated_frame;
-
-  // Update metrics display
-  updateMetrics(data.metrics);
-
-  // Crucially, reset the flag *after* handling the result
-  // This allows the processFrame loop to send the next frame once this one is handled.
-  // isProcessing = false; // This line might be better placed here if it refers to the *sending* part being done
-  // Actually, resetting it here means the *next* frame capture can start immediately after this handler finishes,
-  // potentially overlapping if the next processFrame call happens before the backend gets the *previous* frame.
-  // The safest place is probably right before socket.emit, but let's keep it simple for now.
-  // The 'isProcessing = true' happens at the start of processFrame, and 'isProcessing = false' happens here.
-  // This ensures only one frame is sent at a time.
-  isProcessing = false; // Mark that we have finished processing the *previous* frame's result/sending cycle
+// --- Handle Processed Frame from Backend ---
+socket.on('processed_frame', (data) => {
+  const img = new Image();
+  img.onload = () => {
+    // Draw directly onto display canvas — NO FLICKER
+    displayCtx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
+    updateMetrics(data.metrics);
+  };
+  img.src = `data:image/jpeg;base64,${data.annotated_frame}`;
+  isProcessing = false;
 });
 
-// ... (rest of existing code)
-
-// Listen for connection events
-socket.on('connect', function () {
-  console.log('Connected to server via Socket.IO');
-  startWebcam(); // Start webcam when connected
-});
-
-socket.on('disconnect', function () {
-  console.log('Disconnected from server');
-});
-
-// Function to update metrics display
+// --- Update Metrics Panel ---
 function updateMetrics(metrics) {
-  metricsContent.innerHTML = ''; // Clear previous metrics
-
+  metricsContent.innerHTML = '';
   if (Object.keys(metrics).length === 0) {
     metricsContent.innerHTML = '<p>No relevant objects detected.</p>';
     return;
   }
-
-  for (const [className, count] of Object.entries(metrics)) {
+  Object.entries(metrics).forEach(([className, count]) => {
     const p = document.createElement('p');
     p.textContent = `${className}: ${count}`;
     metricsContent.appendChild(p);
-  }
+  });
 }
 
-// Optional: Listen for errors from the backend
-socket.on('error', function (data) {
-  console.error('Backend error:', data.message);
-  // Display error message to user if needed
-  // alert('An error occurred: ' + data.message);
+// --- Handle Connection Events ---
+socket.on('connect', () => {
+  console.log('Connected to server');
+  startWebcam();
 });
 
-// Start processing frames after the video element loads its metadata
-videoElement.addEventListener('loadedmetadata', function () {
-  // Adjust canvas size initially
-  canvasElement.width = videoElement.videoWidth;
-  canvasElement.height = videoElement.videoHeight;
-  // Begin the processing loop
-  processFrame();
+socket.on('disconnect', () => {
+  console.log('Disconnected from server');
+});
+
+// --- Error Handling ---
+socket.on('error', (data) => {
+  console.error('Backend error:', data.message);
 });
