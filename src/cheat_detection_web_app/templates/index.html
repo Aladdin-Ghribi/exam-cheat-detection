@@ -11,6 +11,20 @@
 
 <body>
   <h1>Cheat Detection Dashboard</h1>
+
+  <div id="source-controls">
+    <h2>Select Source</h2>
+    <div class="source-options">
+      <button id="webcam-btn" class="source-btn active">Use Webcam</button>
+      <label for="file-upload" class="source-btn">Upload File</label>
+      <input type="file" id="file-upload" accept="video/mp4, image/jpeg, image/png" style="display: none;">
+    </div>
+    <div id="file-info" style="display: none;">
+      <span id="file-name"></span>
+      <button id="reset-btn">Reset</button>
+    </div>
+  </div>
+
   <div id="container">
     <div id="video-container">
       <!-- Only ONE canvas needed: for display -->
