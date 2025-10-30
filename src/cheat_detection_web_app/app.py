@@ -14,7 +14,6 @@ from flask import Flask, render_template, request, jsonify
 import tempfile
 import uuid
 
-
 # Add project root to sys.path so we can import config and src modules
 PROJECT_ROOT = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
@@ -32,16 +31,13 @@ print("Initializing YOLODetector...")
 detector = YOLODetector()
 print("YOLODetector ready.")
 
-
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
 
-
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
-
 
 @socketio.on('video_frame')
 def handle_video_frame(data):
@@ -54,29 +50,31 @@ def handle_video_frame(data):
             print("Error: Could not decode image frame from frontend.")
             return
 
-        # Use your existing YoloDetector to process the SINGLE frame
-        # Note: detector.detect() is a generator for streams, but we can adapt it
-        # For a single frame, we call model.predict directly via the detector instance
+        # Use detect_frame to get detections + seat assignments
+        detection_result = detector.detect_frame(frame)
+        
+        # Sanitize detections (convert NumPy types to Python native types)
+        raw_detections = detection_result['detections']
+        detections = []
+        for det in raw_detections:
+            detections.append({
+                'class_id': int(det['class_id']),
+                'confidence': float(det['confidence']),
+                'bbox': [float(x) for x in det['bbox']]
+            })
 
-        detections = detector.detect_frame(frame)
+        # Sanitize seat assignments
+        raw_seat_assignments = detection_result.get('seat_assignments', {})
+        seat_assignments = {
+            int(k): int(v) for k, v in raw_seat_assignments.items()
+        } if raw_seat_assignments else {}
+        print("Seat Assignments:", seat_assignments)
 
-        # Draw detections
-        annotated_frame = frame.copy()
-        for det in detections:
-            x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"{detector.model.names[det['class_id']]} {det['confidence']:.2f}"
-            color = (0, 255, 0)
-            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-            (text_width, text_height), baseline = cv2.getTextSize(
-                label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-            cv2.rectangle(annotated_frame, (x1, y1 - text_height - baseline),
-                          (x1 + text_width, y1), color, thickness=cv2.FILLED)
-            cv2.putText(annotated_frame, label, (x1, y1 - baseline),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+        # Use built-in draw_detections for consistent styling
+        annotated_frame = detector.draw_detections(frame, detection_result)
 
         # Encode and send back
-        _, buffer = cv2.imencode('.jpg', annotated_frame, [
-                                 cv2.IMWRITE_JPEG_QUALITY, 85])
+        _, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         annotated_frame_encoded = base64.b64encode(buffer).decode('utf-8')
 
         # Metrics
@@ -89,6 +87,7 @@ def handle_video_frame(data):
         emit('processed_frame', {
             'annotated_frame': annotated_frame_encoded,
             'detections': detections,
+            'seat_assignments': seat_assignments,
             'metrics': class_counts
         })
 
@@ -97,11 +96,9 @@ def handle_video_frame(data):
         import traceback
         traceback.print_exc()
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -127,7 +124,6 @@ def upload_file():
         'file_type': 'video' if file_ext.lower() in ['.mp4', '.avi', '.mov'] else 'image'
     })
 
-
 @app.route('/process_file', methods=['POST'])
 def process_file():
     data = request.get_json()
@@ -137,37 +133,34 @@ def process_file():
         return jsonify({'error': 'File not found'}), 404
 
     try:
-        # Process the file with the detector
-        detections = []
-
         if data.get('file_type') == 'image':
-            # Process a single image
             img = cv2.imread(file_path)
             if img is None:
                 return jsonify({'error': 'Could not read image file'}), 400
 
-            detections = detector.detect_frame(img)
+            detection_result = detector.detect_frame(img)
+            
+            # Sanitize detections
+            raw_detections = detection_result['detections']
+            detections = []
+            for det in raw_detections:
+                detections.append({
+                    'class_id': int(det['class_id']),
+                    'confidence': float(det['confidence']),
+                    'bbox': [float(x) for x in det['bbox']]
+                })
 
-            # Draw detections
-            annotated_img = img.copy()
-            for det in detections:
-                x1, y1, x2, y2 = map(int, det['bbox'])
-                label = f"{detector.model.names[det['class_id']]} {det['confidence']:.2f}"
-                color = (0, 255, 0)
-                cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, 2)
-                (text_width, text_height), baseline = cv2.getTextSize(
-                    label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-                cv2.rectangle(annotated_img, (x1, y1 - text_height - baseline),
-                            (x1 + text_width, y1), color, thickness=cv2.FILLED)
-                cv2.putText(annotated_img, label, (x1, y1 - baseline),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+            # Sanitize seat assignments
+            raw_seat_assignments = detection_result.get('seat_assignments', {})
+            seat_assignments = {
+                int(k): int(v) for k, v in raw_seat_assignments.items()
+            } if raw_seat_assignments else {}
 
-            # Encode and send back
-            _, buffer = cv2.imencode('.jpg', annotated_img, [
-                                    cv2.IMWRITE_JPEG_QUALITY, 85])
+            annotated_img = detector.draw_detections(img, detection_result)
+
+            _, buffer = cv2.imencode('.jpg', annotated_img, [cv2.IMWRITE_JPEG_QUALITY, 85])
             annotated_img_encoded = base64.b64encode(buffer).decode('utf-8')
 
-            # Metrics
             class_counts = {}
             for det in detections:
                 class_name = detector.model.names[det['class_id']]
@@ -178,17 +171,16 @@ def process_file():
                 'success': True,
                 'annotated_frame': annotated_img_encoded,
                 'detections': detections,
+                'seat_assignments': seat_assignments,
                 'metrics': class_counts
             })
         else:
-            # For video files, we'll handle them frame by frame via the existing socket connection
             return jsonify({
                 'success': True,
                 'message': 'Video file received. Processing will continue via socket connection.'
             })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)

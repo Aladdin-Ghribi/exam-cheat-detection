@@ -3,6 +3,7 @@ const socket = io(); // Connect to Flask-SocketIO server
 const displayCanvas = document.getElementById('displayCanvas');
 const displayCtx = displayCanvas.getContext('2d');
 const metricsContent = document.getElementById('metrics-content');
+const seatAssignmentsDiv = document.getElementById('seat-assignments'); // ✅ Added for Week 3
 
 // UI elements
 const webcamBtn = document.getElementById('webcam-btn');
@@ -126,8 +127,9 @@ async function processFile(file) {
         // Draw processed image on canvas
         displayCtx.drawImage(img, 0, 0);
 
-        // Update metrics
+        // Update metrics and seat assignments
         updateMetrics(processResult.metrics);
+        updateSeatAssignments(processResult.seat_assignments); // ✅ Added for Week 3
       };
       img.src = `data:image/jpeg;base64,${processResult.annotated_frame}`;
     }
@@ -252,6 +254,7 @@ socket.on('processed_frame', (data) => {
     // Draw directly onto display canvas — NO FLICKER
     displayCtx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
     updateMetrics(data.metrics);
+    updateSeatAssignments(data.seat_assignments); // ✅ Added for Week 3
   };
   img.src = `data:image/jpeg;base64,${data.annotated_frame}`;
   isProcessing = false;
@@ -269,6 +272,22 @@ function updateMetrics(metrics) {
     p.textContent = `${className}: ${count}`;
     metricsContent.appendChild(p);
   });
+}
+
+// --- Update Seat Assignments Panel (NEW for Week 3) ---
+function updateSeatAssignments(seatAssignments) {
+  if (!seatAssignmentsDiv) return; // Safety check
+  
+  if (seatAssignments && Object.keys(seatAssignments).length > 0) {
+    let seatHtml = '<ul style="list-style-type: none; padding-left: 0;">';
+    for (const [trackId, seatIndex] of Object.entries(seatAssignments)) {
+      seatHtml += `<li style="margin: 5px 0; padding: 5px; background: #e6f7ff; border-radius: 4px;">Person ID ${trackId} → Seat ${seatIndex}</li>`;
+    }
+    seatHtml += '</ul>';
+    seatAssignmentsDiv.innerHTML = seatHtml;
+  } else {
+    seatAssignmentsDiv.innerHTML = 'No active seat assignments';
+  }
 }
 
 // --- Handle Connection Events ---
