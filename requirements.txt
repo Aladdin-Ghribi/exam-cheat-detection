@@ -3,3 +3,4 @@ ultralytics>=8.3.0
 opencv-python
 torch>=1.8
 numpy
+mediapipe
