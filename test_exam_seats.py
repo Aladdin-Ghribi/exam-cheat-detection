@@ -72,11 +72,12 @@ def test_exam_seats(source, save_output=False, output_path=None, config_path=Non
         detection_result = detector.detect_frame(frame)
         detections = detection_result['detections']
 
-        # Update seat manager with detections
-        seat_result = seat_manager.update(detections)
+        # Update seat manager with detections and frame for pose detection
+        seat_result = seat_manager.update(detections, frame)
 
-        # Draw zones and assignments
-        annotated_frame = seat_manager.draw_zones(frame, seat_result['zone_assignments'])
+        # Draw zones and assignments with pose landmarks
+        show_poses = True  # Set to True to show pose landmarks
+        annotated_frame = seat_manager.draw_zones(frame, seat_result['zone_assignments'], show_poses)
 
         # Draw bounding boxes for people
         for detection in detections:
@@ -151,6 +152,9 @@ def test_exam_seats(source, save_output=False, output_path=None, config_path=Non
     if writer:
         writer.release()
     cv2.destroyAllWindows()
+    
+    # Close seat manager resources
+    seat_manager.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test exam seat assignment for detected people')

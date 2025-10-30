@@ -4,6 +4,7 @@ from collections import defaultdict, deque
 import json
 import os
 
+
 class ExamSeatManager:
     def __init__(self, room_width=1280, room_height=720, zone_size=(120, 150)):
         """
@@ -21,7 +22,8 @@ class ExamSeatManager:
 
         # Dictionary to store person data
         self.person_zones = {}  # track_id -> zone data
-        self.position_history = defaultdict(lambda: deque(maxlen=20))  # track_id -> positions history
+        self.position_history = defaultdict(lambda: deque(
+            maxlen=20))  # track_id -> positions history
         self.position_stability = {}  # track_id -> stability score
         self.empty_zones = {}  # zone_id -> last occupied time
         self.zone_assignments = {}  # track_id -> zone_id
@@ -65,8 +67,10 @@ class ExamSeatManager:
             self.position_history[track_id].append((cx, cy))
 
             # Simplified stable position calculation
-            if len(self.position_history[track_id]) >= 3:  # Reduced from 5 to 3 for faster assignment
-                recent_positions = list(self.position_history[track_id])[-5:]  # Reduced from 10 to 5
+            # Reduced from 5 to 3 for faster assignment
+            if len(self.position_history[track_id]) >= 3:
+                # Reduced from 10 to 5
+                recent_positions = list(self.position_history[track_id])[-5:]
 
                 # Simple average instead of weighted average for speed
                 positions_array = np.array(recent_positions)
@@ -110,7 +114,8 @@ class ExamSeatManager:
                 pos = detection['centroid']
             else:
                 bbox = detection['bbox']
-                pos = (int((bbox[0] + bbox[2]) / 2), int(bbox[1] + (bbox[3] - bbox[1]) / 3))
+                pos = (int((bbox[0] + bbox[2]) / 2),
+                       int(bbox[1] + (bbox[3] - bbox[1]) / 3))
 
             # Check if this person already has a zone
             if track_id in self.zone_assignments:
@@ -125,7 +130,8 @@ class ExamSeatManager:
                     continue
                 else:
                     # Check if person is near their zone with a more generous threshold
-                    if zone and self._is_near_zone(pos, zone, threshold=400):  # Increased threshold
+                    # Increased threshold
+                    if zone and self._is_near_zone(pos, zone, threshold=400):
                         current_assignments[track_id] = zone_id
                         zone['occupied'] = True
                         zone['last_seen'] = 0
@@ -133,15 +139,19 @@ class ExamSeatManager:
                         # Simplified zone center update
                         current_center = zone['center']
                         weight = 0.05  # Reduced weight for more stability
-                        new_center_x = int(current_center[0] * (1 - weight) + pos[0] * weight)
-                        new_center_y = int(current_center[1] * (1 - weight) + pos[1] * weight)
+                        new_center_x = int(
+                            current_center[0] * (1 - weight) + pos[0] * weight)
+                        new_center_y = int(
+                            current_center[1] * (1 - weight) + pos[1] * weight)
                         zone['center'] = (new_center_x, new_center_y)
 
                         # Update zone boundaries
                         width = zone.get('width', self.zone_width)
                         height = zone.get('height', self.zone_height)
-                        zone['top_left'] = (new_center_x - width // 2, new_center_y - height // 2)
-                        zone['bottom_right'] = (new_center_x + width // 2, new_center_y + height // 2)
+                        zone['top_left'] = (
+                            new_center_x - width // 2, new_center_y - height // 2)
+                        zone['bottom_right'] = (
+                            new_center_x + width // 2, new_center_y + height // 2)
                         continue
 
             # Find the nearest empty zone
@@ -150,7 +160,8 @@ class ExamSeatManager:
 
             for z_id, z in self.zones.items():
                 if not z.get('occupied', False):
-                    distance = np.linalg.norm(np.array(pos) - np.array(z['center']))
+                    distance = np.linalg.norm(
+                        np.array(pos) - np.array(z['center']))
                     if distance < min_distance and distance < 500:  # Much larger threshold
                         min_distance = distance
                         best_zone_id = z_id
@@ -181,7 +192,8 @@ class ExamSeatManager:
         # Clean up zones that have been empty for less time
         zones_to_remove = []
         for zone_id, zone in self.zones.items():
-            if not zone.get('occupied', False) and zone['last_seen'] > 60:  # Reduced from 120 to 60 frames
+            # Reduced from 120 to 60 frames
+            if not zone.get('occupied', False) and zone['last_seen'] > 60:
                 zones_to_remove.append(zone_id)
 
         for zone_id in zones_to_remove:
