@@ -64,24 +64,19 @@ class ExamSeatManager:
             # Add to position history
             self.position_history[track_id].append((cx, cy))
 
-            # Calculate stable position (weighted average of recent positions)
-            if len(self.position_history[track_id]) >= 5:
-                recent_positions = list(self.position_history[track_id])[-10:]  # Use more positions
+            # Simplified stable position calculation
+            if len(self.position_history[track_id]) >= 3:  # Reduced from 5 to 3 for faster assignment
+                recent_positions = list(self.position_history[track_id])[-5:]  # Reduced from 10 to 5
 
-                # Calculate position stability (lower variance = more stable)
+                # Simple average instead of weighted average for speed
                 positions_array = np.array(recent_positions)
-                variance = np.var(positions_array, axis=0)
-                stability_score = 1.0 / (1.0 + np.mean(variance))  # Higher score = more stable
-                self.position_stability[track_id] = stability_score
-
-                # Weight recent positions more heavily
-                weights = np.exp(np.linspace(-1, 0, len(recent_positions)))  # Exponential weights
-                weights /= weights.sum()  # Normalize
-
-                # Calculate weighted average
-                weighted_positions = positions_array * weights[:, np.newaxis]
-                stable_position = np.sum(weighted_positions, axis=0).astype(int)
+                stable_position = np.mean(positions_array, axis=0).astype(int)
                 detection['stable_position'] = tuple(stable_position)
+
+                # Simplified stability calculation
+                variance = np.var(positions_array, axis=0)
+                stability_score = 1.0 / (1.0 + np.mean(variance))
+                self.position_stability[track_id] = stability_score
 
         # Update zone assignments
         self._update_zone_assignments(detections)
@@ -94,6 +89,7 @@ class ExamSeatManager:
     def _update_zone_assignments(self, detections):
         """
         Update zone assignments based on current detections.
+        Optimized for faster seat assignment.
 
         Args:
             detections: List of person detections
@@ -103,11 +99,18 @@ class ExamSeatManager:
 
         # First, try to assign people to their existing zones
         for detection in detections:
-            if 'track_id' not in detection or 'stable_position' not in detection:
+            # Require only track_id for assignment, not stable_position
+            if 'track_id' not in detection:
                 continue
 
             track_id = detection['track_id']
-            stable_pos = detection['stable_position']
+
+            # Get position from centroid if available, otherwise from bbox center
+            if 'centroid' in detection:
+                pos = detection['centroid']
+            else:
+                bbox = detection['bbox']
+                pos = (int((bbox[0] + bbox[2]) / 2), int(bbox[1] + (bbox[3] - bbox[1]) / 3))
 
             # Check if this person already has a zone
             if track_id in self.zone_assignments:
@@ -115,30 +118,23 @@ class ExamSeatManager:
                 zone = self.zones.get(zone_id)
 
                 # Check if person is still in their zone
-                if zone and self._is_in_zone(stable_pos, zone):
+                if zone and self._is_in_zone(pos, zone):
                     current_assignments[track_id] = zone_id
                     zone['occupied'] = True
                     zone['last_seen'] = 0
-                    zone['stability'] = self.position_stability.get(track_id, 0.5)
                     continue
                 else:
-                    # Check if person is near their zone (allowing for more movement)
-                    # Use a dynamic threshold based on stability (more stable = smaller threshold)
-                    stability = self.position_stability.get(track_id, 0.5)
-                    threshold = 350 - stability * 100  # Range: 250-350 pixels
-
-                    if zone and self._is_near_zone(stable_pos, zone, threshold=threshold):
+                    # Check if person is near their zone with a more generous threshold
+                    if zone and self._is_near_zone(pos, zone, threshold=400):  # Increased threshold
                         current_assignments[track_id] = zone_id
                         zone['occupied'] = True
                         zone['last_seen'] = 0
-                        zone['stability'] = stability
 
-                        # Update zone center slightly based on new position (adaptive zone)
-                        # This helps zone "follow" person slightly
+                        # Simplified zone center update
                         current_center = zone['center']
-                        weight = 0.1  # How much to move the zone center (10% towards new position)
-                        new_center_x = int(current_center[0] * (1 - weight) + stable_pos[0] * weight)
-                        new_center_y = int(current_center[1] * (1 - weight) + stable_pos[1] * weight)
+                        weight = 0.05  # Reduced weight for more stability
+                        new_center_x = int(current_center[0] * (1 - weight) + pos[0] * weight)
+                        new_center_y = int(current_center[1] * (1 - weight) + pos[1] * weight)
                         zone['center'] = (new_center_x, new_center_y)
 
                         # Update zone boundaries
@@ -146,42 +142,18 @@ class ExamSeatManager:
                         height = zone.get('height', self.zone_height)
                         zone['top_left'] = (new_center_x - width // 2, new_center_y - height // 2)
                         zone['bottom_right'] = (new_center_x + width // 2, new_center_y + height // 2)
-
                         continue
-            else:
-                # Person moved out of their zone, try to find the nearest zone
-                best_zone_id = None
-                min_distance = float('inf')
 
-                for z_id, z in self.zones.items():
-                    if not z.get('occupied', False):
-                        distance = np.linalg.norm(np.array(stable_pos) - np.array(z['center']))
-                        if distance < min_distance and distance < 300:  # Even larger threshold for movement
-                            min_distance = distance
-                            best_zone_id = z_id
-
-                if best_zone_id is not None:
-                    current_assignments[track_id] = best_zone_id
-                    self.zones[best_zone_id]['occupied'] = True
-                    self.zones[best_zone_id]['last_seen'] = 0
-                    self.zones[best_zone_id]['track_id'] = track_id
-                else:
-                    # Create a new zone for this person
-                    new_zone_id = self._create_zone(stable_pos, track_id)
-                    if new_zone_id is not None:  # Only assign if zone was created
-                        current_assignments[track_id] = new_zone_id
-                continue
-
-            # If not, try to find an empty zone nearby
+            # Find the nearest empty zone
             best_zone_id = None
             min_distance = float('inf')
 
-            for zone_id, zone in self.zones.items():
-                if not zone.get('occupied', False):
-                    distance = np.linalg.norm(np.array(stable_pos) - np.array(zone['center']))
-                    if distance < min_distance and distance < 250:  # Increased threshold for better assignment
+            for z_id, z in self.zones.items():
+                if not z.get('occupied', False):
+                    distance = np.linalg.norm(np.array(pos) - np.array(z['center']))
+                    if distance < min_distance and distance < 500:  # Much larger threshold
                         min_distance = distance
-                        best_zone_id = zone_id
+                        best_zone_id = z_id
 
             # If found a suitable empty zone, assign it
             if best_zone_id is not None:
@@ -191,25 +163,25 @@ class ExamSeatManager:
                 self.zones[best_zone_id]['track_id'] = track_id
             else:
                 # Create a new zone for this person
-                new_zone_id = self._create_zone(stable_pos, track_id)
-                if new_zone_id is not None:  # Only assign if zone was created
+                new_zone_id = self._create_zone(pos, track_id)
+                if new_zone_id is not None:
                     current_assignments[track_id] = new_zone_id
 
         # Update zone assignments
         self.zone_assignments = current_assignments
 
-        # Mark zones as empty if no one was assigned for a few frames
+        # Mark zones as empty if no one was assigned for fewer frames
         for zone_id, zone in self.zones.items():
             if zone.get('occupied', False) and zone_id not in current_assignments.values():
                 zone['last_seen'] = zone.get('last_seen', 0) + 1
-                if zone['last_seen'] > 60:  # Further increased to 60 frames for more stability
+                if zone['last_seen'] > 30:  # Reduced from 60 to 30 frames
                     zone['occupied'] = False
                     zone['track_id'] = None
 
-        # Clean up zones that have been empty for too long
+        # Clean up zones that have been empty for less time
         zones_to_remove = []
         for zone_id, zone in self.zones.items():
-            if not zone.get('occupied', False) and zone['last_seen'] > 120:  # Remove zones empty for 2 seconds
+            if not zone.get('occupied', False) and zone['last_seen'] > 60:  # Reduced from 120 to 60 frames
                 zones_to_remove.append(zone_id)
 
         for zone_id in zones_to_remove:
@@ -243,6 +215,7 @@ class ExamSeatManager:
     def _create_zone(self, position, track_id):
         """
         Create a new zone at the specified position.
+        Simplified for faster creation.
 
         Args:
             position: (x, y) tuple for zone center
@@ -251,31 +224,19 @@ class ExamSeatManager:
         Returns:
             ID of the created zone
         """
-        # Always create a zone for new people - the main goal is every person has a zone
-        # We can have more zones than people temporarily
         zone_id = self.next_zone_id
         self.next_zone_id += 1
 
-        # Get stability score if available
-        stability = self.position_stability.get(track_id, 0.5)
-
-        # Adjust zone size based on stability (more stable = smaller zone)
-        width_factor = 1.2 - stability * 0.4  # Range: 0.8 to 1.2
-        height_factor = 1.2 - stability * 0.4  # Range: 0.8 to 1.2
-
-        adjusted_width = int(self.zone_width * width_factor)
-        adjusted_height = int(self.zone_height * height_factor)
-
+        # Use fixed zone size for simplicity and speed
         self.zones[zone_id] = {
             'center': position,
             'occupied': True,
             'last_seen': 0,
             'track_id': track_id,
-            'stability': stability,
-            'top_left': (position[0] - adjusted_width // 2, position[1] - adjusted_height // 2),
-            'bottom_right': (position[0] + adjusted_width // 2, position[1] + adjusted_height // 2),
-            'width': adjusted_width,
-            'height': adjusted_height
+            'top_left': (position[0] - self.zone_width // 2, position[1] - self.zone_height // 2),
+            'bottom_right': (position[0] + self.zone_width // 2, position[1] + self.zone_height // 2),
+            'width': self.zone_width,
+            'height': self.zone_height
         }
 
         return zone_id
@@ -313,6 +274,9 @@ class ExamSeatManager:
         """
         result_frame = frame.copy()
 
+        # Commented out the code that draws rectangles with "occupied" text
+        # as it was overwhelming the frame
+        """
         for zone_id, zone in self.zones.items():
             # Skip empty zones
             if not zone.get('occupied', False):
@@ -344,6 +308,7 @@ class ExamSeatManager:
 
             cv2.putText(result_frame, label, (center[0] - 40, center[1] - 10),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 2)
+        """
 
         return result_frame
 
