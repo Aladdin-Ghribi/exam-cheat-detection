@@ -11,6 +11,7 @@ const fileUploadInput = document.getElementById('file-upload');
 const fileInfo = document.getElementById('file-info');
 const fileName = document.getElementById('file-name');
 const resetBtn = document.getElementById('reset-btn');
+const togglePoseBtn = document.getElementById('toggle-pose-btn');
 
 let stream = null;
 let videoElement = null;
@@ -19,6 +20,7 @@ let lastProcessedTime = 0;
 const PROCESS_INTERVAL_MS = 50; // Target ~10 FPS (adjust as needed)
 let sourceType = 'webcam'; // 'webcam' or 'file'
 let animationFrameId = null;
+let poseEnabled = true; // Track pose visibility state
 
 // --- Start Webcam ---
 async function startWebcam() {
@@ -214,7 +216,7 @@ function processFrame(videoElement) {
 
   // Convert to base64 and send
   const frameDataUrl = captureCanvas.toDataURL('image/jpeg', 0.85);
-  socket.emit('video_frame', frameDataUrl);
+  socket.emit('video_frame', { image: frameDataUrl, pose_enabled: poseEnabled });
 
   // Schedule next frame
   animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
@@ -239,6 +241,11 @@ fileUploadInput.addEventListener('change', (e) => {
 resetBtn.addEventListener('click', () => {
   resetToWebcam();
   sourceType = 'webcam';
+});
+
+togglePoseBtn.addEventListener('click', () => {
+  poseEnabled = !poseEnabled;
+  togglePoseBtn.textContent = poseEnabled ? 'Hide Pose' : 'Show Pose';
 });
 
 // --- Handle Processed Frame from Backend ---
