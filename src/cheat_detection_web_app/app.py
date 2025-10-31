@@ -42,12 +42,31 @@ def handle_disconnect():
 @socketio.on('video_frame')
 def handle_video_frame(data):
     try:
+        # Get pose_enabled flag if present, default to True
+        pose_enabled = data.get('pose_enabled', True)
+        
+        # Store original pose state
+        original_pose_state = detector.enable_pose if hasattr(detector, 'enable_pose') else True
+        
+        # Temporarily set pose detection based on frontend flag
+        if hasattr(detector, 'enable_pose'):
+            detector.enable_pose = pose_enabled
+        
         # Decode frame
-        header, encoded = data.split(',', 1)
+        if isinstance(data, str):
+            # Legacy format - just the image data
+            header, encoded = data.split(',', 1)
+        else:
+            # New format - data is an object with image field
+            header, encoded = data['image'].split(',', 1)
+        
         nparr = np.frombuffer(base64.b64decode(encoded), np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             print("Error: Could not decode image frame from frontend.")
+            # Restore original pose state before returning
+            if hasattr(detector, 'enable_pose'):
+                detector.enable_pose = original_pose_state
             return
 
         # Use detect_frame to get detections + seat assignments
@@ -90,11 +109,18 @@ def handle_video_frame(data):
             'seat_assignments': seat_assignments,
             'metrics': class_counts
         })
+        
+        # Restore original pose state after processing
+        if hasattr(detector, 'enable_pose'):
+            detector.enable_pose = original_pose_state
 
     except Exception as e:
         print(f"Error in handle_video_frame: {e}")
         import traceback
         traceback.print_exc()
+        # Restore original pose state in case of error
+        if hasattr(detector, 'enable_pose'):
+            detector.enable_pose = original_pose_state
 
 @app.route('/')
 def index():
