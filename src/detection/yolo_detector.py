@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
@@ -60,6 +61,9 @@ class YOLODetector:
             save=save_image,
             save_txt=False,#for custom results if needed
             stream=True,#stream result for video
+            half= False,#half precision inference
+            device='cuda',
+            #half precision inference
         )
 
         for r in results:
@@ -139,10 +143,127 @@ class YOLODetector:
             seat_result = self.seat_manager.update(detections)
             seat_assignments = seat_result['zone_assignments']
 
+        if self.enable_pose:
+            self._annotate_behavior(detections)
+
         return {
             'detections': detections,
             'seat_assignments': seat_assignments
         }
+
+    def _annotate_behavior(self, detections):
+        object_detections = [det for det in detections if det['class_id'] != PERSON_CLASS_ID]
+        for detection in detections:
+            if detection['class_id'] != PERSON_CLASS_ID:
+                continue
+            pose = detection.get('pose')
+            behavior = {
+                'head_orientation': None,
+                'face_region': None,
+                'hands': {
+                    'left': {
+                        'near_face': False,
+                        'distance_to_face': None,
+                        'near_object': False,
+                        'distance_to_object': None,
+                        'object_class': None,
+                        'position': None,
+                        'global_position': None,
+                        'visible': False
+                    },
+                    'right': {
+                        'near_face': False,
+                        'distance_to_face': None,
+                        'near_object': False,
+                        'distance_to_object': None,
+                        'object_class': None,
+                        'position': None,
+                        'global_position': None,
+                        'visible': False
+                    }
+                }
+            }
+            if pose and pose.get('success'):
+                behavior['head_orientation'] = pose.get('head_orientation')
+                behavior['face_region'] = pose.get('face_region')
+                behavior['hands']['left'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'left')
+                behavior['hands']['right'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'right')
+            detection['behavior'] = behavior
+
+    def _build_behavior_hand_entry(self, detection, pose, object_detections, side):
+        entry = {
+            'near_face': False,
+            'distance_to_face': None,
+            'near_object': False,
+            'distance_to_object': None,
+            'object_class': None,
+            'position': None,
+            'global_position': None,
+            'visible': False
+        }
+        hand_metrics = pose.get('hand_metrics')
+        if not hand_metrics:
+            return entry
+        metrics = hand_metrics.get(side)
+        if not metrics:
+            return entry
+        entry['distance_to_face'] = metrics.get('distance_to_face')
+        entry['near_face'] = bool(metrics.get('near_face'))
+        entry['position'] = metrics.get('position')
+        entry['visible'] = bool(metrics.get('visible'))
+        if entry['position'] is None:
+            return entry
+        x1, y1, x2, y2 = detection['bbox']
+        width = x2 - x1
+        height = y2 - y1
+        global_point = (
+            float(x1 + entry['position'][0] * width),
+            float(y1 + entry['position'][1] * height)
+        )
+        entry['global_position'] = global_point
+        min_distance = None
+        closest_class = None
+        threshold = min(width, height) * 0.2
+        if threshold <= 0:
+            threshold = 30.0
+        for obj in object_detections:
+            distance = self._point_to_bbox_distance(global_point, obj['bbox'])
+            if min_distance is None or distance < min_distance:
+                min_distance = distance
+                closest_class = self._class_label(obj['class_id'])
+        if min_distance is not None and closest_class is not None:
+            entry['distance_to_object'] = min_distance
+            if min_distance <= threshold:
+                entry['near_object'] = True
+                entry['object_class'] = closest_class
+        return entry
+
+    def _point_to_bbox_distance(self, point, bbox):
+        x, y = point
+        x1, y1, x2, y2 = bbox
+        if x < x1:
+            dx = x1 - x
+        elif x > x2:
+            dx = x - x2
+        else:
+            dx = 0.0
+        if y < y1:
+            dy = y1 - y
+        elif y > y2:
+            dy = y - y2
+        else:
+            dy = 0.0
+        if dx == 0.0 and dy == 0.0:
+            return 0.0
+        return math.hypot(dx, dy)
+
+    def _class_label(self, class_id):
+        names = self.model.names
+        if isinstance(names, dict):
+            return names.get(class_id, str(class_id))
+        if isinstance(names, (list, tuple)) and class_id < len(names):
+            return names[class_id]
+        return str(class_id)
 
     def draw_detections(self, frame, detection_result):
         """

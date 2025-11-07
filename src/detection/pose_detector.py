@@ -43,11 +43,23 @@ class PoseDetector:
         self.history_length = history_length
         self.landmark_history = {}  # track_id -> deque of landmarks
 
-        # Key landmark indices for head, shoulders, and hands
-        self.head_landmarks = [0]  # Nose
-        self.shoulder_landmarks = [11, 12]  # Left and right shoulders
-        # Left wrist, right wrist, left pinky, right pinky
+        self.head_landmarks = [0]
+        self.shoulder_landmarks = [11, 12]
         self.hand_landmarks = [19, 20, 21, 22]
+        self.visibility_threshold = 0.35
+        self.head_pose_landmarks = [0, 2, 5, 7, 8, 9, 10]
+        self.face_landmarks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        self.left_hand_indices = [15, 17, 19, 21]
+        self.right_hand_indices = [16, 18, 20, 22]
+        self.head_pose_model_points = np.array([
+            [0.0, 0.0, 0.0],
+            [-30.0, -125.0, -30.0],
+            [30.0, -125.0, -30.0],
+            [-60.0, -70.0, -60.0],
+            [60.0, -70.0, -60.0],
+            [-40.0, 40.0, -50.0],
+            [40.0, 40.0, -50.0]
+        ], dtype=np.float32)
 
     def detect(self, image, track_id=None):
         """
@@ -79,7 +91,10 @@ class PoseDetector:
             'head': None,
             'shoulders': None,
             'hands': None,
-            'image': image.copy()
+            'image': image.copy(),
+            'head_orientation': None,
+            'hand_metrics': None,
+            'face_region': None
         }
 
         if results.pose_landmarks:
@@ -143,8 +158,121 @@ class PoseDetector:
                     'visibility': landmark['visibility']
                 })
             result['hands'] = hands
+            result['head_orientation'] = self._estimate_head_orientation(landmarks, image.shape)
+            hand_metrics, face_region = self._compute_hand_metrics(landmarks)
+            result['hand_metrics'] = hand_metrics
+            result['face_region'] = face_region
 
         return result
+
+    def _estimate_head_orientation(self, landmarks, image_shape):
+        if landmarks is None or len(landmarks) <= max(self.head_pose_landmarks):
+            return None
+        height, width = image_shape[:2]
+        image_points = []
+        for idx in self.head_pose_landmarks:
+            landmark = landmarks[idx]
+            if landmark['visibility'] < self.visibility_threshold:
+                return None
+            image_points.append([landmark['x'] * width, landmark['y'] * height])
+        image_points = np.array(image_points, dtype=np.float32)
+        model_points = self.head_pose_model_points
+        focal_length = float(width)
+        center = (width / 2.0, height / 2.0)
+        camera_matrix = np.array([
+            [focal_length, 0.0, center[0]],
+            [0.0, focal_length, center[1]],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float32)
+        dist_coeffs = np.zeros((4, 1), dtype=np.float32)
+        success, rotation_vector, translation_vector = cv2.solvePnP(
+            model_points,
+            image_points,
+            camera_matrix,
+            dist_coeffs,
+            flags=cv2.SOLVEPNP_ITERATIVE
+        )
+        if not success:
+            return None
+        rotation_matrix, _ = cv2.Rodrigues(rotation_vector)
+        pitch, yaw, roll = self._rotation_matrix_to_euler(rotation_matrix)
+        if np.isnan(pitch) or np.isnan(yaw) or np.isnan(roll):
+            return None
+        return {
+            'pitch': float(pitch),
+            'yaw': float(yaw),
+            'roll': float(roll),
+            'translation': translation_vector.flatten().astype(float).tolist()
+        }
+
+    def _compute_hand_metrics(self, landmarks):
+        if landmarks is None or len(landmarks) <= max(self.right_hand_indices):
+            return (None, None)
+        face_points = []
+        for idx in self.face_landmarks:
+            landmark = landmarks[idx]
+            if landmark['visibility'] >= self.visibility_threshold:
+                face_points.append([landmark['x'], landmark['y']])
+        if not face_points:
+            return (None, None)
+        face_points = np.array(face_points, dtype=np.float32)
+        face_center = face_points.mean(axis=0)
+        radius = np.mean(np.linalg.norm(face_points - face_center, axis=1))
+        if radius <= 0:
+            radius = 1e-6
+        left_position = self._average_landmark_position(landmarks, self.left_hand_indices)
+        right_position = self._average_landmark_position(landmarks, self.right_hand_indices)
+        hand_metrics = {
+            'left': self._build_hand_metric(left_position, face_center, radius),
+            'right': self._build_hand_metric(right_position, face_center, radius)
+        }
+        face_region = {
+            'center': (float(face_center[0]), float(face_center[1])),
+            'radius': float(radius)
+        }
+        return (hand_metrics, face_region)
+
+    def _average_landmark_position(self, landmarks, indices):
+        points = []
+        for idx in indices:
+            if idx < len(landmarks):
+                landmark = landmarks[idx]
+                if landmark['visibility'] >= self.visibility_threshold:
+                    points.append([landmark['x'], landmark['y']])
+        if not points:
+            return None
+        return np.mean(np.array(points, dtype=np.float32), axis=0)
+
+    def _build_hand_metric(self, position, face_center, radius):
+        if position is None:
+            return {
+                'distance_to_face': None,
+                'near_face': False,
+                'position': None,
+                'visible': False
+            }
+        distance = float(np.linalg.norm(position - face_center))
+        threshold = radius * 1.6 if radius > 0 else 0.15
+        return {
+            'distance_to_face': distance,
+            'near_face': distance <= threshold,
+            'position': (float(position[0]), float(position[1])),
+            'visible': True
+        }
+
+    def _rotation_matrix_to_euler(self, rotation_matrix):
+        sy = np.sqrt(rotation_matrix[0, 0] ** 2 + rotation_matrix[1, 0] ** 2)
+        singular = sy < 1e-6
+        if not singular:
+            x = np.arctan2(rotation_matrix[2, 1], rotation_matrix[2, 2])
+            y = np.arctan2(-rotation_matrix[2, 0], sy)
+            z = np.arctan2(rotation_matrix[1, 0], rotation_matrix[0, 0])
+        else:
+            x = np.arctan2(-rotation_matrix[1, 2], rotation_matrix[1, 1])
+            y = np.arctan2(-rotation_matrix[2, 0], sy)
+            z = 0.0
+        angles = np.degrees(np.array([x, y, z], dtype=np.float32))
+        return angles
 
     def _smooth_landmarks(self, current_landmarks, track_id):
         """
