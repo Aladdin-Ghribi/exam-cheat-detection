@@ -10,6 +10,7 @@ from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE
 from .object_tracker import ObjectTracker
 from .exam_seat_manager import ExamSeatManager
 from .pose_detector import PoseDetector
+from .suspicion_scorer import SuspicionScorer
 
 
 
@@ -35,6 +36,7 @@ class YOLODetector:
         self.enable_tracking = enable_tracking
         self.enable_seat_mapping = enable_seat_mapping
         self.enable_pose = enable_pose
+        self.suspicion_scorer = None
 
         if self.enable_tracking:
             self.tracker = ObjectTracker()
@@ -46,10 +48,14 @@ class YOLODetector:
         if self.enable_pose:
             self.pose_detector = PoseDetector(
                 model_complexity=0,  # Fastest model
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-                smoothing_factor=0.7,  # Smoothing to reduce jitter
-                history_length=5  # Number of frames to use for smoothing
+                min_detection_confidence=0.4,  # Lower for better detection
+                min_tracking_confidence=0.4,   # Lower for better tracking
+                smoothing_factor=0.7,           # Reduced for more responsive detection
+                history_length=10                # Increased for more stable tracking
+            )
+            self.suspicion_scorer = SuspicionScorer(
+                history_length=10,  # Reduced for more responsive scoring
+                smoothing_factor=0.5  # Reduced for more responsive scoring
             )
 
     def detect(self, source, save_image=False, save_path=None):
@@ -153,6 +159,7 @@ class YOLODetector:
 
     def _annotate_behavior(self, detections):
         object_detections = [det for det in detections if det['class_id'] != PERSON_CLASS_ID]
+        active_keys = set()
         for detection in detections:
             if detection['class_id'] != PERSON_CLASS_ID:
                 continue
@@ -189,6 +196,14 @@ class YOLODetector:
                 behavior['hands']['left'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'left')
                 behavior['hands']['right'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'right')
             detection['behavior'] = behavior
+            if self.suspicion_scorer:
+                suspicion = self.suspicion_scorer.score_detection(detection)
+                key = suspicion.pop('key', None)
+                behavior['suspicion'] = suspicion
+                if key is not None:
+                    active_keys.add(key)
+        if self.suspicion_scorer:
+            self.suspicion_scorer.prune(active_keys)
 
     def _build_behavior_hand_entry(self, detection, pose, object_detections, side):
         entry = {
@@ -211,6 +226,7 @@ class YOLODetector:
         entry['near_face'] = bool(metrics.get('near_face'))
         entry['position'] = metrics.get('position')
         entry['visible'] = bool(metrics.get('visible'))
+        entry['face_threshold'] = metrics.get('face_threshold')
         if entry['position'] is None:
             return entry
         x1, y1, x2, y2 = detection['bbox']

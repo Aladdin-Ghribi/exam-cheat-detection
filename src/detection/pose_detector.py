@@ -12,7 +12,7 @@ class PoseDetector:
 
     def __init__(self, static_image_mode=False, model_complexity=0,  # Reduced complexity for speed
                  enable_segmentation=False, min_detection_confidence=0.5,
-                 min_tracking_confidence=0.5, smoothing_factor=0.7, history_length=5):
+                 min_tracking_confidence=0.5, smoothing_factor=0.4, history_length=4):
         """
         Initialize MediaPipe Pose with optimization parameters.
 
@@ -252,12 +252,22 @@ class PoseDetector:
                 'visible': False
             }
         distance = float(np.linalg.norm(position - face_center))
-        threshold = radius * 1.6 if radius > 0 else 0.15
+        # Use a more sensitive threshold for better detection
+        threshold = radius * 1.4 if radius > 0 else 0.15
+        # Add additional proximity levels for more nuanced scoring
+        very_close_threshold = radius * 0.7 if radius > 0 else 0.075
+        somewhat_close_threshold = radius * 2.0 if radius > 0 else 0.2
+        
         return {
             'distance_to_face': distance,
             'near_face': distance <= threshold,
+            'very_near_face': distance <= very_close_threshold,
+            'somewhat_near_face': distance <= somewhat_close_threshold,
             'position': (float(position[0]), float(position[1])),
-            'visible': True
+            'visible': True,
+            'face_threshold': float(threshold),
+            'very_close_threshold': float(very_close_threshold),
+            'somewhat_close_threshold': float(somewhat_close_threshold)
         }
 
     def _rotation_matrix_to_euler(self, rotation_matrix):
