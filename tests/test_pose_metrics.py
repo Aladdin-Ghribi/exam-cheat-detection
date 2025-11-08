@@ -10,6 +10,7 @@ if CURRENT_DIR not in sys.path:
 
 from src.detection.pose_detector import PoseDetector
 from src.detection.yolo_detector import YOLODetector
+from src.detection.suspicion_scorer import SuspicionScorer
 
 
 class PoseMetricsTest(unittest.TestCase):
@@ -137,6 +138,114 @@ class PoseMetricsTest(unittest.TestCase):
         self.assertEqual(entry['object_class'], 'cell_phone')
         self.assertIsNotNone(entry['distance_to_object'])
         self.assertTrue(entry['visible'])
+
+    def test_suspicion_score_components(self):
+        scorer = SuspicionScorer(history_length=3, smoothing_factor=0.5)
+        detection = {
+            'track_id': 5,
+            'bbox': [0.0, 0.0, 200.0, 400.0],
+            'pose': {'success': True},
+            'behavior': {
+                'head_orientation': {'yaw': 60.0, 'pitch': 20.0, 'roll': 5.0},
+                'hands': {
+                    'left': {
+                        'near_face': True,
+                        'distance_to_face': 0.05,
+                        'near_object': True,
+                        'distance_to_object': 5.0,
+                        'position': (0.8, 0.6),
+                        'global_position': (260.0, 260.0),
+                        'visible': True
+                    },
+                    'right': {
+                        'near_face': False,
+                        'distance_to_face': 0.2,
+                        'near_object': False,
+                        'distance_to_object': 80.0,
+                        'position': (0.2, 0.6),
+                        'global_position': (140.0, 260.0),
+                        'visible': True
+                    }
+                }
+            }
+        }
+        result = scorer.score_detection(detection)
+        self.assertGreater(result['raw'], 0.6)
+        self.assertAlmostEqual(result['raw'], result['smoothed'])
+        detection_no_track = {
+            'bbox': [0.0, 0.0, 200.0, 400.0],
+            'pose': {'success': True},
+            'behavior': {
+                'head_orientation': {'yaw': 10.0, 'pitch': 5.0, 'roll': 2.0},
+                'hands': {
+                    'left': {
+                        'near_face': False,
+                        'distance_to_face': 0.1,
+                        'near_object': False,
+                        'distance_to_object': 100.0,
+                        'visible': True
+                    }
+                }
+            }
+        }
+        no_track_result = scorer.score_detection(detection_no_track)
+        self.assertEqual(no_track_result['raw'], no_track_result['smoothed'])
+
+    def test_suspicion_score_smoothing(self):
+        scorer = SuspicionScorer(history_length=3, smoothing_factor=0.5)
+        detection_high = {
+            'track_id': 7,
+            'bbox': [0.0, 0.0, 200.0, 400.0],
+            'pose': {'success': True},
+            'behavior': {
+                'head_orientation': {'yaw': 55.0, 'pitch': 18.0, 'roll': 6.0},
+                'hands': {
+                    'left': {
+                        'near_face': True,
+                        'distance_to_face': 0.08,
+                        'near_object': True,
+                        'distance_to_object': 4.0,
+                        'visible': True
+                    },
+                    'right': {
+                        'near_face': True,
+                        'distance_to_face': 0.12,
+                        'near_object': True,
+                        'distance_to_object': 10.0,
+                        'visible': True
+                    }
+                }
+            }
+        }
+        detection_low = {
+            'track_id': 7,
+            'bbox': [0.0, 0.0, 200.0, 400.0],
+            'pose': {'success': True},
+            'behavior': {
+                'head_orientation': {'yaw': 5.0, 'pitch': 2.0, 'roll': 1.0},
+                'hands': {
+                    'left': {
+                        'near_face': False,
+                        'distance_to_face': 0.2,
+                        'near_object': False,
+                        'distance_to_object': 80.0,
+                        'visible': True
+                    },
+                    'right': {
+                        'near_face': False,
+                        'distance_to_face': 0.2,
+                        'near_object': False,
+                        'distance_to_object': 80.0,
+                        'visible': True
+                    }
+                }
+            }
+        }
+        high_result = scorer.score_detection(detection_high)
+        low_result = scorer.score_detection(detection_low)
+        self.assertLess(low_result['raw'], high_result['raw'])
+        self.assertGreater(low_result['smoothed'], low_result['raw'])
+        self.assertLess(low_result['smoothed'], high_result['raw'])
 
 
 if __name__ == '__main__':
