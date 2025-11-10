@@ -76,17 +76,11 @@ def handle_video_frame(data):
         raw_detections = detection_result['detections']
         detections = []
         for det in raw_detections:
-            sanitized = {
+            detections.append({
                 'class_id': int(det['class_id']),
                 'confidence': float(det['confidence']),
                 'bbox': [float(x) for x in det['bbox']]
-            }
-            # Include behavior data if available
-            if 'behavior' in det:
-                sanitized['behavior'] = det['behavior']
-            if 'track_id' in det:
-                sanitized['track_id'] = int(det['track_id'])
-            detections.append(sanitized)
+            })
 
         # Sanitize seat assignments
         raw_seat_assignments = detection_result.get('seat_assignments', {})
@@ -176,17 +170,11 @@ def process_file():
             raw_detections = detection_result['detections']
             detections = []
             for det in raw_detections:
-                sanitized = {
+                detections.append({
                     'class_id': int(det['class_id']),
                     'confidence': float(det['confidence']),
                     'bbox': [float(x) for x in det['bbox']]
-                }
-                # Include behavior data if available
-                if 'behavior' in det:
-                    sanitized['behavior'] = det['behavior']
-                if 'track_id' in det:
-                    sanitized['track_id'] = int(det['track_id'])
-                detections.append(sanitized)
+                })
 
             # Sanitize seat assignments
             raw_seat_assignments = detection_result.get('seat_assignments', {})
