@@ -1,12 +1,13 @@
 import os
 import sys
 import math
+import torch
 sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
 import cv2
 from ultralytics import YOLO
-from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE
+from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU
 from .object_tracker import ObjectTracker
 from .exam_seat_manager import ExamSeatManager
 from .pose_detector import PoseDetector
@@ -24,10 +25,16 @@ CHEATING_RELATED_CLASSES = {
 #   'seat' : 56
   }
 
+
+
 PERSON_CLASS_ID = 0
 class YOLODetector:
     def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=True, enable_pose=True, room_config=None):
         self.model = YOLO(model_path)
+        # Auto-detect device (cuda if available, else cpu)
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # Use larger size for GPU, smaller for CPU
+        self.img_size = IMG_SIZE_GPU if self.device == 'cuda' else IMG_SIZE_CPU
         self.target_class_ids= [PERSON_CLASS_ID] + list(CHEATING_RELATED_CLASSES.values())
         # now accessible via detector.CHEATING_RELATED_CLASSES
         self.CHEATING_RELATED_CLASSES = CHEATING_RELATED_CLASSES
@@ -62,14 +69,14 @@ class YOLODetector:
         results = self.model.predict(
             source=source,
             conf=CONFIDENCE_THRESHOLD,
-            imgsz= IMG_SIZE,
+            imgsz=self.img_size,
             classes=self.target_class_ids,
             save=save_image,
-            save_txt=False,#for custom results if needed
-            stream=True,#stream result for video
-            half= False,#half precision inference
-            device='cuda',
-            #half precision inference
+            save_txt=False,
+            stream=True,
+            half=False,
+            device=self.device,
+            verbose=False
         )
 
         for r in results:
@@ -99,8 +106,10 @@ class YOLODetector:
         results = self.model.predict(
             source=frame,
             conf=CONFIDENCE_THRESHOLD,
-            imgsz=IMG_SIZE,
+            imgsz=self.img_size,
             classes=self.target_class_ids,
+            device=self.device,
+            half=False,
             verbose=False
         )
 

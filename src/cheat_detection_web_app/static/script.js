@@ -34,8 +34,8 @@ async function startWebcam() {
   try {
     const constraints = { 
       video: { 
-        width: { ideal: 640 },
-        height: { ideal: 480 }
+        width: { ideal: 640 }, // Adjust as needed
+        height: { ideal: 480 } // Adjust as needed
       }, 
       audio: false 
     };
