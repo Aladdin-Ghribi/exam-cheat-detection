@@ -3,12 +3,15 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import cv2
-import time
-import numpy as np
-from src.detection.suspicion_scorer import SuspicionScorer
-from src.detection.pose_detector import PoseDetector
+
+
 from src.detection.yolo_detector import YOLODetector
+from src.detection.pose_detector import PoseDetector
+from src.detection.suspicion_scorer import SuspicionScorer
+import numpy as np
+import time
+import cv2
+
 
 # Add project root to sys.path
 
@@ -42,10 +45,10 @@ def get_suspicion_color(level):
     """
     Get color based on suspicion level for smooth gradient.
     FIXED: Proper color gradient from green -> yellow -> orange -> red
-    
+
     Args:
         level: Suspicion level (0.0 to 1.0)
-        
+
     Returns:
         BGR color tuple
     """
@@ -107,20 +110,27 @@ def test_webcam_pose():
         smoothing_factor=0.6
     )
 
-    # Initialize video capture
-    cap = cv2.VideoCapture(0)
+    # Initialize video capture with DirectShow backend (more stable on Windows)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
     if not cap.isOpened():
-        print("Error: Could not open webcam")
-        return
+        print("Error: Could not open webcam with DirectShow, trying default...")
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("Error: Could not open webcam")
+            return
 
     # Set webcam resolution and FPS
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     cap.set(cv2.CAP_PROP_FPS, 30)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     print("Initializing webcam...")
-    time.sleep(2.0)
+    # Read and discard first few frames
+    for _ in range(5):
+        cap.read()
+    time.sleep(0.5)
 
     # Processing variables
     frame_count = 0
@@ -129,7 +139,7 @@ def test_webcam_pose():
     show_metrics = True
     manual_track_id_counter = 0
     manual_prev_positions = {}
-    scale_factor = 0.85
+    scale_factor = 1.0  # No scaling needed with 640x480
 
     print("\nControls:")
     print("  'c' - Toggle skeleton connections")

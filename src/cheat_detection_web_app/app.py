@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
 from src.detection.yolo_detector import YOLODetector
-from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE
+from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU
 import base64
 import numpy as np
 import cv2
@@ -153,7 +153,8 @@ def upload_file():
     return jsonify({
         'success': True,
         'file_path': file_path,
-        'file_type': 'video' if file_ext.lower() in ['.mp4', '.avi', '.mov'] else 'image'
+        'file_type': 'video' if file_ext.lower() in ['.cls'
+        'mp4', '.avi', '.mov'] else 'image'
     })
 
 @app.route('/process_file', methods=['POST'])
