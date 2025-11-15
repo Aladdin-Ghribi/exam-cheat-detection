@@ -11,6 +11,7 @@ from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU
 from .object_tracker import ObjectTracker
 from .exam_seat_manager import ExamSeatManager
 from .pose_detector import PoseDetector
+from .flagged_evidence_saver import FlaggedEvidenceSaver
 from .suspicion_scorer import SuspicionScorer
 
 
@@ -60,10 +61,11 @@ class YOLODetector:
                 smoothing_factor=0.7,           # Reduced for more responsive detection
                 history_length=10                # Increased for more stable tracking
             )
-            self.suspicion_scorer = SuspicionScorer(
-                history_length=10,  # Reduced for more responsive scoring
-                smoothing_factor=0.5  # Reduced for more responsive scoring
-            )
+            # Use centralized configuration for suspicion scorer
+            self.suspicion_scorer = SuspicionScorer()
+
+        # Initialize evidence saver for flagged events
+        self.evidence_saver = FlaggedEvidenceSaver()
 
     def detect(self, source, save_image=False, save_path=None):
         results = self.model.predict(
@@ -160,6 +162,9 @@ class YOLODetector:
 
         if self.enable_pose:
             self._annotate_behavior(detections)
+
+        # Save flagged evidence if suspicion threshold exceeded
+        self.evidence_saver.process_frame(frame, detections)
 
         return {
             'detections': detections,

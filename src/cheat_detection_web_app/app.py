@@ -221,6 +221,16 @@ def process_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Socket event handler for updating suspicion threshold
+@socketio.on('update_suspicion_threshold')
+def update_suspicion_threshold(data):
+    """Update the suspicion threshold in the evidence saver"""
+    threshold = data.get('threshold', 20)
+    # Update the threshold in the evidence saver
+    detector.evidence_saver.suspicion_threshold = threshold
+    print(f"Updated suspicion threshold to: {threshold}")
+    emit('threshold_updated', {'threshold': threshold})
+
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000) # For local testing without SSL
     # socketio.run(app, host='0.0.0.0', port=5000,                  # For deployment with SSL
