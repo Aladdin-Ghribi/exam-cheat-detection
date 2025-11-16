@@ -77,6 +77,19 @@ h1 {
   background-color: #d32f2f;
 }
 
+.action-btn {
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.action-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
 #container {
   display: flex;
   flex-wrap: wrap;

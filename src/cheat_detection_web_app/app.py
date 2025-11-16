@@ -10,9 +10,13 @@ import base64
 import numpy as np
 import cv2
 from flask_socketio import SocketIO, emit
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import tempfile
 import uuid
+import json
+import csv
+import zipfile
+from datetime import datetime
 
 # Add project root to sys.path so we can import config and src modules
 PROJECT_ROOT = os.path.dirname(os.path.dirname(
@@ -29,6 +33,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Initialize detector ONCE at startup (not per request!)
 print("Initializing YOLODetector...")
 detector = YOLODetector()
+detector.auto_save_enabled = True  # Enable auto-save by default
 print("YOLODetector ready.")
 
 @socketio.on('connect')
@@ -71,6 +76,11 @@ def handle_video_frame(data):
 
         # Use detect_frame to get detections + seat assignments
         detection_result = detector.detect_frame(frame)
+        
+        # Auto-save if enabled and suspicion threshold exceeded
+        if hasattr(detector, 'auto_save_enabled') and detector.auto_save_enabled:
+            if hasattr(detector, 'evidence_saver'):
+                detector.evidence_saver.process_frame(frame, detection_result['detections'])
         
         # Sanitize detections (convert NumPy types to Python native types)
         raw_detections = detection_result['detections']
@@ -226,10 +236,102 @@ def process_file():
 def update_suspicion_threshold(data):
     """Update the suspicion threshold in the evidence saver"""
     threshold = data.get('threshold', 20)
-    # Update the threshold in the evidence saver
     detector.evidence_saver.suspicion_threshold = threshold
     print(f"Updated suspicion threshold to: {threshold}")
     emit('threshold_updated', {'threshold': threshold})
+
+@socketio.on('toggle_auto_save')
+def toggle_auto_save(data):
+    """Toggle auto-save functionality"""
+    enabled = data.get('enabled', True)
+    detector.auto_save_enabled = enabled
+    print(f"Auto-save {'enabled' if enabled else 'disabled'}")
+    emit('save_notification', {'message': f"Auto-save {'enabled' if enabled else 'disabled'}", 'type': 'info'})
+
+@socketio.on('manual_save')
+def manual_save(data):
+    """Manually save current frame"""
+    try:
+        frame_b64 = data.get('frame')
+        detections = data.get('detections', [])
+        
+        if not frame_b64:
+            emit('save_notification', {'message': 'No frame data received', 'type': 'error'})
+            return
+        
+        nparr = np.frombuffer(base64.b64decode(frame_b64), np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            emit('save_notification', {'message': 'Failed to decode frame', 'type': 'error'})
+            return
+        
+        detector.evidence_saver.manual_save(frame, detections, reason="Manual save from UI")
+        emit('save_notification', {'message': 'Frame saved successfully', 'type': 'success'})
+    except Exception as e:
+        print(f"Error in manual_save: {e}")
+        emit('save_notification', {'message': f'Save failed: {str(e)}', 'type': 'error'})
+
+@socketio.on('export_data')
+def export_data(data):
+    """Export flagged events in requested format"""
+    try:
+        format_type = data.get('format', 'json')
+        events = detector.evidence_saver.get_recent_events(limit=100)
+        
+        if not events:
+            emit('save_notification', {'message': 'No events to export', 'type': 'error'})
+            return
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        if format_type == 'json':
+            filename = f'flagged_events_{timestamp}.json'
+            filepath = os.path.join(tempfile.gettempdir(), filename)
+            with open(filepath, 'w') as f:
+                json.dump(events, f, indent=2)
+        
+        elif format_type == 'csv':
+            filename = f'flagged_events_{timestamp}.csv'
+            filepath = os.path.join(tempfile.gettempdir(), filename)
+            with open(filepath, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Event ID', 'Timestamp', 'Suspicion Score', 'Reasons'])
+                for event in events:
+                    writer.writerow([
+                        event.get('event_id', ''),
+                        event.get('timestamp', ''),
+                        event.get('suspicion_score_100', 0),
+                        '; '.join(event.get('reasons', []))
+                    ])
+        
+        elif format_type == 'zip':
+            filename = f'flagged_events_{timestamp}.zip'
+            filepath = os.path.join(tempfile.gettempdir(), filename)
+            with zipfile.ZipFile(filepath, 'w') as zipf:
+                evidence_dir = detector.evidence_saver.output_dir
+                for event in events:
+                    event_id = event.get('event_id')
+                    event_dir = os.path.join(evidence_dir, event_id)
+                    if os.path.exists(event_dir):
+                        for root, dirs, files in os.walk(event_dir):
+                            for file in files:
+                                file_path = os.path.join(root, file)
+                                arcname = os.path.join(event_id, file)
+                                zipf.write(file_path, arcname)
+        
+        emit('export_ready', {'download_url': f'/download/{filename}', 'filename': filename})
+    except Exception as e:
+        print(f"Error in export_data: {e}")
+        emit('save_notification', {'message': f'Export failed: {str(e)}', 'type': 'error'})
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    """Serve exported file for download"""
+    filepath = os.path.join(tempfile.gettempdir(), filename)
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=True, download_name=filename)
+    return jsonify({'error': 'File not found'}), 404
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000) # For local testing without SSL
