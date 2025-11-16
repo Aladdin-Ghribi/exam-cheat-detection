@@ -33,6 +33,9 @@ const PROCESS_INTERVAL_MS = 50; // Target ~10 FPS (adjust as needed)
 let sourceType = 'webcam'; // 'webcam' or 'file'
 let animationFrameId = null;
 let poseEnabled = true; // Track pose visibility state
+let autoSaveEnabled = true; // Track auto-save state
+let currentFrame = null; // Store current frame for manual save
+let currentDetections = null; // Store current detections for manual save
 
 // --- Start Webcam ---
 async function startWebcam() {
@@ -302,6 +305,10 @@ socket.on('processed_frame', (data) => {
     updateSeatAssignments(data.seat_assignments);
     updateBehaviorAnalysis(data.detections);
     updateSuspicionScores(data.detections);
+    
+    // Store current frame and detections for manual save
+    currentFrame = data.annotated_frame;
+    currentDetections = data.detections;
   };
   img.src = `data:image/jpeg;base64,${data.annotated_frame}`;
   isProcessing = false;
@@ -547,3 +554,69 @@ socket.on('disconnect', () => {
 socket.on('error', (data) => {
   console.error('Backend error:', data.message);
 });
+
+// --- Save & Export Controls ---
+const autoSaveToggle = document.getElementById('auto-save-toggle');
+const manualSaveBtn = document.getElementById('manual-save-btn');
+const exportJsonBtn = document.getElementById('export-json-btn');
+const exportCsvBtn = document.getElementById('export-csv-btn');
+const exportZipBtn = document.getElementById('export-zip-btn');
+const saveStatus = document.getElementById('save-status');
+
+autoSaveToggle.addEventListener('change', (e) => {
+  autoSaveEnabled = e.target.checked;
+  socket.emit('toggle_auto_save', { enabled: autoSaveEnabled });
+  showSaveStatus(`Auto-save ${autoSaveEnabled ? 'enabled' : 'disabled'}`);
+});
+
+manualSaveBtn.addEventListener('click', () => {
+  if (!currentFrame || !currentDetections) {
+    showSaveStatus('No frame available to save', 'error');
+    return;
+  }
+  socket.emit('manual_save', { 
+    frame: currentFrame, 
+    detections: currentDetections 
+  });
+  showSaveStatus('Frame saved manually', 'success');
+});
+
+exportJsonBtn.addEventListener('click', () => {
+  socket.emit('export_data', { format: 'json' });
+});
+
+exportCsvBtn.addEventListener('click', () => {
+  socket.emit('export_data', { format: 'csv' });
+});
+
+exportZipBtn.addEventListener('click', () => {
+  socket.emit('export_data', { format: 'zip' });
+});
+
+socket.on('export_ready', (data) => {
+  const link = document.createElement('a');
+  link.href = data.download_url;
+  link.download = data.filename;
+  link.click();
+  showSaveStatus(`Exported: ${data.filename}`, 'success');
+});
+
+socket.on('save_notification', (data) => {
+  showSaveStatus(data.message, data.type || 'info');
+});
+
+function showSaveStatus(message, type = 'info') {
+  saveStatus.textContent = message;
+  saveStatus.style.display = 'block';
+  
+  const colors = {
+    success: '#e8f5e9',
+    error: '#ffebee',
+    info: '#e3f2fd'
+  };
+  saveStatus.style.background = colors[type] || colors.info;
+  
+  setTimeout(() => {
+    saveStatus.style.display = 'none';
+  }, 3000);
+}

@@ -48,6 +48,23 @@
     </div>
   </div>
 
+  <div id="save-controls" style="margin: 20px 0; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <h2>Save & Export</h2>
+    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="auto-save-toggle" checked style="margin-right: 5px;">
+          <span>Auto-save flagged frames</span>
+        </label>
+      </div>
+      <button id="manual-save-btn" class="action-btn" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">📸 Save Current Frame</button>
+      <button id="export-json-btn" class="action-btn" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">📄 Export JSON</button>
+      <button id="export-csv-btn" class="action-btn" style="padding: 8px 16px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer;">📊 Export CSV</button>
+      <button id="export-zip-btn" class="action-btn" style="padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer;">📦 Export ZIP</button>
+    </div>
+    <div id="save-status" style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-radius: 4px; display: none;"></div>
+  </div>
+
   <div id="container">
     <div id="video-container">
       <!-- Display pre-annotated frame from backend (includes IDs + seat zones) -->
