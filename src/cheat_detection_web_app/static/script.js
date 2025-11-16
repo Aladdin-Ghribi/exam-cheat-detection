@@ -7,10 +7,15 @@ const seatAssignmentsDiv = document.getElementById('seat-assignments');
 const behaviorContent = document.getElementById('behavior-content');
 const scoringContent = document.getElementById('scoring-content');
 
-// Scoring thresholds
-let yawThreshold = 30;
-let pitchThreshold = 20;
-let suspicionThreshold = 50;
+// Scoring thresholds - using centralized configuration
+const CONFIG_YAW_THRESHOLD = 30; // From suspicion_config.py
+const CONFIG_PITCH_THRESHOLD = 20; // From suspicion_config.py
+const CONFIG_SUSPICION_THRESHOLD = 20; // From suspicion_config.py
+
+// These values can be updated by UI controls
+let yawThreshold = CONFIG_YAW_THRESHOLD;
+let pitchThreshold = CONFIG_PITCH_THRESHOLD;
+let suspicionThreshold = CONFIG_SUSPICION_THRESHOLD;
 
 // UI elements
 const webcamBtn = document.getElementById('webcam-btn');
@@ -271,6 +276,14 @@ document.getElementById('pitch-threshold').addEventListener('input', (e) => {
 document.getElementById('suspicion-threshold').addEventListener('input', (e) => {
   suspicionThreshold = parseInt(e.target.value);
   document.getElementById('suspicion-value').textContent = suspicionThreshold;
+
+  // Send the updated threshold to the backend
+  socket.emit('update_suspicion_threshold', { threshold: suspicionThreshold });
+
+  // Listen for confirmation from backend
+  socket.on('threshold_updated', (data) => {
+    console.log(`Suspicion threshold updated to ${data.threshold}`);
+  });
 });
 
 // --- Handle Processed Frame from Backend ---
@@ -347,7 +360,7 @@ function updateBehaviorAnalysis(detections) {
     if (behavior.head_orientation) {
       const ho = behavior.head_orientation;
       html += `<div style="margin-top: 5px;"><strong>Head Angles:</strong><br>`;
-      html += `Pitch: ${ho.pitch.toFixed(1)}° | Yaw: ${ho.yaw.toFixed(1)}° | Roll: ${ho.roll.toFixed(1)}°</div>`;
+      html += `Pitch: ${ho.pitch.toFixed(1)}° | Yaw: ${ho.yaw.toFixed(1)}°</div>`;
       
       // Alert for extreme angles
       if (Math.abs(ho.yaw) > 30 || Math.abs(ho.pitch) > 20) {

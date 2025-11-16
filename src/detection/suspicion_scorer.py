@@ -1,47 +1,40 @@
 from collections import deque
+from .suspicion_config import (
+    SUSPICION_THRESHOLD, 
+    NORMAL_GAZE_THRESHOLD, 
+    SUSPICIOUS_GAZE_THRESHOLD, 
+    HIGH_SUSPICION_GAZE_THRESHOLD, 
+    VERY_SUSPICION_GAZE_THRESHOLD,
+    HEAD_WEIGHT,
+    HANDS_FACE_WEIGHT,
+    HANDS_OBJECT_WEIGHT,
+    SMOOTHING_FACTOR,
+    HISTORY_LENGTH,
+    HIGH_RISK_OBJECTS,
+    MEDIUM_RISK_OBJECTS
+)
 
 
 class SuspicionScorer:
-    def __init__(self, history_length=10, smoothing_factor=0.6):
+    def __init__(self):
         """
-        Initialize the SuspicionScorer with balanced parameters.
-        Args:
-            history_length: Number of frames to track for smoothing
-            smoothing_factor: Smoothing factor for score transitions
+        Initialize the SuspicionScorer with centralized configuration.
         """
-        self.history_length = history_length
-        self.smoothing_factor = smoothing_factor
+        self.history_length = HISTORY_LENGTH
+        self.smoothing_factor = SMOOTHING_FACTOR
         self.history = {}
         self.orientation_baseline = {}
         self.baseline_ready_frames = 5
 
-        # Risk objects
-        self.high_risk_objects = frozenset({
-            'cell phone',
-            'cellphone',
-            'mobile phone',
-            'mobile',
-            'phone',
-            'smartphone',
-            'smart phone',
-            'iphone',
-            'android phone',
-            'book',
-            'textbook',
-            'notebook',
-            'study guide'
-        })
-        self.medium_risk_objects = frozenset({
-            'laptop',
-            'handbag',
-            'backpack'
-        })
+        # Risk objects from config
+        self.high_risk_objects = HIGH_RISK_OBJECTS
+        self.medium_risk_objects = MEDIUM_RISK_OBJECTS
 
-        # Thresholds for head orientation - FIXED: More lenient for normal gaze
-        self.normal_gaze_threshold = 15.0  # Degrees - normal forward gaze tolerance
-        self.suspicious_gaze_threshold = 30.0  # Degrees - when to start scoring higher
-        self.high_suspicious_gaze_threshold = 50.0  # Degrees - high suspicion
-        self.very_suspicious_gaze_threshold = 70.0  # Degrees - very high suspicion
+        # Thresholds for head orientation from config
+        self.normal_gaze_threshold = NORMAL_GAZE_THRESHOLD
+        self.suspicious_gaze_threshold = SUSPICIOUS_GAZE_THRESHOLD
+        self.high_suspicious_gaze_threshold = HIGH_SUSPICION_GAZE_THRESHOLD
+        self.very_suspicious_gaze_threshold = VERY_SUSPICION_GAZE_THRESHOLD
 
     def score_detection(self, detection):
         """
@@ -55,11 +48,11 @@ class SuspicionScorer:
         key = self._make_key(detection)
         components = self._compute_components(detection, behavior, key)
 
-        # Balanced weights for all components
+        # Weights from centralized configuration
         weights = {
-            'head': 0.5,          # Head orientation is most important
-            'hands_face': 0.3,    # Hand-face proximity is significant
-            'hands_object': 0.2   # Hand-object proximity complements
+            'head': HEAD_WEIGHT,          # Head orientation is most important
+            'hands_face': HANDS_FACE_WEIGHT,    # Hand-face proximity is significant
+            'hands_object': HANDS_OBJECT_WEIGHT   # Hand-object proximity complements
         }
 
         # Calculate raw score
@@ -193,7 +186,8 @@ class SuspicionScorer:
 
         yaw = float(orientation.get('yaw', 0.0))
         pitch = float(orientation.get('pitch', 0.0))
-        roll = float(orientation.get('roll', 0.0))
+        # Ignoring roll as it's stuck at -45 degrees
+        # roll = float(orientation.get('roll', 0.0))
 
         if abs(pitch) > 90:
             pitch = pitch % 180
@@ -202,46 +196,49 @@ class SuspicionScorer:
 
         extreme_yaw = abs(yaw)
         extreme_pitch = abs(pitch)
-        extreme_roll = abs(roll)
-        # for broader or narrower critical zones.
-        if extreme_yaw >= 65.0 or extreme_pitch >= 40.0 or extreme_roll >= 30.0:
+        # Removed roll from extreme position check
+        # extreme_roll = abs(roll)
+        # Only return very high scores for truly extreme positions
+        if extreme_yaw >= 80.0 or extreme_pitch >= 60.0:
             return 0.95
-        if extreme_yaw >= 16.0:  # Lower to tighten, raise to relax
-            return 0.95
+        # Removed the overly aggressive threshold that was triggering at 16.0 degrees
 
-        baseline = self._update_head_baseline(key, yaw, pitch, roll)
+        baseline = self._update_head_baseline(key, yaw, pitch, 0.0)  # Pass 0.0 for roll
 
         # Calculate deviations from baseline
         if baseline is not None and baseline.get('frames', 0) >= self.baseline_ready_frames:
             yaw_dev = abs(yaw - baseline['yaw'])
             pitch_dev = abs(pitch - baseline['pitch'])
-            roll_dev = abs(roll - baseline['roll'])
+            # Ignoring roll deviation
+            # roll_dev = abs(roll - baseline['roll'])
         else:
-            # FIXED: Use absolute values only if no baseline established
+            # Use absolute values only if no baseline established
             yaw_dev = abs(yaw)
             pitch_dev = abs(pitch)
-            roll_dev = abs(roll)
+            # Ignoring roll deviation
+            # roll_dev = abs(roll)
 
         # Calculate component scores with balanced scaling
         yaw_score = self._scale_deviation(
             yaw_dev, self.normal_gaze_threshold, self.very_suspicious_gaze_threshold)
         pitch_score = self._scale_deviation(
             pitch_dev, self.normal_gaze_threshold, self.high_suspicious_gaze_threshold)
-        roll_score = self._scale_deviation(
-            roll_dev, self.normal_gaze_threshold * 2, self.high_suspicious_gaze_threshold)
+        # Ignoring roll component
+        # roll_score = self._scale_deviation(
+        #     roll_dev, self.normal_gaze_threshold * 2, self.high_suspicious_gaze_threshold)
 
-        # Weighted combination - yaw is most important
-        score = 0.7 * yaw_score + 0.2 * pitch_score + 0.1 * roll_score
+        # Weighted combination - yaw is most important, ignoring roll
+        score = 0.75 * yaw_score + 0.25 * pitch_score  # Removed roll component
 
-        # FIXED: Apply graduated thresholds for more nuanced scoring
+        # Apply graduated thresholds for more nuanced scoring
         if yaw_dev >= self.very_suspicious_gaze_threshold or pitch_dev >= self.high_suspicious_gaze_threshold:
-            score = max(score, 0.9)
+            score = max(score, 0.8)  # Reduced from 0.9
         elif yaw_dev >= self.high_suspicious_gaze_threshold or pitch_dev >= self.suspicious_gaze_threshold:
-            score = max(score, 0.7)
+            score = max(score, 0.5)  # Reduced from 0.7
         elif yaw_dev >= self.suspicious_gaze_threshold or pitch_dev >= self.normal_gaze_threshold * 1.5:
-            score = max(score, 0.4)
+            score = max(score, 0.3)  # Reduced from 0.4
         elif yaw_dev >= self.normal_gaze_threshold:
-            score = max(score, 0.15)
+            score = max(score, 0.1)  # Reduced from 0.15
         else:
             score = min(score, 0.05)
 
@@ -276,7 +273,7 @@ class SuspicionScorer:
             key: Tracking key
             yaw: Yaw angle
             pitch: Pitch angle
-            roll: Roll angle
+            roll: Roll angle (ignored)
         Returns:
             Updated baseline or None
         """
@@ -288,7 +285,7 @@ class SuspicionScorer:
             self.orientation_baseline[key] = {
                 'yaw': yaw,
                 'pitch': pitch,
-                'roll': roll,
+                'roll': 0.0,  # Set baseline roll to 0
                 'frames': 1
             }
             return None
@@ -312,7 +309,8 @@ class SuspicionScorer:
 
         blend('yaw', yaw)
         blend('pitch', pitch)
-        blend('roll', roll)
+        # Ignoring roll baseline updates
+        # blend('roll', roll)
         baseline['frames'] = min(frames + 1, 1500)
 
         return baseline
@@ -401,7 +399,8 @@ class SuspicionScorer:
                 label_norm = None
 
             if label_norm and label_norm in self.high_risk_objects:
-                return 1.0
+                # Ensure high-risk objects get a very high score that converts to 100/100
+                return 0.99  # Slightly less than 1.0 to avoid rounding issues
 
             if distance is None:
                 continue
