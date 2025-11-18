@@ -1,21 +1,19 @@
 import os
 import sys
 import math
+import time
 import torch
 sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
 import cv2
 from ultralytics import YOLO
-from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU
+from config import YOLO_MODEL, YOLO_MODEL_OPTIONS, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU, IMG_SIZE_NANO, ENABLE_FRAME_SKIPPING, FRAME_SKIP_THRESHOLD_MS, MAX_FRAME_SKIP
 from .object_tracker import ObjectTracker
 from .exam_seat_manager import ExamSeatManager
 from .pose_detector import PoseDetector
 from .flagged_evidence_saver import FlaggedEvidenceSaver
 from .suspicion_scorer import SuspicionScorer
-
-
-
 
 CHEATING_RELATED_CLASSES = {
   'cell_phone' : 67,
@@ -23,22 +21,27 @@ CHEATING_RELATED_CLASSES = {
   'laptop' : 63,
   'backpack' : 24,
   'handbag': 26,
-#   'seat' : 56
-  }
-
-
+}
 
 PERSON_CLASS_ID = 0
+
 class YOLODetector:
-    def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=True, enable_pose=True, room_config=None):
+    def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=True, enable_pose=True, room_config=None, model_size="medium"):
         self.model = YOLO(model_path)
-        # Auto-detect device (cuda if available, else cpu)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        # Use larger size for GPU, smaller for CPU
-        self.img_size = IMG_SIZE_GPU if self.device == 'cuda' else IMG_SIZE_CPU
-        self.target_class_ids= [PERSON_CLASS_ID] + list(CHEATING_RELATED_CLASSES.values())
-        # now accessible via detector.CHEATING_RELATED_CLASSES
+        self.model_size = model_size
+        self.img_size = self._get_img_size()
+        self.target_class_ids = [PERSON_CLASS_ID] + list(CHEATING_RELATED_CLASSES.values())
         self.CHEATING_RELATED_CLASSES = CHEATING_RELATED_CLASSES
+        
+        # Frame skipping for performance
+        self.frame_count = 0
+        self.skip_frames = 0
+        self.last_process_time = 0
+        self.enable_frame_skipping = ENABLE_FRAME_SKIPPING
+        self.frame_skip_threshold = FRAME_SKIP_THRESHOLD_MS
+        self.max_frame_skip = MAX_FRAME_SKIP
+        self.last_detections = None
 
         # Initialize tracker and seat manager if enabled
         self.enable_tracking = enable_tracking
@@ -52,23 +55,44 @@ class YOLODetector:
         if self.enable_seat_mapping:
             self.seat_manager = ExamSeatManager()
 
-        # Initialize pose detector if enabled
         if self.enable_pose:
             self.pose_detector = PoseDetector(
-                model_complexity=0,  # Fastest model
-                min_detection_confidence=0.4,  # Lower for better detection
-                min_tracking_confidence=0.4,   # Lower for better tracking
-                smoothing_factor=0.7,           # Reduced for more responsive detection
-                history_length=10                # Increased for more stable tracking
+                model_complexity=0,
+                min_detection_confidence=0.4,
+                min_tracking_confidence=0.4,
+                smoothing_factor=0.7,
+                history_length=10
             )
-            # Use centralized configuration for suspicion scorer
             self.suspicion_scorer = SuspicionScorer()
 
-        # Initialize evidence saver for flagged events
         self.evidence_saver = FlaggedEvidenceSaver()
-
-        # Initialize auto-save flag
         self.auto_save_enabled = True
+
+    def _get_img_size(self):
+        """Get appropriate image size based on model size and device."""
+        if self.model_size == "nano":
+            return IMG_SIZE_NANO
+        elif self.model_size == "small":
+            return IMG_SIZE_CPU
+        else:  # medium
+            return IMG_SIZE_GPU if self.device == 'cuda' else IMG_SIZE_CPU
+
+    def switch_model(self, model_size):
+        """Switch to a different YOLO model size."""
+        if model_size not in YOLO_MODEL_OPTIONS:
+            print(f"Invalid model size. Options: {list(YOLO_MODEL_OPTIONS.keys())}")
+            return False
+        
+        model_path = YOLO_MODEL_OPTIONS[model_size]
+        if not os.path.exists(model_path):
+            print(f"Model file not found: {model_path}")
+            return False
+        
+        self.model = YOLO(model_path)
+        self.model_size = model_size
+        self.img_size = self._get_img_size()
+        print(f"Switched to {model_size} model ({model_path})")
+        return True
 
     def detect(self, source, save_image=False, save_path=None):
         results = self.model.predict(
@@ -99,15 +123,16 @@ class YOLODetector:
                         })
             yield detections, r.orig_img
 
-
-    # ✅ NEW: Method for single-frame detection (used by Flask)
     def detect_frame(self, frame):
-        """
-        Run detection on a single frame (NumPy array).
-        Returns: dictionary with:
-        - 'detections': list of detection dicts
-        - 'seat_assignments': dict mapping seat_index -> track_id (if seat mapping enabled)
-        """
+        """Run detection on a single frame with frame skipping support."""
+        start_time = time.time()
+        self.frame_count += 1
+
+        # Check if we should skip this frame
+        if self.enable_frame_skipping and self.skip_frames > 0:
+            self.skip_frames -= 1
+            return self.last_detections if self.last_detections else {'detections': [], 'seat_assignments': None}
+
         results = self.model.predict(
             source=frame,
             conf=CONFIDENCE_THRESHOLD,
@@ -135,29 +160,18 @@ class YOLODetector:
                         'bbox': [x1, y1, x2, y2]
                     }
 
-                    # Add pose data if person detection and pose is enabled
                     if cls_id == PERSON_CLASS_ID and self.enable_pose:
-                        # Crop person from frame
                         person_img = frame[int(y1):int(y2), int(x1):int(x2)]
-
-                        # Skip if crop is invalid
                         if person_img.size > 0:
-                            # Get track ID if available
                             track_id = None
-
-                            # Detect pose for this person
                             pose_result = self.pose_detector.detect(person_img, track_id)
-
-                            # Add pose data to detection
                             detection['pose'] = pose_result
 
                     detections.append(detection)
 
-        # Apply tracking if enabled
         if self.enable_tracking:
             detections = self.tracker.update(detections)
 
-        # Get seat assignments if enabled
         seat_assignments = None
         if self.enable_seat_mapping:
             seat_result = self.seat_manager.update(detections)
@@ -166,14 +180,24 @@ class YOLODetector:
         if self.enable_pose:
             self._annotate_behavior(detections)
 
-        # Save flagged evidence if suspicion threshold exceeded and auto-save is enabled
         if self.auto_save_enabled:
             self.evidence_saver.process_frame(frame, detections)
 
-        return {
+        result = {
             'detections': detections,
             'seat_assignments': seat_assignments
         }
+        
+        self.last_detections = result
+
+        # Check processing time and enable frame skipping if needed
+        process_time = (time.time() - start_time) * 1000
+        self.last_process_time = process_time
+        
+        if self.enable_frame_skipping and process_time > self.frame_skip_threshold:
+            self.skip_frames = min(self.max_frame_skip, int(process_time / self.frame_skip_threshold))
+
+        return result
 
     def _annotate_behavior(self, detections):
         object_detections = [det for det in detections if det['class_id'] != PERSON_CLASS_ID]
@@ -300,74 +324,53 @@ class YOLODetector:
         return str(class_id)
 
     def draw_detections(self, frame, detection_result):
-        """
-        Draw detections, tracking IDs, and seat assignments on the frame.
-
-        Args:
-            frame: Input frame
-            detection_result: Dictionary returned by detect_frame
-
-        Returns:
-            Frame with annotations drawn
-        """
         annotated_frame = frame.copy()
         detections = detection_result['detections']
         seat_assignments = detection_result.get('seat_assignments')
 
-        # Draw seat map if available
         if self.enable_seat_mapping and seat_assignments is not None:
             annotated_frame = self.seat_manager.draw_zones(annotated_frame, seat_assignments)
 
-        # Draw detections with tracking IDs
         for det in detections:
             x1, y1, x2, y2 = map(int, det['bbox'])
             label = f"{self.model.names[det['class_id']]} {det['confidence']:.2f}"
 
-            # Add tracking ID if available
             if 'track_id' in det:
                 label = f"[ID:{det['track_id']}] {label}"
-                color = (0, 0, 255)  # Red for tracked persons
+                color = (0, 0, 255)
 
-                # Draw stable position if available
                 if 'stable_position' in det:
                     cx, cy = det['stable_position']
-                    # Draw a larger, more visible point
-                    cv2.circle(annotated_frame, (cx, cy), 8, (255, 255, 0), -1)  # Yellow circle
-                    cv2.circle(annotated_frame, (cx, cy), 8, (0, 0, 0), 2)  # Black border
+                    cv2.circle(annotated_frame, (cx, cy), 8, (255, 255, 0), -1)
+                    cv2.circle(annotated_frame, (cx, cy), 8, (0, 0, 0), 2)
             else:
-                color = (0, 255, 0)  # Green for untracked objects
+                color = (0, 255, 0)
 
-            # Draw bounding box
             cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
 
-            # Draw pose skeleton if available and enabled
             if 'pose' in det and self.enable_pose and det['pose']['success']:
-                # Draw pose skeleton on person in original frame
                 pose_result = det['pose']
 
-                # Draw pose landmarks
                 if pose_result['head']:
                     for landmark in pose_result['head']:
                         x = int(x1 + landmark['x'] * (x2 - x1))
                         y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (0, 0, 255), -1)  # Red for head
+                        cv2.circle(annotated_frame, (x, y), 5, (0, 0, 255), -1)
 
                 if pose_result['shoulders']:
                     for landmark in pose_result['shoulders']:
                         x = int(x1 + landmark['x'] * (x2 - x1))
                         y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (0, 255, 0), -1)  # Green for shoulders
+                        cv2.circle(annotated_frame, (x, y), 5, (0, 255, 0), -1)
 
                 if pose_result['hands']:
                     for landmark in pose_result['hands']:
                         x = int(x1 + landmark['x'] * (x2 - x1))
                         y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (255, 0, 0), -1)  # Blue for hands
+                        cv2.circle(annotated_frame, (x, y), 5, (255, 0, 0), -1)
 
-                # Draw pose skeleton connections
                 person_img = frame[int(y1):int(y2), int(x1):int(x2)]
                 if person_img.size > 0:
-                    # Draw connections on a temporary image
                     import numpy as np
                     temp_img = np.zeros_like(person_img)
                     skeleton_img = self.pose_detector.draw_landmarks(
@@ -376,11 +379,9 @@ class YOLODetector:
                         connections=True
                     )
 
-                    # Overlay skeleton on original frame
                     mask = skeleton_img > 0
                     annotated_frame[y1:y2, x1:x2][mask] = skeleton_img[mask]
 
-            # Draw label
             (text_width, text_height), baseline = cv2.getTextSize(
                 label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
             cv2.rectangle(annotated_frame, (x1, y1 - text_height - baseline),
@@ -391,32 +392,25 @@ class YOLODetector:
         return annotated_frame
 
     def get_room_map(self, seat_assignments=None):
-        """
-        Get a room map visualization.
-
-        Args:
-            seat_assignments: Dictionary mapping seat_index -> track_id
-
-        Returns:
-            Room map as an image
-        """
         if not self.enable_seat_mapping:
             return None
 
-        # Create a blank room map
         import numpy as np
         room_map = np.zeros((self.seat_manager.room_height, self.seat_manager.room_width, 3), dtype=np.uint8)
 
-        # Draw zones
         return self.seat_manager.draw_zones(room_map, seat_assignments)
 
     def set_auto_save(self, enabled):
-        """
-        Enable or disable auto-save functionality.
-
-        Args:
-            enabled: Boolean indicating whether to enable auto-save
-        """
         self.auto_save_enabled = enabled
         if hasattr(self, 'evidence_saver'):
             self.evidence_saver.auto_save_enabled = enabled
+
+    def get_performance_stats(self):
+        """Get current performance statistics."""
+        return {
+            'model_size': self.model_size,
+            'device': self.device,
+            'last_process_time_ms': self.last_process_time,
+            'frame_count': self.frame_count,
+            'skip_frames_active': self.skip_frames
+        }
