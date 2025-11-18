@@ -7,14 +7,25 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 SAMPLES_DIR = os.path.join(DATA_DIR, "samples")
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output")
 
-# Model
-YOLO_MODEL = "yolo11m.pt"   
+# Model Selection
+YOLO_MODEL = "yolo11m.pt"
+YOLO_MODEL_OPTIONS = {
+    "nano": "yolo11n.pt",
+    "small": "yolo11s.pt",
+    "medium": "yolo11m.pt"
+}
 
 # Inference
-CONFIDENCE_THRESHOLD = 0.5
-IMG_SIZE_GPU = 1344  # For GPU systems (RTX 3070, etc.)
-IMG_SIZE_CPU = 640   # For CPU-only systems (i5 8th gen, etc.)
+CONFIDENCE_THRESHOLD = 0.4
+IMG_SIZE_GPU = 1344
+IMG_SIZE_CPU = 728
+IMG_SIZE_NANO = 640
 USE_HALF_PRECISION = False
+
+# Performance Optimization
+ENABLE_FRAME_SKIPPING = True
+FRAME_SKIP_THRESHOLD_MS = 100
+MAX_FRAME_SKIP = 3
 
 # Ensure dirs exist
 os.makedirs(OUTPUT_DIR, exist_ok=True)

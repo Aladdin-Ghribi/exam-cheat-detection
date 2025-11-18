@@ -23,6 +23,29 @@
     </div>
   </div>
 
+  <div id="performance-controls" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+    <h2>Performance Settings</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+      <div>
+        <label>Model Size:</label>
+        <select id="model-size" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+          <option value="nano">Nano (Fastest)</option>
+          <option value="small">Small (Fast)</option>
+          <option value="medium" selected>Medium (Balanced)</option>
+        </select>
+      </div>
+      <div>
+        <label>
+          <input type="checkbox" id="frame-skip-toggle" checked>
+          Enable Frame Skipping
+        </label>
+      </div>
+    </div>
+    <div id="perf-stats" style="margin-top: 10px; padding: 8px; background: white; border-radius: 4px; font-size: 12px;">
+      Processing: <span id="process-time">0</span>ms | Frames: <span id="frame-count">0</span>
+    </div>
+  </div>
+
   <div id="pose-controls">
     <h2>Pose Controls</h2>
     <div class="pose-options">
@@ -67,14 +90,12 @@
 
   <div id="container">
     <div id="video-container">
-      <!-- Display pre-annotated frame from backend (includes IDs + seat zones) -->
       <img id="annotated-feed" src="" alt="Annotated Video Feed" style="width:100%; display:none;">
       <canvas id="displayCanvas" width="640" height="480"></canvas>
     </div>
     <div id="metrics-container">
       <h2>Detection Metrics</h2>
       <div id="metrics-content">
-        <!-- Metrics will be updated here -->
       </div>
       <div id="seat-map-info" style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px;">
         <h3>Seat Assignments</h3>

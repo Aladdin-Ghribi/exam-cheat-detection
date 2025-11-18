@@ -18,22 +18,19 @@ import csv
 import zipfile
 from datetime import datetime
 
-# Add project root to sys.path so we can import config and src modules
 PROJECT_ROOT = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
-# Create a temporary directory for uploaded files
 UPLOAD_FOLDER = tempfile.mkdtemp()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Initialize detector ONCE at startup (not per request!)
 print("Initializing YOLODetector...")
 detector = YOLODetector()
-detector.auto_save_enabled = True  # Enable auto-save by default
+detector.auto_save_enabled = True
 print("YOLODetector ready.")
 
 @socketio.on('connect')
@@ -47,42 +44,31 @@ def handle_disconnect():
 @socketio.on('video_frame')
 def handle_video_frame(data):
     try:
-        # Get pose_enabled flag if present, default to True
         pose_enabled = data.get('pose_enabled', True)
-        
-        # Store original pose state
         original_pose_state = detector.enable_pose if hasattr(detector, 'enable_pose') else True
         
-        # Temporarily set pose detection based on frontend flag
         if hasattr(detector, 'enable_pose'):
             detector.enable_pose = pose_enabled
         
-        # Decode frame
         if isinstance(data, str):
-            # Legacy format - just the image data
             header, encoded = data.split(',', 1)
         else:
-            # New format - data is an object with image field
             header, encoded = data['image'].split(',', 1)
         
         nparr = np.frombuffer(base64.b64decode(encoded), np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             print("Error: Could not decode image frame from frontend.")
-            # Restore original pose state before returning
             if hasattr(detector, 'enable_pose'):
                 detector.enable_pose = original_pose_state
             return
 
-        # Use detect_frame to get detections + seat assignments
         detection_result = detector.detect_frame(frame)
         
-        # Auto-save if enabled and suspicion threshold exceeded
         if hasattr(detector, 'auto_save_enabled') and detector.auto_save_enabled:
             if hasattr(detector, 'evidence_saver'):
                 detector.evidence_saver.process_frame(frame, detection_result['detections'])
         
-        # Sanitize detections (convert NumPy types to Python native types)
         raw_detections = detection_result['detections']
         detections = []
         for det in raw_detections:
@@ -91,42 +77,38 @@ def handle_video_frame(data):
                 'confidence': float(det['confidence']),
                 'bbox': [float(x) for x in det['bbox']]
             }
-            # Include behavior data if available
             if 'behavior' in det:
                 sanitized['behavior'] = det['behavior']
             if 'track_id' in det:
                 sanitized['track_id'] = int(det['track_id'])
             detections.append(sanitized)
 
-        # Sanitize seat assignments
         raw_seat_assignments = detection_result.get('seat_assignments', {})
         seat_assignments = {
             int(k): int(v) for k, v in raw_seat_assignments.items()
         } if raw_seat_assignments else {}
-        print("Seat Assignments:", seat_assignments)
 
-        # Use built-in draw_detections for consistent styling
         annotated_frame = detector.draw_detections(frame, detection_result)
 
-        # Encode and send back
         _, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         annotated_frame_encoded = base64.b64encode(buffer).decode('utf-8')
 
-        # Metrics
         class_counts = {}
         for det in detections:
             class_name = detector.model.names[det['class_id']]
             if class_name in detector.CHEATING_RELATED_CLASSES:
                 class_counts[class_name] = class_counts.get(class_name, 0) + 1
 
+        perf_stats = detector.get_performance_stats()
+
         emit('processed_frame', {
             'annotated_frame': annotated_frame_encoded,
             'detections': detections,
             'seat_assignments': seat_assignments,
-            'metrics': class_counts
+            'metrics': class_counts,
+            'performance_stats': perf_stats
         })
         
-        # Restore original pose state after processing
         if hasattr(detector, 'enable_pose'):
             detector.enable_pose = original_pose_state
 
@@ -134,7 +116,6 @@ def handle_video_frame(data):
         print(f"Error in handle_video_frame: {e}")
         import traceback
         traceback.print_exc()
-        # Restore original pose state in case of error
         if hasattr(detector, 'enable_pose'):
             detector.enable_pose = original_pose_state
 
@@ -151,15 +132,12 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
-    # Generate a unique filename to avoid conflicts
     file_ext = os.path.splitext(str(file.filename))[1]
     unique_filename = str(uuid.uuid4()) + file_ext
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
 
-    # Save the file
     file.save(file_path)
 
-    # Return the file path for processing
     return jsonify({
         'success': True,
         'file_path': file_path,
@@ -182,7 +160,6 @@ def process_file():
 
             detection_result = detector.detect_frame(img)
             
-            # Sanitize detections
             raw_detections = detection_result['detections']
             detections = []
             for det in raw_detections:
@@ -191,14 +168,12 @@ def process_file():
                     'confidence': float(det['confidence']),
                     'bbox': [float(x) for x in det['bbox']]
                 }
-                # Include behavior data if available
                 if 'behavior' in det:
                     sanitized['behavior'] = det['behavior']
                 if 'track_id' in det:
                     sanitized['track_id'] = int(det['track_id'])
                 detections.append(sanitized)
 
-            # Sanitize seat assignments
             raw_seat_assignments = detection_result.get('seat_assignments', {})
             seat_assignments = {
                 int(k): int(v) for k, v in raw_seat_assignments.items()
@@ -230,10 +205,8 @@ def process_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Socket event handler for updating suspicion threshold
 @socketio.on('update_suspicion_threshold')
 def update_suspicion_threshold(data):
-    """Update the suspicion threshold in the evidence saver"""
     threshold = data.get('threshold', 20)
     detector.evidence_saver.suspicion_threshold = threshold
     print(f"Updated suspicion threshold to: {threshold}")
@@ -241,18 +214,28 @@ def update_suspicion_threshold(data):
 
 @socketio.on('toggle_auto_save')
 def toggle_auto_save(data):
-    """Toggle auto-save functionality"""
     enabled = data.get('enabled', True)
-
-    # Use the new set_auto_save method to ensure synchronization
     detector.set_auto_save(enabled)
-
     print(f"Auto-save {'enabled' if enabled else 'disabled'}")
     emit('save_notification', {'message': f"Auto-save {'enabled' if enabled else 'disabled'}", 'type': 'info'})
 
+@socketio.on('switch_model')
+def switch_model(data):
+    model_size = data.get('model_size', 'medium')
+    if detector.switch_model(model_size):
+        emit('save_notification', {'message': f'Switched to {model_size} model', 'type': 'success'})
+    else:
+        emit('save_notification', {'message': f'Failed to switch to {model_size} model', 'type': 'error'})
+
+@socketio.on('toggle_frame_skipping')
+def toggle_frame_skipping(data):
+    enabled = data.get('enabled', True)
+    detector.enable_frame_skipping = enabled
+    print(f"Frame skipping {'enabled' if enabled else 'disabled'}")
+    emit('save_notification', {'message': f"Frame skipping {'enabled' if enabled else 'disabled'}", 'type': 'info'})
+
 @socketio.on('manual_save')
 def manual_save(data):
-    """Manually save current frame"""
     try:
         frame_b64 = data.get('frame')
         detections = data.get('detections', [])
@@ -276,7 +259,6 @@ def manual_save(data):
 
 @socketio.on('export_data')
 def export_data(data):
-    """Export flagged events in requested format"""
     try:
         format_type = data.get('format', 'json')
         events = detector.evidence_saver.get_recent_events(limit=100)
@@ -329,7 +311,6 @@ def export_data(data):
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    """Serve exported file for download"""
     filepath = os.path.join(tempfile.gettempdir(), filename)
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True, download_name=filename)
@@ -337,5 +318,3 @@ def download_file(filename):
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
-    # For deployment with SSL, uncomment and configure:
-    # socketio.run(app, host='0.0.0.0', port=5000, ssl_context=('cert.pem', 'key.pem'))
