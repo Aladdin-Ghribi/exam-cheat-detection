@@ -383,7 +383,8 @@ class ExamSeatManager:
                 'bottom_right': (center[0] + zone_data.get('width', self.zone_width) // 2, center[1] + zone_data.get('height', self.zone_height) // 2)
             }
 
-        # Update next zone        if self.zones:
+        # Update next zone ID
+        if self.zones:
             self.next_zone_id = max(self.zones.keys()) + 1
 
         return True

@@ -163,8 +163,7 @@ def upload_file():
     return jsonify({
         'success': True,
         'file_path': file_path,
-        'file_type': 'video' if file_ext.lower() in ['.cls'
-        'mp4', '.avi', '.mov'] else 'image'
+        'file_type': 'video' if file_ext.lower() in ['.mp4', '.avi', '.mov'] else 'image'
     })
 
 @app.route('/process_file', methods=['POST'])
@@ -244,7 +243,10 @@ def update_suspicion_threshold(data):
 def toggle_auto_save(data):
     """Toggle auto-save functionality"""
     enabled = data.get('enabled', True)
-    detector.auto_save_enabled = enabled
+
+    # Use the new set_auto_save method to ensure synchronization
+    detector.set_auto_save(enabled)
+
     print(f"Auto-save {'enabled' if enabled else 'disabled'}")
     emit('save_notification', {'message': f"Auto-save {'enabled' if enabled else 'disabled'}", 'type': 'info'})
 
@@ -334,8 +336,6 @@ def download_file(filename):
     return jsonify({'error': 'File not found'}), 404
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000) # For local testing without SSL
-    # socketio.run(app, host='0.0.0.0', port=5000,                  # For deployment with SSL
-    #              ssl_context=('cert.pem', 'key.pem'))            # Replace cert.pem and key.pem with your actual certificate and private key files.
- 
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    # For deployment with SSL, uncomment and configure:
+    # socketio.run(app, host='0.0.0.0', port=5000, ssl_context=('cert.pem', 'key.pem'))
