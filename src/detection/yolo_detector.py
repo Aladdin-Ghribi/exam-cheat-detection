@@ -67,6 +67,9 @@ class YOLODetector:
         # Initialize evidence saver for flagged events
         self.evidence_saver = FlaggedEvidenceSaver()
 
+        # Initialize auto-save flag
+        self.auto_save_enabled = True
+
     def detect(self, source, save_image=False, save_path=None):
         results = self.model.predict(
             source=source,
@@ -163,8 +166,9 @@ class YOLODetector:
         if self.enable_pose:
             self._annotate_behavior(detections)
 
-        # Save flagged evidence if suspicion threshold exceeded
-        self.evidence_saver.process_frame(frame, detections)
+        # Save flagged evidence if suspicion threshold exceeded and auto-save is enabled
+        if self.auto_save_enabled:
+            self.evidence_saver.process_frame(frame, detections)
 
         return {
             'detections': detections,
@@ -405,3 +409,14 @@ class YOLODetector:
 
         # Draw zones
         return self.seat_manager.draw_zones(room_map, seat_assignments)
+
+    def set_auto_save(self, enabled):
+        """
+        Enable or disable auto-save functionality.
+
+        Args:
+            enabled: Boolean indicating whether to enable auto-save
+        """
+        self.auto_save_enabled = enabled
+        if hasattr(self, 'evidence_saver'):
+            self.evidence_saver.auto_save_enabled = enabled

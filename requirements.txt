@@ -4,3 +4,7 @@ opencv-python
 torch>=1.8
 numpy
 mediapipe
+flask
+flask-socketio
+pillow
+scipy

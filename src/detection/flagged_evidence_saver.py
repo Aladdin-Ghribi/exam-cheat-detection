@@ -31,6 +31,7 @@ class FlaggedEvidenceSaver:
         self.suspicion_threshold = suspicion_threshold
         self.max_retention_days = max_retention_days
         self.max_saved_events = max_saved_events
+        self.auto_save_enabled = True  # Enable auto-save by default
 
         # Create output directory if it doesn't exist
         os.makedirs(self.output_dir, exist_ok=True)
@@ -50,6 +51,10 @@ class FlaggedEvidenceSaver:
             detections: List of detection dictionaries with behavior.suspicion.smoothed
             timestamp: Optional timestamp, defaults to current time
         """
+        # Check if auto-save is enabled
+        if not self.auto_save_enabled:
+            return
+
         if timestamp is None:
             timestamp = datetime.now()
 
@@ -342,8 +347,17 @@ class FlaggedEvidenceSaver:
         if timestamp is None:
             timestamp = datetime.now()
 
+        # Store current auto_save state
+        original_auto_save = self.auto_save_enabled
+
+        # Temporarily enable auto-save to allow manual save
+        self.auto_save_enabled = True
+
         # Force save with high suspicion score
         self._save_evidence(frame, detections, timestamp, 1.0)
+
+        # Restore original auto_save state
+        self.auto_save_enabled = original_auto_save
 
         # Update metadata with manual reason
         event_dir = os.path.join(self.output_dir, self.saved_events[-1]['event_id'])
