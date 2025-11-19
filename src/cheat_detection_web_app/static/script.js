@@ -20,7 +20,11 @@ const fileUploadInput = document.getElementById('file-upload');
 const fileInfo = document.getElementById('file-info');
 const fileName = document.getElementById('file-name');
 const resetBtn = document.getElementById('reset-btn');
-const togglePoseBtn = document.getElementById('toggle-pose-btn');
+const togglePoseBtn = document.getElementById('toggle-pose-check');
+const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+const settingsPanel = document.getElementById('settings-panel');
+const filterSeverity = document.getElementById('filter-severity');
+const filterStudent = document.getElementById('filter-student');
 const modelSizeSelect = document.getElementById('model-size');
 const frameSkipToggle = document.getElementById('frame-skip-toggle');
 const processTimeSpan = document.getElementById('process-time');
@@ -38,6 +42,9 @@ let autoSaveEnabled = true;
 let currentFrame = null;
 let currentDetections = null;
 let frameCount = 0;
+let eventLogEntries = [];
+let allEventLogEntries = [];
+let activeStudents = new Set();
 
 async function startWebcam() {
   try {
@@ -223,9 +230,20 @@ resetBtn.addEventListener('click', () => {
   sourceType = 'webcam';
 });
 
-togglePoseBtn.addEventListener('click', () => {
-  poseEnabled = !poseEnabled;
-  togglePoseBtn.textContent = poseEnabled ? 'Hide Pose' : 'Show Pose';
+settingsToggleBtn.addEventListener('click', () => {
+  settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+});
+
+togglePoseBtn.addEventListener('change', (e) => {
+  poseEnabled = e.target.checked;
+});
+
+filterSeverity.addEventListener('change', () => {
+  applyEventFilters();
+});
+
+filterStudent.addEventListener('change', () => {
+  applyEventFilters();
 });
 
 modelSizeSelect.addEventListener('change', (e) => {
@@ -273,6 +291,8 @@ socket.on('processed_frame', (data) => {
     displayCtx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
     updateMetrics(data.metrics);
     updateSeatAssignments(data.seat_assignments);
+    updateSeatMap(data.seat_map_data);
+    updateEventLog(data.flagged_events);
     updateBehaviorAnalysis(data.detections);
     updateSuspicionScores(data.detections);
     
@@ -569,3 +589,133 @@ function showSaveStatus(message, type = 'info') {
     saveStatus.style.display = 'none';
   }, 3000);
 }
+
+function updateSeatMap(seatMapData) {
+  const seatMapGrid = document.getElementById('seat-map-grid');
+  if (!seatMapGrid) return;
+  
+  if (!seatMapData || seatMapData.length === 0) {
+    seatMapGrid.innerHTML = '<div style="text-align: center; color: #999; padding: 20px; grid-column: 1/-1;">No students detected</div>';
+    return;
+  }
+  
+  let html = '';
+  seatMapData.forEach(student => {
+    const bgColor = student.status === 'flagged' ? '#FFC107' : '#4CAF50';
+    const textColor = student.status === 'flagged' ? '#000' : '#fff';
+    const icon = student.status === 'flagged' ? '⚠️' : '✅';
+    const seatLabel = student.seat_id !== null && student.seat_id !== undefined ? `Seat ${student.seat_id}` : 'Unassigned';
+    
+    html += `
+      <div style="
+        background: ${bgColor};
+        color: ${textColor};
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+        cursor: pointer;
+      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <div style="font-size: 24px; margin-bottom: 5px;">${icon}</div>
+        <div style="font-weight: bold; font-size: 16px;">ID ${student.track_id}</div>
+        <div style="font-size: 12px; margin-top: 3px; opacity: 0.9;">${seatLabel}</div>
+        <div style="font-size: 11px; margin-top: 5px; padding: 3px; background: rgba(0,0,0,0.1); border-radius: 3px;">
+          Score: ${student.suspicion_score}/100
+        </div>
+      </div>
+    `;
+  });
+  
+  seatMapGrid.innerHTML = html;
+}
+
+function updateEventLog(flaggedEvents) {
+  const eventLog = document.getElementById('event-log');
+  if (!eventLog) return;
+  
+  if (flaggedEvents && flaggedEvents.length > 0) {
+    flaggedEvents.forEach(event => {
+      const isDuplicate = allEventLogEntries.some(e => 
+        e.track_id === event.track_id && 
+        e.timestamp === event.timestamp && 
+        e.description === event.description
+      );
+      
+      if (!isDuplicate) {
+        allEventLogEntries.unshift(event);
+        activeStudents.add(event.track_id);
+        if (allEventLogEntries.length > 50) allEventLogEntries.pop();
+      }
+    });
+    updateStudentFilter();
+  }
+  
+  applyEventFilters();
+}
+
+function updateStudentFilter() {
+  const currentValue = filterStudent.value;
+  filterStudent.innerHTML = '<option value="all">All Students</option>';
+  Array.from(activeStudents).sort((a, b) => a - b).forEach(id => {
+    filterStudent.innerHTML += `<option value="${id}">Student ID ${id}</option>`;
+  });
+  filterStudent.value = currentValue;
+}
+
+function applyEventFilters() {
+  const eventLog = document.getElementById('event-log');
+  const severityFilter = filterSeverity.value;
+  const studentFilter = filterStudent.value;
+  
+  let filtered = allEventLogEntries.filter(event => {
+    if (studentFilter !== 'all' && event.track_id != studentFilter) return false;
+    if (severityFilter === 'high' && event.score < 60) return false;
+    if (severityFilter === 'medium' && (event.score < 40 || event.score >= 60)) return false;
+    if (severityFilter === 'low' && (event.score < 20 || event.score >= 40)) return false;
+    return true;
+  });
+  
+  if (filtered.length === 0) {
+    eventLog.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">No events match filters</div>';
+    return;
+  }
+  
+  let html = '';
+  filtered.forEach((event, index) => {
+    const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
+    html += `
+      <div style="
+        padding: 15px;
+        margin-bottom: 10px;
+        background: ${bgColor};
+        border-left: 4px solid #f44336;
+        border-radius: 4px;
+        line-height: 1.6;
+      ">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-weight: bold; color: #333; font-size: 14px;">Student ID ${event.track_id}</span>
+          <span style="color: #666; font-size: 12px;">${event.timestamp}</span>
+        </div>
+        <div style="color: #555; font-size: 13px; margin-bottom: 5px;">${event.description}</div>
+        <div style="display: inline-block; padding: 3px 8px; background: #ffebee; color: #d32f2f; border-radius: 3px; font-size: 11px; font-weight: bold;">
+          Score: ${event.score}/100
+        </div>
+      </div>
+    `;
+  });
+  
+  eventLog.innerHTML = html;
+}
+
+settingsToggleBtn.addEventListener('mouseover', () => {
+  settingsToggleBtn.style.background = '#3498db';
+  settingsToggleBtn.style.color = 'white';
+  settingsToggleBtn.style.transform = 'translateY(-2px)';
+});
+
+settingsToggleBtn.addEventListener('mouseout', () => {
+  settingsToggleBtn.style.background = 'white';
+  settingsToggleBtn.style.color = '#2c3e50';
+  settingsToggleBtn.style.transform = 'translateY(0)';
+});
