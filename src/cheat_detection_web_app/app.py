@@ -79,6 +79,10 @@ def handle_video_frame(data):
             }
             if 'behavior' in det:
                 sanitized['behavior'] = det['behavior']
+                # Convert suspicion score to 0-100 scale
+                if 'suspicion' in sanitized['behavior']:
+                    suspicion = sanitized['behavior']['suspicion']
+                    suspicion['suspicion_score_100'] = int(suspicion.get('smoothed', 0) * 100)
             if 'track_id' in det:
                 sanitized['track_id'] = int(det['track_id'])
             detections.append(sanitized)
@@ -101,6 +105,26 @@ def handle_video_frame(data):
 
         perf_stats = detector.get_performance_stats()
 
+        # Store latest data globally and log flagged events
+        global latest_data, event_log
+        latest_data = {
+            'detections': detections,
+            'seat_assignments': seat_assignments,
+            'annotated_frame': annotated_frame_encoded
+        }
+        
+        # Log flagged incidents
+        for det in detections:
+            if det.get('behavior', {}).get('suspicion', {}).get('smoothed', 0) * 100 >= 20:
+                event_log.append({
+                    'timestamp': datetime.now().strftime('%H:%M:%S'),
+                    'student_id': det.get('track_id', 'Unknown'),
+                    'score': int(det['behavior']['suspicion']['smoothed'] * 100),
+                    'description': get_incident_description(det)
+                })
+                if len(event_log) > 50:  # Keep only last 50 events
+                    event_log.pop(0)
+        
         emit('processed_frame', {
             'annotated_frame': annotated_frame_encoded,
             'detections': detections,
@@ -122,6 +146,70 @@ def handle_video_frame(data):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# Global variable to store latest detection data
+latest_data = {'detections': [], 'seat_assignments': {}, 'annotated_frame': None}
+event_log = []
+
+def get_incident_description(detection):
+    reasons = []
+    behavior = detection.get('behavior', {})
+    
+    if behavior.get('head_orientation'):
+        ho = behavior['head_orientation']
+        if abs(ho['yaw']) > 30:
+            reasons.append(f"Head turned {abs(ho['yaw']):.0f}°")
+        if abs(ho['pitch']) > 20:
+            reasons.append(f"Head tilted {abs(ho['pitch']):.0f}°")
+    
+    if behavior.get('hands'):
+        for side in ['left', 'right']:
+            hand = behavior['hands'].get(side, {})
+            if hand.get('near_object') and hand.get('object_class'):
+                reasons.append(f"{side.title()} hand near {hand['object_class']}")
+            elif hand.get('near_face'):
+                reasons.append(f"{side.title()} hand near face")
+    
+    return ', '.join(reasons) if reasons else 'Suspicious behavior detected'
+
+@app.route('/api/current_data')
+def get_current_data():
+    global event_log
+    data = latest_data.copy()
+    data['event_log'] = event_log[-10:]  # Last 10 events
+    data['has_active_session'] = bool(data.get('annotated_frame'))
+    return jsonify(data)
+
+@app.route('/api/event_log')
+def get_event_log():
+    global event_log
+    return jsonify({
+        'events': event_log,
+        'total_count': len(event_log)
+    })
+
+@app.route('/api/seat_assignments')
+def get_seat_assignments():
+    global latest_data
+    seat_assignments = latest_data.get('seat_assignments', {})
+    return jsonify({
+        'seat_assignments': seat_assignments,
+        'active_seats': len([s for s in seat_assignments.values() if s])
+    })
+
+@app.route('/api/metrics')
+def get_metrics():
+    global latest_data
+    detections = latest_data.get('detections', [])
+    metrics = {}
+    for det in detections:
+        class_name = detector.model.names[det['class_id']]
+        if class_name in detector.CHEATING_RELATED_CLASSES:
+            metrics[class_name] = metrics.get(class_name, 0) + 1
+    return jsonify({
+        'metrics': metrics,
+        'detection_count': len(detections)
+    })
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -190,6 +278,14 @@ def process_file():
                 if class_name in detector.CHEATING_RELATED_CLASSES:
                     class_counts[class_name] = class_counts.get(class_name, 0) + 1
 
+            # Store latest data globally for instructor view
+            global latest_data
+            latest_data = {
+                'detections': detections,
+                'seat_assignments': seat_assignments,
+                'annotated_frame': annotated_img_encoded
+            }
+            
             return jsonify({
                 'success': True,
                 'annotated_frame': annotated_img_encoded,

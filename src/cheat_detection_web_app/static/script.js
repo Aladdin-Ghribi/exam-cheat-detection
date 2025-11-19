@@ -1,571 +1,410 @@
-// script.js
 const socket = io();
-const displayCanvas = document.getElementById('displayCanvas');
-const displayCtx = displayCanvas.getContext('2d');
-const metricsContent = document.getElementById('metrics-content');
-const seatAssignmentsDiv = document.getElementById('seat-assignments');
-const behaviorContent = document.getElementById('behavior-content');
-const scoringContent = document.getElementById('scoring-content');
-
-const CONFIG_YAW_THRESHOLD = 30;
-const CONFIG_PITCH_THRESHOLD = 20;
-const CONFIG_SUSPICION_THRESHOLD = 20;
-
-let yawThreshold = CONFIG_YAW_THRESHOLD;
-let pitchThreshold = CONFIG_PITCH_THRESHOLD;
-let suspicionThreshold = CONFIG_SUSPICION_THRESHOLD;
-
+const canvas = document.getElementById('displayCanvas');
+const ctx = canvas.getContext('2d');
 const webcamBtn = document.getElementById('webcam-btn');
-const fileUploadInput = document.getElementById('file-upload');
-const fileInfo = document.getElementById('file-info');
-const fileName = document.getElementById('file-name');
-const resetBtn = document.getElementById('reset-btn');
-const togglePoseBtn = document.getElementById('toggle-pose-btn');
-const modelSizeSelect = document.getElementById('model-size');
-const frameSkipToggle = document.getElementById('frame-skip-toggle');
-const processTimeSpan = document.getElementById('process-time');
-const frameCountSpan = document.getElementById('frame-count');
+const fileUpload = document.getElementById('file-upload');
+const fileNameSpan = document.getElementById('file-name');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeModal = document.querySelector('.close');
+const viewToggleBtn = document.getElementById('view-toggle-btn');
+const mainElement = document.querySelector('main');
 
 let stream = null;
 let videoElement = null;
 let isProcessing = false;
-let lastProcessedTime = 0;
-const PROCESS_INTERVAL_MS = 50;
-let sourceType = 'webcam';
-let animationFrameId = null;
 let poseEnabled = true;
-let autoSaveEnabled = true;
-let currentFrame = null;
-let currentDetections = null;
-let frameCount = 0;
+let isInstructorView = false;
 
-async function startWebcam() {
+// View toggle - Start in monitoring view
+mainElement.classList.add('monitoring-view');
+viewToggleBtn.innerHTML = '👨🏫 Instructor View';
+
+viewToggleBtn.onclick = () => {
+  isInstructorView = !isInstructorView;
+  if (isInstructorView) {
+    mainElement.classList.remove('monitoring-view');
+    viewToggleBtn.innerHTML = '📺 Monitoring View';
+    viewToggleBtn.title = 'Switch to monitoring-only view';
+  } else {
+    mainElement.classList.add('monitoring-view');
+    viewToggleBtn.innerHTML = '👨🏫 Instructor View';
+    viewToggleBtn.title = 'Switch to instructor view with seat map and events';
+  }
+};
+
+// Settings modal
+settingsBtn.onclick = () => settingsModal.style.display = 'block';
+closeModal.onclick = () => settingsModal.style.display = 'none';
+window.onclick = (e) => { if (e.target == settingsModal) settingsModal.style.display = 'none'; };
+
+// Webcam
+webcamBtn.onclick = async () => {
+  if (stream) return;
   try {
-    const constraints = { 
-      video: { 
-        width: { ideal: 640 },
-        height: { ideal: 480 }
-      }, 
-      audio: false 
-    };
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
     videoElement = document.createElement('video');
     videoElement.srcObject = stream;
-
-    videoElement.onloadedmetadata = () => {
-      displayCanvas.width = 640;
-      displayCanvas.height = 480;
-      processFrame(videoElement);
-    };
-
     videoElement.play();
+    videoElement.onloadedmetadata = () => {
+      canvas.width = 640;
+      canvas.height = 480;
+      processFrame();
+    };
+    webcamBtn.classList.add('active');
   } catch (err) {
-    console.error('Webcam access denied:', err);
-    alert('Camera access required. Please allow and refresh.');
+    alert('Camera access denied');
   }
-}
+};
 
-async function processFile(file) {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
-
+// File upload
+fileUpload.onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  fileNameSpan.textContent = file.name;
+  
   if (stream) {
-    stream.getTracks().forEach(track => track.stop());
+    stream.getTracks().forEach(t => t.stop());
     stream = null;
   }
-
+  
   const formData = new FormData();
   formData.append('file', file);
-
-  try {
-    const uploadResponse = await fetch('/upload', {
-      method: 'POST',
-      body: formData
-    });
-
-    const uploadResult = await uploadResponse.json();
-
-    if (!uploadResult.success) {
-      throw new Error(uploadResult.error || 'File upload failed');
-    }
-
-    const fileType = file.type.split('/')[0];
-
-    if (fileType === 'video') {
-      videoElement = document.createElement('video');
-      videoElement.src = URL.createObjectURL(file);
-      videoElement.play();
-
-      videoElement.onloadedmetadata = () => {
-        displayCanvas.width = videoElement.videoWidth;
-        displayCanvas.height = videoElement.videoHeight;
-        processFrame(videoElement);
-      };
-    } else if (fileType === 'image') {
-      const processResponse = await fetch('/process_file', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          file_path: uploadResult.file_path,
-          file_type: uploadResult.file_type
-        })
-      });
-
-      const processResult = await processResponse.json();
-
-      if (!processResult.success) {
-        throw new Error(processResult.error || 'Image processing failed');
-      }
-
-      const img = new Image();
-      img.onload = () => {
-        displayCanvas.width = img.width;
-        displayCanvas.height = img.height;
-        displayCtx.drawImage(img, 0, 0);
-        updateMetrics(processResult.metrics);
-        updateSeatAssignments(processResult.seat_assignments);
-        updateBehaviorAnalysis(processResult.detections);
-        updateSuspicionScores(processResult.detections);
-      };
-      img.src = `data:image/jpeg;base64,${processResult.annotated_frame}`;
-    }
-
-    fileName.textContent = file.name;
-    fileInfo.style.display = 'flex';
-    webcamBtn.classList.remove('active');
-
-  } catch (error) {
-    console.error('Error processing file:', error);
-    alert(`Error: ${error.message}`);
-    resetToWebcam();
+  
+  const res = await fetch('/upload', { method: 'POST', body: formData });
+  const data = await res.json();
+  
+  if (data.success && data.file_type === 'video') {
+    videoElement = document.createElement('video');
+    videoElement.src = URL.createObjectURL(file);
+    videoElement.play();
+    videoElement.onloadedmetadata = () => {
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      processFrame();
+    };
   }
-}
+};
 
-function resetToWebcam() {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
-
-  if (videoElement && videoElement.pause) {
-    videoElement.pause();
-    videoElement.src = '';
-  }
-
-  fileInfo.style.display = 'none';
-  webcamBtn.classList.add('active');
-  fileUploadInput.value = '';
-
-  displayCanvas.width = 640;
-  displayCanvas.height = 480;
-
-  displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
-
-  startWebcam();
-}
-
-function processFrame(videoElement) {
+function processFrame() {
   if (!videoElement || isProcessing) {
-    animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
+    requestAnimationFrame(processFrame);
     return;
   }
-
-  if (videoElement.tagName === 'VIDEO' && (videoElement.paused || videoElement.ended)) {
-    if (videoElement.ended) {
-      console.log('Video playback ended');
-      return;
-    }
-    animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
+  
+  if (videoElement.paused || videoElement.ended) {
+    requestAnimationFrame(processFrame);
     return;
   }
-
-  const now = Date.now();
-  if (now - lastProcessedTime < PROCESS_INTERVAL_MS) {
-    animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
-    return;
-  }
-
-  lastProcessedTime = now;
+  
   isProcessing = true;
-
-  const captureCanvas = document.createElement('canvas');
-  captureCanvas.width = videoElement.videoWidth || videoElement.width || 640;
-  captureCanvas.height = videoElement.videoHeight || videoElement.height || 480;
-  const captureCtx = captureCanvas.getContext('2d');
-  captureCtx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
-
-  const frameDataUrl = captureCanvas.toDataURL('image/jpeg', 0.85);
-  socket.emit('video_frame', { image: frameDataUrl, pose_enabled: poseEnabled });
-
-  animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
+  
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = videoElement.videoWidth || 640;
+  tempCanvas.height = videoElement.videoHeight || 480;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.drawImage(videoElement, 0, 0);
+  
+  const frameData = tempCanvas.toDataURL('image/jpeg', 0.85);
+  socket.emit('video_frame', { image: frameData, pose_enabled: poseEnabled });
+  
+  requestAnimationFrame(processFrame);
 }
-
-webcamBtn.addEventListener('click', () => {
-  if (sourceType !== 'webcam') {
-    resetToWebcam();
-    sourceType = 'webcam';
-  }
-});
-
-fileUploadInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    processFile(file);
-    sourceType = 'file';
-  }
-});
-
-resetBtn.addEventListener('click', () => {
-  resetToWebcam();
-  sourceType = 'webcam';
-});
-
-togglePoseBtn.addEventListener('click', () => {
-  poseEnabled = !poseEnabled;
-  togglePoseBtn.textContent = poseEnabled ? 'Hide Pose' : 'Show Pose';
-});
-
-modelSizeSelect.addEventListener('change', (e) => {
-  const modelSize = e.target.value;
-  socket.emit('switch_model', { model_size: modelSize });
-  console.log(`Switching to ${modelSize} model`);
-});
-
-frameSkipToggle.addEventListener('change', (e) => {
-  socket.emit('toggle_frame_skipping', { enabled: e.target.checked });
-  console.log(`Frame skipping ${e.target.checked ? 'enabled' : 'disabled'}`);
-});
-
-document.getElementById('yaw-threshold').addEventListener('input', (e) => {
-  yawThreshold = parseInt(e.target.value);
-  document.getElementById('yaw-value').textContent = yawThreshold;
-});
-
-document.getElementById('pitch-threshold').addEventListener('input', (e) => {
-  pitchThreshold = parseInt(e.target.value);
-  document.getElementById('pitch-value').textContent = pitchThreshold;
-});
-
-document.getElementById('suspicion-threshold').addEventListener('input', (e) => {
-  suspicionThreshold = parseInt(e.target.value);
-  document.getElementById('suspicion-value').textContent = suspicionThreshold;
-  socket.emit('update_suspicion_threshold', { threshold: suspicionThreshold });
-});
 
 socket.on('processed_frame', (data) => {
-  frameCount++;
-  frameCountSpan.textContent = frameCount;
-  
-  if (data.performance_stats) {
-    processTimeSpan.textContent = data.performance_stats.last_process_time_ms.toFixed(1);
-  }
-
   const img = new Image();
   img.onload = () => {
-    if (sourceType === 'webcam' && (displayCanvas.width !== 640 || displayCanvas.height !== 480)) {
-      displayCanvas.width = 640;
-      displayCanvas.height = 480;
-    }
-
-    displayCtx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
-    updateMetrics(data.metrics);
-    updateSeatAssignments(data.seat_assignments);
-    updateBehaviorAnalysis(data.detections);
-    updateSuspicionScores(data.detections);
-    
-    currentFrame = data.annotated_frame;
-    currentDetections = data.detections;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    updateSeatMap(data.seat_assignments, data.detections);
+    updateEventLog(data.detections);
   };
-  img.src = `data:image/jpeg;base64,${data.annotated_frame}`;
+  img.src = 'data:image/jpeg;base64,' + data.annotated_frame;
   isProcessing = false;
 });
 
-function updateMetrics(metrics) {
-  metricsContent.innerHTML = '';
-  if (Object.keys(metrics).length === 0) {
-    metricsContent.innerHTML = '<p>No relevant objects detected.</p>';
-    return;
+// Refresh seat map when threshold changes
+setInterval(() => {
+  if (Object.keys(currentSeats).length > 0) {
+    updateSeatMap(currentSeats, currentDetections);
   }
-  Object.entries(metrics).forEach(([className, count]) => {
-    const p = document.createElement('p');
-    p.textContent = `${className}: ${count}`;
-    metricsContent.appendChild(p);
-  });
-}
+}, 1000);
 
-function updateSeatAssignments(seatAssignments) {
-  if (!seatAssignmentsDiv) return;
-  
-  if (seatAssignments && Object.keys(seatAssignments).length > 0) {
-    let seatHtml = '<ul style="list-style-type: none; padding-left: 0;">';
-    for (const [trackId, seatIndex] of Object.entries(seatAssignments)) {
-      seatHtml += `<li style="margin: 5px 0; padding: 5px; background: #e6f7ff; border-radius: 4px;">Person ID ${trackId} → Seat ${seatIndex}</li>`;
-    }
-    seatHtml += '</ul>';
-    seatAssignmentsDiv.innerHTML = seatHtml;
-  } else {
-    seatAssignmentsDiv.innerHTML = 'No active seat assignments';
-  }
-}
+let currentSeats = {};
+let currentDetections = [];
 
-function updateBehaviorAnalysis(detections) {
-  if (!behaviorContent || !detections) return;
+function updateSeatMap(seats, detections) {
+  currentSeats = seats;
+  currentDetections = detections;
   
-  const personDetections = detections.filter(d => d.class_id === 0 && d.behavior);
+  const grid = document.getElementById('seat-map-grid');
+  grid.innerHTML = '';
   
-  if (personDetections.length === 0) {
-    behaviorContent.innerHTML = 'No behavior data available';
+  if (!seats || Object.keys(seats).length === 0) {
+    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#94a3b8;">No students detected</p>';
     return;
   }
   
-  let html = '';
-  personDetections.forEach(det => {
-    const behavior = det.behavior;
-    const trackId = det.track_id || 'Unknown';
+  Object.entries(seats).forEach(([trackId, seatId]) => {
+    const det = detections.find(d => d.track_id == trackId);
     
-    html += `<div style="margin-bottom: 15px; padding: 8px; background: white; border-left: 3px solid #ffc107; border-radius: 4px;">`;
-    html += `<strong>Person ID ${trackId}</strong><br>`;
-    
-    if (behavior.head_orientation) {
-      const ho = behavior.head_orientation;
-      html += `<div style="margin-top: 5px;"><strong>Head Angles:</strong><br>`;
-      html += `Pitch: ${ho.pitch.toFixed(1)}° | Yaw: ${ho.yaw.toFixed(1)}°</div>`;
-      
-      if (Math.abs(ho.yaw) > 30 || Math.abs(ho.pitch) > 20) {
-        html += `<div style="color: #d32f2f; font-weight: bold; margin-top: 3px;">⚠️ Looking away</div>`;
-      }
-    }
-    
-    if (behavior.hands) {
-      html += `<div style="margin-top: 5px;"><strong>Hand Proximity:</strong><br>`;
-      
-      ['left', 'right'].forEach(side => {
-        const hand = behavior.hands[side];
-        if (hand && hand.visible) {
-          const sideLabel = side.charAt(0).toUpperCase() + side.slice(1);
-          html += `${sideLabel}: `;
-          
-          if (hand.near_face) {
-            html += `<span style="color: #f57c00;">Near face (${hand.distance_to_face.toFixed(3)})</span>`;
-          } else if (hand.near_object && hand.object_class) {
-            html += `<span style="color: #d32f2f;">⚠️ Near ${hand.object_class}</span>`;
-          } else {
-            html += `<span style="color: #388e3c;">Normal</span>`;
-          }
-          html += `<br>`;
-        }
-      });
-      html += `</div>`;
-    }
-    
-    html += `</div>`;
-  });
-  
-  behaviorContent.innerHTML = html;
-}
-
-function updateSuspicionScores(detections) {
-  if (!scoringContent || !detections) return;
-  
-  const personDetections = detections.filter(d => d.class_id === 0);
-  
-  if (personDetections.length === 0) {
-    scoringContent.innerHTML = 'No persons detected';
-    return;
-  }
-  
-  let html = '';
-  personDetections.forEach(det => {
-    const trackId = det.track_id || 'Unknown';
+    // Get score from multiple possible locations
     let score = 0;
-    let reasons = [];
-    
-    if (det.behavior) {
-      const behavior = det.behavior;
-      
-      if (behavior.head_orientation) {
-        const ho = behavior.head_orientation;
-        if (Math.abs(ho.yaw) > yawThreshold) {
-          const yawScore = Math.min(30, Math.abs(ho.yaw) - yawThreshold);
-          score += yawScore;
-          reasons.push(`Head turned ${Math.abs(ho.yaw).toFixed(0)}° (yaw)`);
-        }
-        if (Math.abs(ho.pitch) > pitchThreshold) {
-          const pitchScore = Math.min(20, Math.abs(ho.pitch) - pitchThreshold);
-          score += pitchScore;
-          reasons.push(`Head tilted ${Math.abs(ho.pitch).toFixed(0)}° (pitch)`);
-        }
-      }
-      
-      if (behavior.hands) {
-        ['left', 'right'].forEach(side => {
-          const hand = behavior.hands[side];
-          if (hand && hand.visible) {
-            if (hand.near_object && hand.object_class) {
-              score += 40;
-              reasons.push(`${side} hand near ${hand.object_class}`);
-            } else if (hand.near_face) {
-              score += 15;
-              reasons.push(`${side} hand near face`);
-            }
-          }
-        });
-      }
+    if (det?.behavior?.suspicion) {
+      score = det.behavior.suspicion.suspicion_score_100 || 
+              Math.round((det.behavior.suspicion.smoothed || 0) * 100);
     }
     
-    const nearbyObjects = detections.filter(d => 
-      d.class_id !== 0 && 
-      isNearPerson(d.bbox, det.bbox)
+    console.log(`Seat ${seatId}, Track ${trackId}, Score: ${score}`);
+    
+    const div = document.createElement('div');
+    div.className = 'seat-item';
+    
+    // Alert if score >= 70, Suspicious if >= 40, Active otherwise
+    if (score >= 70) {
+      div.classList.add('alert');
+    } else if (score >= 40) {
+      div.classList.add('suspicious');
+    } else {
+      div.classList.add('active');
+    }
+    
+    const statusText = score >= 70 ? 'ALERT' : score >= 40 ? 'FLAGGED' : 'ACTIVE';
+    div.innerHTML = `
+      <div style="font-size: 1rem; font-weight: 600;">Seat ${seatId}</div>
+      <div style="font-size: 0.75rem; opacity: 0.9;">ID: ${trackId}</div>
+      <div style="font-size: 0.8rem; font-weight: 600; margin-top: 0.25rem;">${score}%</div>
+      <div style="font-size: 0.7rem; opacity: 0.8;">${statusText}</div>
+    `;
+    div.title = `Student ${trackId} - ${statusText} - Suspicion: ${score}%`;
+    grid.appendChild(div);
+  });
+}
+
+let allEvents = [];
+let studentIds = new Set();
+
+function updateEventLog(detections) {
+  const suspicionThreshold = parseInt(document.getElementById('suspicion-threshold').value);
+  
+  detections.forEach(det => {
+    // Skip non-person detections
+    if (det.class_id !== 0) return;
+    
+    const score = det.behavior?.suspicion?.suspicion_score_100 || 0;
+    
+    // Only log if score meets threshold
+    if (score < suspicionThreshold) return;
+    
+    const studentId = det.track_id || 'Unknown';
+    studentIds.add(studentId);
+    
+    const severity = score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
+    const event = {
+      time: new Date().toLocaleTimeString(),
+      studentId,
+      score,
+      severity,
+      description: getEventDescription(det)
+    };
+    
+    // Avoid duplicate events (check if same student with similar score in last second)
+    const isDuplicate = allEvents.some(e => 
+      e.studentId === studentId && 
+      Math.abs(e.score - score) < 5 &&
+      (new Date() - new Date('1970-01-01 ' + e.time)) < 1000
     );
     
-    nearbyObjects.forEach(obj => {
-      const className = getClassName(obj.class_id);
-      score += 30;
-      reasons.push(`${className} detected nearby`);
-    });
-    
-    score = Math.min(100, Math.round(score));
-    
-    let alertLevel = 'low';
-    let alertColor = '#4caf50';
-    let alertBg = '#e8f5e9';
-    
-    if (score >= suspicionThreshold) {
-      alertLevel = 'high';
-      alertColor = '#d32f2f';
-      alertBg = '#ffebee';
-    } else if (score >= suspicionThreshold * 0.6) {
-      alertLevel = 'medium';
-      alertColor = '#f57c00';
-      alertBg = '#fff3e0';
+    if (!isDuplicate) {
+      allEvents.unshift(event);
+      if (allEvents.length > 100) allEvents.pop();
     }
-    
-    html += `<div style="margin-bottom: 12px; padding: 10px; background: ${alertBg}; border-left: 4px solid ${alertColor}; border-radius: 4px;">`;
-    html += `<div style="display: flex; justify-content: space-between; align-items: center;">`;
-    html += `<strong>Person ID ${trackId}</strong>`;
-    html += `<span style="font-size: 20px; font-weight: bold; color: ${alertColor};">${score}/100</span>`;
-    html += `</div>`;
-    
-    if (reasons.length > 0) {
-      html += `<div style="margin-top: 8px; font-size: 13px;">`;
-      html += `<strong>Reasons:</strong><ul style="margin: 5px 0; padding-left: 20px;">`;
-      reasons.forEach(reason => {
-        html += `<li>${reason}</li>`;
-      });
-      html += `</ul></div>`;
-    } else {
-      html += `<div style="margin-top: 5px; color: #666; font-size: 13px;">No suspicious behavior detected</div>`;
-    }
-    
-    if (score >= suspicionThreshold) {
-      html += `<div style="margin-top: 8px; padding: 5px; background: #d32f2f; color: white; border-radius: 3px; text-align: center; font-weight: bold;">⚠️ ALERT: High Suspicion</div>`;
-    }
-    
-    html += `</div>`;
   });
   
-  scoringContent.innerHTML = html;
+  updateStudentFilter();
+  renderEvents();
+  updateStats();
 }
 
-function isNearPerson(objBbox, personBbox) {
-  const [ox1, oy1, ox2, oy2] = objBbox;
-  const [px1, py1, px2, py2] = personBbox;
+function getEventDescription(det) {
+  const behavior = det.behavior || {};
+  const reasons = [];
   
-  const horizontalOverlap = ox1 < px2 && ox2 > px1;
-  const verticalOverlap = oy1 < py2 && oy2 > py1;
+  if (behavior.head_orientation) {
+    const yaw = Math.abs(behavior.head_orientation.yaw);
+    const pitch = Math.abs(behavior.head_orientation.pitch);
+    if (yaw > 30) reasons.push(`Head turned ${yaw.toFixed(0)}°`);
+    if (pitch > 20) reasons.push(`Head tilted ${pitch.toFixed(0)}°`);
+  }
   
-  return horizontalOverlap && verticalOverlap;
+  if (behavior.hands) {
+    ['left', 'right'].forEach(side => {
+      const hand = behavior.hands[side];
+      if (hand?.near_object) reasons.push(`${side} hand near object`);
+      if (hand?.near_face) reasons.push(`${side} hand near face`);
+    });
+  }
+  
+  return reasons.length > 0 ? reasons.join(', ') : 'Suspicious behavior';
 }
 
-function getClassName(classId) {
-  const classNames = {
-    67: 'cell phone',
-    73: 'book',
-    63: 'laptop',
-    24: 'backpack',
-    26: 'handbag'
-  };
-  return classNames[classId] || `object ${classId}`;
-}
-
-socket.on('connect', () => {
-  console.log('Connected to server');
-  sourceType = 'webcam';
-  startWebcam();
-});
-
-socket.on('disconnect', () => {
-  console.log('Disconnected from server');
-});
-
-socket.on('error', (data) => {
-  console.error('Backend error:', data.message);
-});
-
-const autoSaveToggle = document.getElementById('auto-save-toggle');
-const manualSaveBtn = document.getElementById('manual-save-btn');
-const exportJsonBtn = document.getElementById('export-json-btn');
-const exportCsvBtn = document.getElementById('export-csv-btn');
-const exportZipBtn = document.getElementById('export-zip-btn');
-const saveStatus = document.getElementById('save-status');
-
-autoSaveToggle.addEventListener('change', (e) => {
-  autoSaveEnabled = e.target.checked;
-  socket.emit('toggle_auto_save', { enabled: autoSaveEnabled });
-  showSaveStatus(`Auto-save ${autoSaveEnabled ? 'enabled' : 'disabled'}`);
-});
-
-manualSaveBtn.addEventListener('click', () => {
-  if (!currentFrame || !currentDetections) {
-    showSaveStatus('No frame available to save', 'error');
+function renderEvents() {
+  const log = document.getElementById('event-log-list');
+  const severityFilter = document.getElementById('severity-filter').value;
+  const studentFilter = document.getElementById('student-filter').value;
+  const suspicionThreshold = parseInt(document.getElementById('suspicion-threshold').value);
+  
+  const filtered = allEvents.filter(e => {
+    const matchSeverity = severityFilter === 'all' || e.severity === severityFilter;
+    const matchStudent = studentFilter === 'all' || e.studentId == studentFilter;
+    const matchThreshold = e.score >= suspicionThreshold;
+    return matchSeverity && matchStudent && matchThreshold;
+  });
+  
+  log.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    log.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:2rem;">No events match filters</p>';
     return;
   }
-  socket.emit('manual_save', { 
-    frame: currentFrame, 
-    detections: currentDetections 
+  
+  filtered.slice(0, 20).forEach(event => {
+    const div = document.createElement('div');
+    div.className = `event-item ${event.severity}`;
+    div.innerHTML = `
+      <div class="event-time">${event.time}</div>
+      <div class="event-student">Student ID: ${event.studentId} • Score: ${event.score}%</div>
+      <div class="event-desc">${event.description}</div>
+    `;
+    log.appendChild(div);
   });
-  showSaveStatus('Frame saved manually', 'success');
-});
+  
+  updateStats();
+}
 
-exportJsonBtn.addEventListener('click', () => {
+function updateStudentFilter() {
+  const filter = document.getElementById('student-filter');
+  const currentValue = filter.value;
+  
+  filter.innerHTML = '<option value="all">All Students</option>';
+  Array.from(studentIds).sort((a, b) => a - b).forEach(id => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `Student ${id}`;
+    filter.appendChild(opt);
+  });
+  
+  filter.value = currentValue;
+}
+
+function updateStats() {
+  document.getElementById('student-count').textContent = studentIds.size;
+  document.getElementById('flagged-count').textContent = allEvents.filter(e => e.severity === 'high').length;
+  document.getElementById('event-count').textContent = allEvents.length;
+}
+
+// Settings controls with real-time feedback
+function showFeedback(elementId, message, duration = 2000) {
+  const feedback = document.getElementById(elementId);
+  feedback.textContent = message;
+  feedback.classList.add('show');
+  setTimeout(() => feedback.classList.remove('show'), duration);
+}
+
+document.getElementById('toggle-pose-btn').onchange = (e) => {
+  poseEnabled = e.target.checked;
+  showFeedback('param-feedback', `Pose detection ${e.target.checked ? 'enabled' : 'disabled'}`);
+  renderEvents();
+};
+
+document.getElementById('yaw-threshold').oninput = (e) => {
+  document.getElementById('yaw-value').textContent = e.target.value + '°';
+  showFeedback('param-feedback', `Yaw threshold updated to ${e.target.value}°`);
+  renderEvents();
+};
+
+document.getElementById('pitch-threshold').oninput = (e) => {
+  document.getElementById('pitch-value').textContent = e.target.value + '°';
+  showFeedback('param-feedback', `Pitch threshold updated to ${e.target.value}°`);
+  renderEvents();
+};
+
+document.getElementById('suspicion-threshold').oninput = (e) => {
+  document.getElementById('suspicion-value').textContent = e.target.value;
+  socket.emit('update_suspicion_threshold', { threshold: parseInt(e.target.value) });
+  showFeedback('param-feedback', `Suspicion threshold updated to ${e.target.value}`);
+  renderEvents();
+  updateSeatMap({}, []);
+};
+
+document.getElementById('model-size').onchange = (e) => {
+  socket.emit('switch_model', { model_size: e.target.value });
+  showFeedback('perf-feedback', `Switching to ${e.target.value} model...`);
+};
+
+document.getElementById('frame-skip-toggle').onchange = (e) => {
+  socket.emit('toggle_frame_skipping', { enabled: e.target.checked });
+  showFeedback('perf-feedback', `Frame skipping ${e.target.checked ? 'enabled' : 'disabled'}`);
+};
+
+document.getElementById('auto-save-toggle').onchange = (e) => {
+  socket.emit('toggle_auto_save', { enabled: e.target.checked });
+  showFeedback('export-feedback', `Auto-save ${e.target.checked ? 'enabled' : 'disabled'}`);
+};
+
+document.getElementById('export-json-btn').onclick = () => {
   socket.emit('export_data', { format: 'json' });
-});
+  showFeedback('export-feedback', 'Exporting JSON...');
+};
 
-exportCsvBtn.addEventListener('click', () => {
+document.getElementById('export-csv-btn').onclick = () => {
   socket.emit('export_data', { format: 'csv' });
-});
+  showFeedback('export-feedback', 'Exporting CSV...');
+};
 
-exportZipBtn.addEventListener('click', () => {
+document.getElementById('export-zip-btn').onclick = () => {
   socket.emit('export_data', { format: 'zip' });
-});
+  showFeedback('export-feedback', 'Exporting ZIP...');
+};
 
 socket.on('export_ready', (data) => {
-  const link = document.createElement('a');
-  link.href = data.download_url;
-  link.download = data.filename;
-  link.click();
-  showSaveStatus(`Exported: ${data.filename}`, 'success');
+  const a = document.createElement('a');
+  a.href = data.download_url;
+  a.download = data.filename;
+  a.click();
+  showFeedback('export-feedback', `Downloaded: ${data.filename}`);
 });
 
 socket.on('save_notification', (data) => {
-  showSaveStatus(data.message, data.type || 'info');
+  const status = document.getElementById('save-status');
+  status.textContent = data.message;
+  status.style.display = 'block';
+  status.style.background = data.type === 'success' ? '#d1fae5' : data.type === 'error' ? '#fee2e2' : '#dbeafe';
+  setTimeout(() => status.style.display = 'none', 3000);
+  
+  if (data.type === 'success') {
+    showFeedback('perf-feedback', data.message);
+  }
 });
 
-function showSaveStatus(message, type = 'info') {
-  saveStatus.textContent = message;
-  saveStatus.style.display = 'block';
-  
-  const colors = {
-    success: '#e8f5e9',
-    error: '#ffebee',
-    info: '#e3f2fd'
-  };
-  saveStatus.style.background = colors[type] || colors.info;
-  
-  setTimeout(() => {
-    saveStatus.style.display = 'none';
-  }, 3000);
-}
+// Filters
+document.getElementById('severity-filter').onchange = renderEvents;
+document.getElementById('student-filter').onchange = renderEvents;
+
+document.getElementById('clear-log-btn').onclick = () => {
+  if (confirm('Clear all events?')) {
+    allEvents = [];
+    renderEvents();
+    updateStats();
+  }
+};
+
+// Auto-start webcam
+socket.on('connect', () => {
+  console.log('Connected to server');
+  setTimeout(() => webcamBtn.click(), 500);
+});
+
+// Initialize
+renderEvents();
+updateStats();

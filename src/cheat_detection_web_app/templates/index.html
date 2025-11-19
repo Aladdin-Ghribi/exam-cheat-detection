@@ -3,115 +3,158 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cheat Detection Dashboard</title>
+  <title>Exam Monitoring System</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <h1>Cheat Detection Dashboard</h1>
-
-  <div id="source-controls">
-    <h2>Select Source</h2>
-    <div class="source-options">
-      <button id="webcam-btn" class="source-btn active">Use Webcam</button>
-      <label for="file-upload" class="source-btn">Upload File</label>
-      <input type="file" id="file-upload" accept="video/mp4, image/jpeg, image/png" style="display: none;">
+  <header>
+    <h1>Exam Monitoring System</h1>
+    <div class="header-controls">
+      <button id="view-toggle-btn" class="icon-btn">👨‍🏫 Instructor View</button>
+      <button id="settings-btn" class="icon-btn">⚙️ Settings</button>
     </div>
-    <div id="file-info" style="display: none;">
-      <span id="file-name"></span>
-      <button id="reset-btn">Reset</button>
-    </div>
-  </div>
+  </header>
 
-  <div id="performance-controls" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-    <h2>Performance Settings</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-      <div>
-        <label>Model Size:</label>
-        <select id="model-size" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-          <option value="nano">Nano (Fastest)</option>
-          <option value="small">Small (Fast)</option>
-          <option value="medium" selected>Medium (Balanced)</option>
-        </select>
+  <main>
+    <div class="video-section">
+      <div class="video-controls">
+        <button id="webcam-btn" class="btn btn-primary active">📹 Webcam</button>
+        <label for="file-upload" class="btn btn-secondary">📁 Upload</label>
+        <input type="file" id="file-upload" accept="video/*,image/*" hidden>
+        <span id="file-name"></span>
       </div>
-      <div>
-        <label>
-          <input type="checkbox" id="frame-skip-toggle" checked>
-          Enable Frame Skipping
+      <canvas id="displayCanvas"></canvas>
+    </div>
+
+    <div class="instructor-panel">
+      <div class="panel-card">
+        <h2>🪑 Seat Map</h2>
+        <div class="legend">
+          <span class="legend-item"><span class="dot green"></span>Active</span>
+          <span class="legend-item"><span class="dot yellow"></span>Flagged</span>
+          <span class="legend-item"><span class="dot red"></span>Alert</span>
+        </div>
+        <div id="seat-map-grid"></div>
+      </div>
+      
+      <div class="panel-card">
+        <h2>📋 Event Log</h2>
+        <div class="filters">
+          <select id="severity-filter" class="filter-select">
+            <option value="all">All Severity</option>
+            <option value="high">🔴 High</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+          <select id="student-filter" class="filter-select">
+            <option value="all">All Students</option>
+          </select>
+          <button id="clear-log-btn" class="btn-clear">Clear Log</button>
+        </div>
+        <div id="event-log-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Settings</h2>
+      
+      <div class="settings-group">
+        <h3>🎯 Detection Parameters</h3>
+        <div class="toggle-control">
+          <label class="switch">
+            <input type="checkbox" id="toggle-pose-btn" checked>
+            <span class="slider"></span>
+          </label>
+          <span>Enable Pose Detection</span>
+        </div>
+        
+        <div class="slider-control">
+          <div class="slider-header">
+            <span>Head Yaw Threshold</span>
+            <span class="slider-value" id="yaw-value">30°</span>
+          </div>
+          <input type="range" id="yaw-threshold" min="15" max="60" value="30" step="5" class="custom-slider">
+          <div class="slider-labels">
+            <span>15°</span>
+            <span>60°</span>
+          </div>
+        </div>
+        
+        <div class="slider-control">
+          <div class="slider-header">
+            <span>Head Pitch Threshold</span>
+            <span class="slider-value" id="pitch-value">20°</span>
+          </div>
+          <input type="range" id="pitch-threshold" min="10" max="40" value="20" step="5" class="custom-slider">
+          <div class="slider-labels">
+            <span>10°</span>
+            <span>40°</span>
+          </div>
+        </div>
+        
+        <div class="slider-control">
+          <div class="slider-header">
+            <span>Suspicion Threshold</span>
+            <span class="slider-value" id="suspicion-value">20</span>
+          </div>
+          <input type="range" id="suspicion-threshold" min="20" max="100" value="20" step="10" class="custom-slider">
+          <div class="slider-labels">
+            <span>20</span>
+            <span>100</span>
+          </div>
+        </div>
+        <div class="settings-feedback" id="param-feedback"></div>
+      </div>
+
+      <div class="settings-group">
+        <h3>⚡ Performance</h3>
+        <label class="select-label">
+          Model Size:
+          <select id="model-size" class="custom-select">
+            <option value="nano">Nano (Fastest)</option>
+            <option value="small">Small (Fast)</option>
+            <option value="medium" selected>Medium (Balanced)</option>
+          </select>
         </label>
+        <div class="toggle-control">
+          <label class="switch">
+            <input type="checkbox" id="frame-skip-toggle" checked>
+            <span class="slider"></span>
+          </label>
+          <span>Frame Skipping</span>
+        </div>
+        <div class="settings-feedback" id="perf-feedback"></div>
       </div>
-    </div>
-    <div id="perf-stats" style="margin-top: 10px; padding: 8px; background: white; border-radius: 4px; font-size: 12px;">
-      Processing: <span id="process-time">0</span>ms | Frames: <span id="frame-count">0</span>
-    </div>
-  </div>
 
-  <div id="pose-controls">
-    <h2>Pose Controls</h2>
-    <div class="pose-options">
-      <button id="toggle-pose-btn" class="pose-btn">Hide Pose</button>
-    </div>
-  </div>
-
-  <div id="scoring-controls" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-    <h2>Scoring Thresholds</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-      <div>
-        <label>Head Yaw Threshold: <span id="yaw-value">30</span>°</label>
-        <input type="range" id="yaw-threshold" min="15" max="60" value="30" step="5" style="width: 100%;">
-      </div>
-      <div>
-        <label>Head Pitch Threshold: <span id="pitch-value">20</span>°</label>
-        <input type="range" id="pitch-threshold" min="10" max="40" value="20" step="5" style="width: 100%;">
-      </div>
-      <div>
-        <label>Suspicion Threshold: <span id="suspicion-value">20</span></label>
-        <input type="range" id="suspicion-threshold" min="20" max="100" value="20" step="10" style="width: 100%;">
+      <div class="settings-group">
+        <h3>💾 Export</h3>
+        <div class="toggle-control">
+          <label class="switch">
+            <input type="checkbox" id="auto-save-toggle" checked>
+            <span class="slider"></span>
+          </label>
+          <span>Auto-save Events</span>
+        </div>
+        <div class="btn-group">
+          <button id="export-json-btn" class="btn btn-secondary">📄 JSON</button>
+          <button id="export-csv-btn" class="btn btn-secondary">📊 CSV</button>
+          <button id="export-zip-btn" class="btn btn-secondary">📦 ZIP</button>
+        </div>
+        <div class="settings-feedback" id="export-feedback"></div>
       </div>
     </div>
   </div>
 
-  <div id="save-controls" style="margin: 20px 0; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <h2>Save & Export</h2>
-    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <label style="display: flex; align-items: center; cursor: pointer;">
-          <input type="checkbox" id="auto-save-toggle" checked style="margin-right: 5px;">
-          <span>Auto-save flagged frames</span>
-        </label>
-      </div>
-      <button id="manual-save-btn" class="action-btn" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">📸 Save Current Frame</button>
-      <button id="export-json-btn" class="action-btn" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">📄 Export JSON</button>
-      <button id="export-csv-btn" class="action-btn" style="padding: 8px 16px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer;">📊 Export CSV</button>
-      <button id="export-zip-btn" class="action-btn" style="padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer;">📦 Export ZIP</button>
-    </div>
-    <div id="save-status" style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-radius: 4px; display: none;"></div>
+  <div id="save-status"></div>
+  <div id="stats-bar">
+    <span>👥 Students: <strong id="student-count">0</strong></span>
+    <span>⚠️ Flagged: <strong id="flagged-count">0</strong></span>
+    <span>📊 Events: <strong id="event-count">0</strong></span>
   </div>
-
-  <div id="container">
-    <div id="video-container">
-      <img id="annotated-feed" src="" alt="Annotated Video Feed" style="width:100%; display:none;">
-      <canvas id="displayCanvas" width="640" height="480"></canvas>
-    </div>
-    <div id="metrics-container">
-      <h2>Detection Metrics</h2>
-      <div id="metrics-content">
-      </div>
-      <div id="seat-map-info" style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px;">
-        <h3>Seat Assignments</h3>
-        <div id="seat-assignments">No seat data</div>
-      </div>
-      <div id="behavior-info" style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 4px;">
-        <h3>Behavior Analysis</h3>
-        <div id="behavior-content">No behavior data</div>
-      </div>
-      <div id="scoring-info" style="margin-top: 15px; padding: 10px; background: #ffebee; border-radius: 4px;">
-        <h3>Suspicion Scores</h3>
-        <div id="scoring-content">No scores available</div>
-      </div>
-    </div>
-  </div>
-
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
