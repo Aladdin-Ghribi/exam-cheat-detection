@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
 from src.detection.yolo_detector import YOLODetector
+from src.detection.suspicion_scorer import SuspicionScorer
 from config import YOLO_MODEL, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU
 import base64
 import numpy as np
@@ -32,6 +33,10 @@ print("Initializing YOLODetector...")
 detector = YOLODetector()
 detector.auto_save_enabled = True
 print("YOLODetector ready.")
+
+print("Initializing SuspicionScorer...")
+suspicion_scorer = SuspicionScorer()
+print("SuspicionScorer ready.")
 
 @socketio.on('connect')
 def handle_connect():
@@ -79,6 +84,9 @@ def handle_video_frame(data):
             }
             if 'behavior' in det:
                 sanitized['behavior'] = det['behavior']
+                # Add unified suspicion score calculation
+                suspicion_result = suspicion_scorer.score_detection(det)
+                sanitized['unified_score'] = round(suspicion_result['smoothed'] * 100)
             if 'track_id' in det:
                 sanitized['track_id'] = int(det['track_id'])
             detections.append(sanitized)
@@ -116,7 +124,7 @@ def handle_video_frame(data):
                     'track_id': track_id,
                     'seat_id': seat_id,
                     'status': status,
-                    'suspicion_score': round(suspicion_score)
+                    'suspicion_score': suspicion_score
                 })
 
         # Check for flagged events
@@ -128,7 +136,7 @@ def handle_video_frame(data):
                     reasons = []
                     if 'head_orientation' in det['behavior']:
                         ho = det['behavior']['head_orientation']
-                        if abs(ho.get('yaw', 0)) > 30:
+                        if ho and abs(ho.get('yaw', 0)) > 30:
                             reasons.append(f"Head turned {abs(ho['yaw']):.0f}°")
                     if 'hands' in det['behavior']:
                         for side in ['left', 'right']:
@@ -140,7 +148,7 @@ def handle_video_frame(data):
                         flagged_events.append({
                             'track_id': det.get('track_id'),
                             'timestamp': datetime.now().strftime('%H:%M:%S'),
-                            'score': round(suspicion_score),
+                            'score': int(suspicion_score),
                             'description': ', '.join(reasons[:2])
                         })
 
@@ -215,6 +223,9 @@ def process_file():
                 }
                 if 'behavior' in det:
                     sanitized['behavior'] = det['behavior']
+                    # Add unified suspicion score calculation
+                    suspicion_result = suspicion_scorer.score_detection(det)
+                    sanitized['unified_score'] = round(suspicion_result['smoothed'] * 100)
                 if 'track_id' in det:
                     sanitized['track_id'] = int(det['track_id'])
                 detections.append(sanitized)
@@ -260,7 +271,7 @@ def update_suspicion_threshold(data):
 @socketio.on('toggle_auto_save')
 def toggle_auto_save(data):
     enabled = data.get('enabled', True)
-    detector.set_auto_save(enabled)
+    detector.auto_save_enabled = enabled
     print(f"Auto-save {'enabled' if enabled else 'disabled'}")
     emit('save_notification', {'message': f"Auto-save {'enabled' if enabled else 'disabled'}", 'type': 'info'})
 
@@ -360,6 +371,61 @@ def download_file(filename):
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True, download_name=filename)
     return jsonify({'error': 'File not found'}), 404
+
+@app.route('/api/historical_events', methods=['GET'])
+def get_historical_events():
+    try:
+        evidence_dir = os.path.join(PROJECT_ROOT, 'output', 'flagged_evidence')
+        if not os.path.exists(evidence_dir):
+            return jsonify({'events': []})
+        
+        events = []
+        for event_folder in os.listdir(evidence_dir):
+            metadata_path = os.path.join(evidence_dir, event_folder, 'metadata.json')
+            if os.path.exists(metadata_path):
+                with open(metadata_path, 'r') as f:
+                    metadata = json.load(f)
+                    timestamp_str = metadata.get('timestamp', '')
+                    if timestamp_str:
+                        dt = datetime.fromisoformat(timestamp_str)
+                        time_str = dt.strftime('%H:%M:%S')
+                    else:
+                        time_str = 'Unknown'
+                    
+                    track_id = event_folder.split('_')[-1]
+                    suspicion_score = metadata.get('suspicion_score_100', 0)
+                    reasons = metadata.get('reasons', [])
+                    
+                    if not reasons and 'all_detections' in metadata and len(metadata['all_detections']) > 0:
+                        det = metadata['all_detections'][0]
+                        if 'behavior' in det:
+                            behavior = det['behavior']
+                            if 'head_orientation' in behavior:
+                                ho = behavior['head_orientation']
+                                if abs(ho.get('yaw', 0)) > 30:
+                                    reasons.append(f"Body rolled {abs(ho['yaw']):.0f}°")
+                                if abs(ho.get('pitch', 0)) > 20:
+                                    reasons.append(f"Head left/right {abs(ho['pitch']):.0f}°")
+                            if 'hands' in behavior:
+                                for side in ['left', 'right']:
+                                    hand = behavior['hands'].get(side, {})
+                                    if hand.get('near_object') and hand.get('object_class'):
+                                        reasons.append(f"{side.capitalize()} hand near {hand['object_class']}")
+                    
+                    events.append({
+                        'track_id': int(track_id),
+                        'timestamp': time_str,
+                        'score': suspicion_score,
+                        'description': ', '.join(reasons[:2]) if reasons else 'Suspicious behavior detected'
+                    })
+        
+        events.sort(key=lambda x: x['timestamp'], reverse=True)
+        return jsonify({'events': events[:100]})
+    except Exception as e:
+        print(f"Error loading historical events: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'events': []})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
