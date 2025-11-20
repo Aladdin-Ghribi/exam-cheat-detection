@@ -48,21 +48,38 @@ class SuspicionScorer:
         key = self._make_key(detection)
         components = self._compute_components(detection, behavior, key)
 
-        # Weights from centralized configuration
-        weights = {
-            'head': HEAD_WEIGHT,          # Head orientation is most important
-            'hands_face': HANDS_FACE_WEIGHT,    # Hand-face proximity is significant
-            'hands_object': HANDS_OBJECT_WEIGHT   # Hand-object proximity complements
-        }
-
-        # Calculate raw score
-        raw = sum(max(0.0, min(1.0, components[name]))
-                  * weight for name, weight in weights.items())
-        raw = max(0.0, min(1.0, raw))
-        if components.get('hands_object', 0.0) >= 0.95 or components.get('head', 0.0) >= 0.95:
-            raw = max(raw, 0.95)
-
-        # Apply smoothing
+        # Simple scoring matching app.py logic
+        score = 0
+        
+        # Head orientation (0-50 points)
+        if 'head_orientation' in behavior:
+            ho = behavior['head_orientation']
+            if ho is not None:
+                yaw_threshold = 30
+                pitch_threshold = 20
+                
+                if abs(ho.get('yaw', 0)) > yaw_threshold:
+                    score += min(30, abs(ho['yaw']) - yaw_threshold)
+                if abs(ho.get('pitch', 0)) > pitch_threshold:
+                    score += min(20, abs(ho['pitch']) - pitch_threshold)
+        
+        # Hand proximity (0-100 points per hand for high-risk objects)
+        if 'hands' in behavior:
+            for side in ['left', 'right']:
+                hand = behavior['hands'].get(side, {})
+                if hand.get('visible'):
+                    if hand.get('near_object') and hand.get('object_class'):
+                        obj_class = hand.get('object_class', '').lower()
+                        if 'phone' in obj_class or 'book' in obj_class:
+                            score = 100  # Instant flag for phone/book
+                            break
+                        else:
+                            score += 40
+                    elif hand.get('near_face'):
+                        score += 15
+        
+        # Convert to 0-1 scale
+        raw = min(1.0, score / 100.0)
         smoothed = self._smooth(key, raw)
 
         # Create result
@@ -172,7 +189,7 @@ class SuspicionScorer:
 
     def _head_component(self, key, orientation):
         """
-        Compute the head orientation suspicion component.
+        Compute the head orientation suspicion component using simple thresholds.
         Args:
             key: Tracking key
             orientation: Head orientation dictionary
@@ -180,77 +197,23 @@ class SuspicionScorer:
             Suspicion score for head orientation
         """
         if not orientation:
-            if key is not None:
-                self.orientation_baseline.pop(key, None)
             return 0.0
 
         yaw = float(orientation.get('yaw', 0.0))
         pitch = float(orientation.get('pitch', 0.0))
-        # Ignoring roll as it's stuck at -45 degrees
-        # roll = float(orientation.get('roll', 0.0))
-
-        if abs(pitch) > 90:
-            pitch = pitch % 180
-            if pitch > 90:
-                pitch = pitch - 180
-
-        extreme_yaw = abs(yaw)
-        extreme_pitch = abs(pitch)
-        # Removed roll from extreme position check
-        # extreme_roll = abs(roll)
-        # Only return very high scores for truly extreme positions
-        if extreme_yaw >= 80.0 or extreme_pitch >= 60.0:
-            return 0.95
-        # Removed the overly aggressive threshold that was triggering at 16.0 degrees
-
-        baseline = self._update_head_baseline(key, yaw, pitch, 0.0)  # Pass 0.0 for roll
-
-        # Calculate deviations from baseline
-        if baseline is not None and baseline.get('frames', 0) >= self.baseline_ready_frames:
-            yaw_dev = abs(yaw - baseline['yaw'])
-            pitch_dev = abs(pitch - baseline['pitch'])
-            # Ignoring roll deviation
-            # roll_dev = abs(roll - baseline['roll'])
-        else:
-            # Use absolute values only if no baseline established
-            yaw_dev = abs(yaw)
-            pitch_dev = abs(pitch)
-            # Ignoring roll deviation
-            # roll_dev = abs(roll)
-
-        # Calculate component scores with balanced scaling
-        yaw_score = self._scale_deviation(
-            yaw_dev, self.normal_gaze_threshold, self.very_suspicious_gaze_threshold)
-        pitch_score = self._scale_deviation(
-            pitch_dev, self.normal_gaze_threshold, self.high_suspicious_gaze_threshold)
-        # Ignoring roll component
-        # roll_score = self._scale_deviation(
-        #     roll_dev, self.normal_gaze_threshold * 2, self.high_suspicious_gaze_threshold)
-
-        # Weighted combination - yaw is most important, ignoring roll
-        score = 0.75 * yaw_score + 0.25 * pitch_score  # Removed roll component
-
-        # Apply graduated thresholds for more nuanced scoring
-        if yaw_dev >= self.very_suspicious_gaze_threshold or pitch_dev >= self.high_suspicious_gaze_threshold:
-            score = max(score, 0.8)  # Reduced from 0.9
-        elif yaw_dev >= self.high_suspicious_gaze_threshold or pitch_dev >= self.suspicious_gaze_threshold:
-            score = max(score, 0.5)  # Reduced from 0.7
-        elif yaw_dev >= self.suspicious_gaze_threshold or pitch_dev >= self.normal_gaze_threshold * 1.5:
-            score = max(score, 0.3)  # Reduced from 0.4
-        elif yaw_dev >= self.normal_gaze_threshold:
-            score = max(score, 0.1)  # Reduced from 0.15
-        else:
-            score = min(score, 0.05)
-
-        if extreme_yaw < 20.0 and -5.0 <= pitch <= 30.0:
-            if extreme_pitch <= 20.0:
-                score = min(score, 0.1)
-            elif extreme_pitch <= 25.0:
-                score = min(score, 0.14)
-            else:
-                score = min(score, 0.2)
-
-        return min(1.0, score)
+        
+        # Simple threshold-based scoring (matching app.py logic)
+        yaw_threshold = 30
+        pitch_threshold = 20
+        score = 0
+        
+        if abs(yaw) > yaw_threshold:
+            score += min(30, abs(yaw) - yaw_threshold)
+        if abs(pitch) > pitch_threshold:
+            score += min(20, abs(pitch) - pitch_threshold)
+        
+        # Convert to 0-1 scale (max possible score is 50)
+        return min(1.0, score / 100.0)
 
     def _scale_deviation(self, value, neutral, extreme):
         """

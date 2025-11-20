@@ -352,7 +352,7 @@ function updateBehaviorAnalysis(detections) {
     if (behavior.head_orientation) {
       const ho = behavior.head_orientation;
       html += `<div style="margin-top: 5px;"><strong>Head Angles:</strong><br>`;
-      html += `Pitch: ${ho.pitch.toFixed(1)}° | Yaw: ${ho.yaw.toFixed(1)}°</div>`;
+      html += `Left/Right: ${ho.pitch.toFixed(1)}° | Body Roll: ${ho.yaw.toFixed(1)}°</div>`;
       
       if (Math.abs(ho.yaw) > 30 || Math.abs(ho.pitch) > 20) {
         html += `<div style="color: #d32f2f; font-weight: bold; margin-top: 3px;">⚠️ Looking away</div>`;
@@ -400,7 +400,7 @@ function updateSuspicionScores(detections) {
   let html = '';
   personDetections.forEach(det => {
     const trackId = det.track_id || 'Unknown';
-    let score = 0;
+    const score = det.unified_score || 0;
     let reasons = [];
     
     if (det.behavior) {
@@ -409,14 +409,10 @@ function updateSuspicionScores(detections) {
       if (behavior.head_orientation) {
         const ho = behavior.head_orientation;
         if (Math.abs(ho.yaw) > yawThreshold) {
-          const yawScore = Math.min(30, Math.abs(ho.yaw) - yawThreshold);
-          score += yawScore;
-          reasons.push(`Head turned ${Math.abs(ho.yaw).toFixed(0)}° (yaw)`);
+          reasons.push(`Body rolled ${Math.abs(ho.yaw).toFixed(0)}°`);
         }
         if (Math.abs(ho.pitch) > pitchThreshold) {
-          const pitchScore = Math.min(20, Math.abs(ho.pitch) - pitchThreshold);
-          score += pitchScore;
-          reasons.push(`Head tilted ${Math.abs(ho.pitch).toFixed(0)}° (pitch)`);
+          reasons.push(`Head left/right ${Math.abs(ho.pitch).toFixed(0)}°`);
         }
       }
       
@@ -425,10 +421,8 @@ function updateSuspicionScores(detections) {
           const hand = behavior.hands[side];
           if (hand && hand.visible) {
             if (hand.near_object && hand.object_class) {
-              score += 40;
               reasons.push(`${side} hand near ${hand.object_class}`);
             } else if (hand.near_face) {
-              score += 15;
               reasons.push(`${side} hand near face`);
             }
           }
@@ -443,11 +437,8 @@ function updateSuspicionScores(detections) {
     
     nearbyObjects.forEach(obj => {
       const className = getClassName(obj.class_id);
-      score += 30;
       reasons.push(`${className} detected nearby`);
     });
-    
-    score = Math.min(100, Math.round(score));
     
     let alertLevel = 'low';
     let alertColor = '#4caf50';
@@ -515,7 +506,37 @@ socket.on('connect', () => {
   console.log('Connected to server');
   sourceType = 'webcam';
   startWebcam();
+  loadHistoricalEvents();
+  setInterval(loadHistoricalEvents, 5000); // Refresh every 5 seconds
 });
+
+function loadHistoricalEvents() {
+  console.log('Loading historical events...');
+  fetch('/api/historical_events')
+    .then(response => {
+      console.log('Response status:', response.status);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Received data:', data);
+      if (data.events && data.events.length > 0) {
+        console.log('Found', data.events.length, 'events');
+        allEventLogEntries = data.events;
+        const uniqueStudents = new Set(data.events.map(e => e.track_id));
+        activeStudents = uniqueStudents;
+        updateStudentFilter();
+        applyEventFilters();
+      } else {
+        console.log('No events found');
+        allEventLogEntries = [];
+        activeStudents = new Set();
+        applyEventFilters();
+      }
+    })
+    .catch(error => {
+      console.error('Error loading historical events:', error);
+    });
+}
 
 socket.on('disconnect', () => {
   console.log('Disconnected from server');
@@ -535,7 +556,6 @@ const saveStatus = document.getElementById('save-status');
 autoSaveToggle.addEventListener('change', (e) => {
   autoSaveEnabled = e.target.checked;
   socket.emit('toggle_auto_save', { enabled: autoSaveEnabled });
-  showSaveStatus(`Auto-save ${autoSaveEnabled ? 'enabled' : 'disabled'}`);
 });
 
 manualSaveBtn.addEventListener('click', () => {
@@ -601,9 +621,23 @@ function updateSeatMap(seatMapData) {
   
   let html = '';
   seatMapData.forEach(student => {
-    const bgColor = student.status === 'flagged' ? '#FFC107' : '#4CAF50';
-    const textColor = student.status === 'flagged' ? '#000' : '#fff';
-    const icon = student.status === 'flagged' ? '⚠️' : '✅';
+    const det = currentDetections ? currentDetections.find(d => d.track_id === student.track_id) : null;
+    const score = det ? (det.unified_score || 0) : 0;
+    
+    let bgColor = '#4CAF50';
+    let textColor = '#fff';
+    let icon = '✅';
+    
+    if (score >= suspicionThreshold) {
+      bgColor = '#d32f2f';
+      textColor = '#fff';
+      icon = '🚨';
+    } else if (score >= suspicionThreshold * 0.6) {
+      bgColor = '#FFC107';
+      textColor = '#000';
+      icon = '⚠️';
+    }
+    
     const seatLabel = student.seat_id !== null && student.seat_id !== undefined ? `Seat ${student.seat_id}` : 'Unassigned';
     
     html += `
@@ -621,7 +655,7 @@ function updateSeatMap(seatMapData) {
         <div style="font-weight: bold; font-size: 16px;">ID ${student.track_id}</div>
         <div style="font-size: 12px; margin-top: 3px; opacity: 0.9;">${seatLabel}</div>
         <div style="font-size: 11px; margin-top: 5px; padding: 3px; background: rgba(0,0,0,0.1); border-radius: 3px;">
-          Score: ${student.suspicion_score}/100
+          Score: ${score}/100
         </div>
       </div>
     `;
@@ -631,27 +665,8 @@ function updateSeatMap(seatMapData) {
 }
 
 function updateEventLog(flaggedEvents) {
-  const eventLog = document.getElementById('event-log');
-  if (!eventLog) return;
-  
-  if (flaggedEvents && flaggedEvents.length > 0) {
-    flaggedEvents.forEach(event => {
-      const isDuplicate = allEventLogEntries.some(e => 
-        e.track_id === event.track_id && 
-        e.timestamp === event.timestamp && 
-        e.description === event.description
-      );
-      
-      if (!isDuplicate) {
-        allEventLogEntries.unshift(event);
-        activeStudents.add(event.track_id);
-        if (allEventLogEntries.length > 50) allEventLogEntries.pop();
-      }
-    });
-    updateStudentFilter();
-  }
-  
-  applyEventFilters();
+  // Event log now loads only from output folder via loadHistoricalEvents()
+  // This function is kept for compatibility but does nothing
 }
 
 function updateStudentFilter() {
