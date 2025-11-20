@@ -101,10 +101,55 @@ def handle_video_frame(data):
 
         perf_stats = detector.get_performance_stats()
 
+        # Build seat map data with status
+        seat_map_data = []
+        for det in detections:
+            if det['class_id'] == 0 and 'track_id' in det:
+                track_id = det['track_id']
+                seat_id = seat_assignments.get(track_id)
+                suspicion_score = 0
+                if 'behavior' in det and 'suspicion' in det['behavior']:
+                    suspicion_score = det['behavior']['suspicion'].get('smoothed', 0) * 100
+                
+                status = 'flagged' if suspicion_score >= 20 else 'active'
+                seat_map_data.append({
+                    'track_id': track_id,
+                    'seat_id': seat_id,
+                    'status': status,
+                    'suspicion_score': round(suspicion_score)
+                })
+
+        # Check for flagged events
+        flagged_events = []
+        for det in detections:
+            if det['class_id'] == 0 and 'behavior' in det and 'suspicion' in det['behavior']:
+                suspicion_score = det['behavior']['suspicion'].get('smoothed', 0) * 100
+                if suspicion_score >= 20:
+                    reasons = []
+                    if 'head_orientation' in det['behavior']:
+                        ho = det['behavior']['head_orientation']
+                        if abs(ho.get('yaw', 0)) > 30:
+                            reasons.append(f"Head turned {abs(ho['yaw']):.0f}°")
+                    if 'hands' in det['behavior']:
+                        for side in ['left', 'right']:
+                            hand = det['behavior']['hands'].get(side, {})
+                            if hand.get('near_object') and hand.get('object_class'):
+                                reasons.append(f"{side.capitalize()} hand near {hand['object_class']}")
+                    
+                    if reasons:
+                        flagged_events.append({
+                            'track_id': det.get('track_id'),
+                            'timestamp': datetime.now().strftime('%H:%M:%S'),
+                            'score': round(suspicion_score),
+                            'description': ', '.join(reasons[:2])
+                        })
+
         emit('processed_frame', {
             'annotated_frame': annotated_frame_encoded,
             'detections': detections,
             'seat_assignments': seat_assignments,
+            'seat_map_data': seat_map_data,
+            'flagged_events': flagged_events,
             'metrics': class_counts,
             'performance_stats': perf_stats
         })
