@@ -44,6 +44,6 @@ output/
 
 # Potentially large sample data (if you add more later)
 data/samples/
-
+data/
 # Logs
 *.log
