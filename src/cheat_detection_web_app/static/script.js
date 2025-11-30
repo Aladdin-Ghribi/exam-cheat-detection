@@ -34,15 +34,21 @@ let stream = null;
 let videoElement = null;
 let isProcessing = false;
 let lastProcessedTime = 0;
-const PROCESS_INTERVAL_MS = 50;
+const RENDER_FPS = 30;
+const RENDER_INTERVAL_MS = 1000 / RENDER_FPS;
+const PROCESS_FPS = 10;
+const PROCESS_INTERVAL_MS = 1000 / PROCESS_FPS;
 let sourceType = 'webcam';
-let animationFrameId = null;
+let renderFrameId = null;
 let poseEnabled = true;
-let autoSaveEnabled = true;
+let showPoseSkeleton = false;
+let showBoundingBoxes = true;
+let autoSaveEnabled = false;
 let currentFrame = null;
 let currentDetections = null;
+let lastAnnotations = null;
 let frameCount = 0;
-let eventLogEntries = [];
+
 let allEventLogEntries = [];
 let activeStudents = new Set();
 
@@ -51,7 +57,8 @@ async function startWebcam() {
     const constraints = { 
       video: { 
         width: { ideal: 640 },
-        height: { ideal: 480 }
+        height: { ideal: 480 },
+        frameRate: { ideal: 30 }
       }, 
       audio: false 
     };
@@ -63,7 +70,8 @@ async function startWebcam() {
     videoElement.onloadedmetadata = () => {
       displayCanvas.width = 640;
       displayCanvas.height = 480;
-      processFrame(videoElement);
+      startRenderLoop();
+      startProcessLoop();
     };
 
     videoElement.play();
@@ -74,9 +82,7 @@ async function startWebcam() {
 }
 
 async function processFile(file) {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
+  stopLoops();
 
   if (stream) {
     stream.getTracks().forEach(track => track.stop());
@@ -108,7 +114,8 @@ async function processFile(file) {
       videoElement.onloadedmetadata = () => {
         displayCanvas.width = videoElement.videoWidth;
         displayCanvas.height = videoElement.videoHeight;
-        processFrame(videoElement);
+        startRenderLoop();
+        startProcessLoop();
       };
     } else if (fileType === 'image') {
       const processResponse = await fetch('/process_file', {
@@ -153,9 +160,7 @@ async function processFile(file) {
 }
 
 function resetToWebcam() {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
+  stopLoops();
 
   if (videoElement && videoElement.pause) {
     videoElement.pause();
@@ -174,40 +179,148 @@ function resetToWebcam() {
   startWebcam();
 }
 
-function processFrame(videoElement) {
-  if (!videoElement || isProcessing) {
-    animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
-    return;
-  }
-
-  if (videoElement.tagName === 'VIDEO' && (videoElement.paused || videoElement.ended)) {
-    if (videoElement.ended) {
-      console.log('Video playback ended');
+function startRenderLoop() {
+  let lastRenderTime = 0;
+  
+  function render(timestamp) {
+    if (!videoElement) {
+      renderFrameId = requestAnimationFrame(render);
       return;
     }
-    animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
-    return;
+
+    if (videoElement.tagName === 'VIDEO' && (videoElement.paused || videoElement.ended)) {
+      if (videoElement.ended) {
+        console.log('Video playback ended');
+        return;
+      }
+      renderFrameId = requestAnimationFrame(render);
+      return;
+    }
+
+    const elapsed = timestamp - lastRenderTime;
+    if (elapsed < RENDER_INTERVAL_MS) {
+      renderFrameId = requestAnimationFrame(render);
+      return;
+    }
+
+    lastRenderTime = timestamp;
+
+    displayCtx.drawImage(videoElement, 0, 0, displayCanvas.width, displayCanvas.height);
+
+    if (lastAnnotations) {
+      drawAnnotations(lastAnnotations);
+    }
+
+    renderFrameId = requestAnimationFrame(render);
   }
 
-  const now = Date.now();
-  if (now - lastProcessedTime < PROCESS_INTERVAL_MS) {
-    animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
-    return;
+  renderFrameId = requestAnimationFrame(render);
+}
+
+function startProcessLoop() {
+  setInterval(() => {
+    if (isProcessing || !videoElement) return;
+    if (videoElement.tagName === 'VIDEO' && (videoElement.paused || videoElement.ended)) return;
+
+    isProcessing = true;
+
+    const captureCanvas = document.createElement('canvas');
+    captureCanvas.width = videoElement.videoWidth || videoElement.width || 640;
+    captureCanvas.height = videoElement.videoHeight || videoElement.height || 480;
+    const captureCtx = captureCanvas.getContext('2d');
+    captureCtx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
+
+    const frameDataUrl = captureCanvas.toDataURL('image/jpeg', 0.85);
+    socket.emit('video_frame', { image: frameDataUrl, pose_enabled: poseEnabled });
+  }, PROCESS_INTERVAL_MS);
+}
+
+function stopLoops() {
+  if (renderFrameId) {
+    cancelAnimationFrame(renderFrameId);
+    renderFrameId = null;
   }
+}
 
-  lastProcessedTime = now;
-  isProcessing = true;
+function drawAnnotations(annotations) {
+  if (!annotations || !annotations.detections) return;
 
-  const captureCanvas = document.createElement('canvas');
-  captureCanvas.width = videoElement.videoWidth || videoElement.width || 640;
-  captureCanvas.height = videoElement.videoHeight || videoElement.height || 480;
-  const captureCtx = captureCanvas.getContext('2d');
-  captureCtx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
+  const detections = annotations.detections;
 
-  const frameDataUrl = captureCanvas.toDataURL('image/jpeg', 0.85);
-  socket.emit('video_frame', { image: frameDataUrl, pose_enabled: poseEnabled });
+  detections.forEach(det => {
+    const [x1, y1, x2, y2] = det.bbox;
+    const score = det.unified_score || 0;
+    const isPerson = det.class_id === 0;
 
-  animationFrameId = requestAnimationFrame(() => processFrame(videoElement));
+    if (showBoundingBoxes) {
+      let color = '#4caf50';
+      let lineWidth = 2;
+
+      if (isPerson) {
+        if (score >= suspicionThreshold) {
+          color = '#d32f2f';
+          lineWidth = 3;
+        } else if (score >= suspicionThreshold * 0.6) {
+          color = '#f57c00';
+          lineWidth = 3;
+        }
+      } else {
+        color = '#2196f3';
+      }
+
+      displayCtx.strokeStyle = color;
+      displayCtx.lineWidth = lineWidth;
+      displayCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+      const className = getClassName(det.class_id);
+      const label = isPerson && det.track_id ? `ID ${det.track_id} (${score})` : className;
+
+      displayCtx.fillStyle = color;
+      displayCtx.fillRect(x1, y1 - 20, displayCtx.measureText(label).width + 10, 20);
+      displayCtx.fillStyle = '#ffffff';
+      displayCtx.font = '14px Arial';
+      displayCtx.fillText(label, x1 + 5, y1 - 5);
+    }
+
+    if (isPerson && showPoseSkeleton && det.behavior && det.behavior.pose_landmarks) {
+      drawPoseSkeleton(det.behavior.pose_landmarks);
+    }
+  });
+}
+
+function drawPoseSkeleton(landmarks) {
+  if (!landmarks || landmarks.length === 0) return;
+
+  const connections = [
+    [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
+    [11, 23], [12, 24], [23, 24], [23, 25], [25, 27],
+    [24, 26], [26, 28]
+  ];
+
+  displayCtx.strokeStyle = '#00ff00';
+  displayCtx.lineWidth = 2;
+
+  connections.forEach(([start, end]) => {
+    if (landmarks[start] && landmarks[end]) {
+      const startLm = landmarks[start];
+      const endLm = landmarks[end];
+      if (startLm.visibility > 0.5 && endLm.visibility > 0.5) {
+        displayCtx.beginPath();
+        displayCtx.moveTo(startLm.x * displayCanvas.width, startLm.y * displayCanvas.height);
+        displayCtx.lineTo(endLm.x * displayCanvas.width, endLm.y * displayCanvas.height);
+        displayCtx.stroke();
+      }
+    }
+  });
+
+  landmarks.forEach((lm, idx) => {
+    if (lm.visibility > 0.5) {
+      displayCtx.fillStyle = '#ff0000';
+      displayCtx.beginPath();
+      displayCtx.arc(lm.x * displayCanvas.width, lm.y * displayCanvas.height, 4, 0, 2 * Math.PI);
+      displayCtx.fill();
+    }
+  });
 }
 
 webcamBtn.addEventListener('click', () => {
@@ -235,7 +348,12 @@ settingsToggleBtn.addEventListener('click', () => {
 });
 
 togglePoseBtn.addEventListener('change', (e) => {
-  poseEnabled = e.target.checked;
+  showPoseSkeleton = e.target.checked;
+});
+
+const toggleBboxBtn = document.getElementById('toggle-bbox-check');
+toggleBboxBtn.addEventListener('change', (e) => {
+  showBoundingBoxes = e.target.checked;
 });
 
 filterSeverity.addEventListener('change', () => {
@@ -247,30 +365,29 @@ filterStudent.addEventListener('change', () => {
 });
 
 modelSizeSelect.addEventListener('change', (e) => {
-  const modelSize = e.target.value;
-  socket.emit('switch_model', { model_size: modelSize });
-  console.log(`Switching to ${modelSize} model`);
+  socket.emit('switch_model', { model_size: e.target.value });
 });
 
 frameSkipToggle.addEventListener('change', (e) => {
   socket.emit('toggle_frame_skipping', { enabled: e.target.checked });
-  console.log(`Frame skipping ${e.target.checked ? 'enabled' : 'disabled'}`);
 });
 
 document.getElementById('yaw-threshold').addEventListener('input', (e) => {
   yawThreshold = parseInt(e.target.value);
   document.getElementById('yaw-value').textContent = yawThreshold;
+  socket.emit('update_thresholds', { yaw: yawThreshold, pitch: pitchThreshold, suspicion: suspicionThreshold });
 });
 
 document.getElementById('pitch-threshold').addEventListener('input', (e) => {
   pitchThreshold = parseInt(e.target.value);
   document.getElementById('pitch-value').textContent = pitchThreshold;
+  socket.emit('update_thresholds', { yaw: yawThreshold, pitch: pitchThreshold, suspicion: suspicionThreshold });
 });
 
 document.getElementById('suspicion-threshold').addEventListener('input', (e) => {
   suspicionThreshold = parseInt(e.target.value);
   document.getElementById('suspicion-value').textContent = suspicionThreshold;
-  socket.emit('update_suspicion_threshold', { threshold: suspicionThreshold });
+  socket.emit('update_thresholds', { yaw: yawThreshold, pitch: pitchThreshold, suspicion: suspicionThreshold });
 });
 
 socket.on('processed_frame', (data) => {
@@ -283,12 +400,15 @@ socket.on('processed_frame', (data) => {
 
   const img = new Image();
   img.onload = () => {
-    if (sourceType === 'webcam' && (displayCanvas.width !== 640 || displayCanvas.height !== 480)) {
-      displayCanvas.width = 640;
-      displayCanvas.height = 480;
-    }
+    lastAnnotations = {
+      image: img,
+      detections: data.detections,
+      metrics: data.metrics,
+      seat_assignments: data.seat_assignments,
+      seat_map_data: data.seat_map_data,
+      flagged_events: data.flagged_events
+    };
 
-    displayCtx.drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
     updateMetrics(data.metrics);
     updateSeatAssignments(data.seat_assignments);
     updateSeatMap(data.seat_map_data);
@@ -503,54 +623,38 @@ function getClassName(classId) {
 }
 
 socket.on('connect', () => {
-  console.log('Connected to server');
   sourceType = 'webcam';
   startWebcam();
   loadHistoricalEvents();
-  setInterval(loadHistoricalEvents, 5000); // Refresh every 5 seconds
+  setInterval(loadHistoricalEvents, 10000);
 });
 
 function loadHistoricalEvents() {
-  console.log('Loading historical events...');
   fetch('/api/historical_events')
-    .then(response => {
-      console.log('Response status:', response.status);
-      return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-      console.log('Received data:', data);
       if (data.events && data.events.length > 0) {
-        console.log('Found', data.events.length, 'events');
         allEventLogEntries = data.events;
-        const uniqueStudents = new Set(data.events.map(e => e.track_id));
-        activeStudents = uniqueStudents;
+        activeStudents = new Set(data.events.map(e => e.track_id));
         updateStudentFilter();
         applyEventFilters();
       } else {
-        console.log('No events found');
         allEventLogEntries = [];
         activeStudents = new Set();
         applyEventFilters();
       }
     })
-    .catch(error => {
-      console.error('Error loading historical events:', error);
-    });
+    .catch(() => {});
 }
 
-socket.on('disconnect', () => {
-  console.log('Disconnected from server');
-});
-
-socket.on('error', (data) => {
-  console.error('Backend error:', data.message);
-});
+socket.on('disconnect', () => {});
+socket.on('error', () => {});
 
 const autoSaveToggle = document.getElementById('auto-save-toggle');
 const manualSaveBtn = document.getElementById('manual-save-btn');
 const exportJsonBtn = document.getElementById('export-json-btn');
 const exportCsvBtn = document.getElementById('export-csv-btn');
-const exportZipBtn = document.getElementById('export-zip-btn');
+
 const saveStatus = document.getElementById('save-status');
 
 autoSaveToggle.addEventListener('change', (e) => {
@@ -578,9 +682,7 @@ exportCsvBtn.addEventListener('click', () => {
   socket.emit('export_data', { format: 'csv' });
 });
 
-exportZipBtn.addEventListener('click', () => {
-  socket.emit('export_data', { format: 'zip' });
-});
+
 
 socket.on('export_ready', (data) => {
   const link = document.createElement('a');

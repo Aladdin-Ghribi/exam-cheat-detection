@@ -1,10 +1,6 @@
 from collections import deque
 from .suspicion_config import (
-    SUSPICION_THRESHOLD, 
-    NORMAL_GAZE_THRESHOLD, 
-    SUSPICIOUS_GAZE_THRESHOLD, 
-    HIGH_SUSPICION_GAZE_THRESHOLD, 
-    VERY_SUSPICION_GAZE_THRESHOLD,
+    SUSPICION_THRESHOLD,
     HEAD_WEIGHT,
     HANDS_FACE_WEIGHT,
     HANDS_OBJECT_WEIGHT,
@@ -30,11 +26,10 @@ class SuspicionScorer:
         self.high_risk_objects = HIGH_RISK_OBJECTS
         self.medium_risk_objects = MEDIUM_RISK_OBJECTS
 
-        # Thresholds for head orientation from config
-        self.normal_gaze_threshold = NORMAL_GAZE_THRESHOLD
-        self.suspicious_gaze_threshold = SUSPICIOUS_GAZE_THRESHOLD
-        self.high_suspicious_gaze_threshold = HIGH_SUSPICION_GAZE_THRESHOLD
-        self.very_suspicious_gaze_threshold = VERY_SUSPICION_GAZE_THRESHOLD
+        # Dynamic thresholds (can be updated from UI)
+        self.yaw_threshold = 30
+        self.pitch_threshold = 20
+        self.suspicion_threshold = SUSPICION_THRESHOLD
 
     def score_detection(self, detection):
         """
@@ -55,13 +50,10 @@ class SuspicionScorer:
         if 'head_orientation' in behavior:
             ho = behavior['head_orientation']
             if ho is not None:
-                yaw_threshold = 30
-                pitch_threshold = 20
-                
-                if abs(ho.get('yaw', 0)) > yaw_threshold:
-                    score += min(30, abs(ho['yaw']) - yaw_threshold)
-                if abs(ho.get('pitch', 0)) > pitch_threshold:
-                    score += min(20, abs(ho['pitch']) - pitch_threshold)
+                if abs(ho.get('yaw', 0)) > self.yaw_threshold:
+                    score += min(30, abs(ho['yaw']) - self.yaw_threshold)
+                if abs(ho.get('pitch', 0)) > self.pitch_threshold:
+                    score += min(20, abs(ho['pitch']) - self.pitch_threshold)
         
         # Hand proximity (0-100 points per hand for high-risk objects)
         if 'hands' in behavior:
@@ -202,15 +194,12 @@ class SuspicionScorer:
         yaw = float(orientation.get('yaw', 0.0))
         pitch = float(orientation.get('pitch', 0.0))
         
-        # Simple threshold-based scoring (matching app.py logic)
-        yaw_threshold = 30
-        pitch_threshold = 20
         score = 0
         
-        if abs(yaw) > yaw_threshold:
-            score += min(30, abs(yaw) - yaw_threshold)
-        if abs(pitch) > pitch_threshold:
-            score += min(20, abs(pitch) - pitch_threshold)
+        if abs(yaw) > self.yaw_threshold:
+            score += min(30, abs(yaw) - self.yaw_threshold)
+        if abs(pitch) > self.pitch_threshold:
+            score += min(20, abs(pitch) - self.pitch_threshold)
         
         # Convert to 0-1 scale (max possible score is 50)
         return min(1.0, score / 100.0)

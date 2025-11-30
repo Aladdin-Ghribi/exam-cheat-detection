@@ -6,11 +6,7 @@ This file ensures consistent thresholds and weights across all components.
 # Main suspicion threshold (0-100 scale)
 SUSPICION_THRESHOLD = 20  # Default threshold for flagging suspicious behavior
 
-# Head orientation thresholds (degrees)
-NORMAL_GAZE_THRESHOLD = 25.0  # Normal forward gaze tolerance
-SUSPICIOUS_GAZE_THRESHOLD = 45.0  # When to start scoring higher
-HIGH_SUSPICION_GAZE_THRESHOLD = 60.0  # High suspicion
-VERY_SUSPICION_GAZE_THRESHOLD = 80.0  # Very high suspicion
+
 
 # Scoring weights
 HEAD_WEIGHT = 0.75  # Weight for head orientation component
@@ -44,13 +40,8 @@ MEDIUM_RISK_OBJECTS = frozenset({
     'backpack'
 })
 
-# UI scoring parameters (0-100 scale)
-HEAD_YAW_MAX_SCORE = 30  # Maximum score for head yaw
-HEAD_PITCH_MAX_SCORE = 20  # Maximum score for head pitch
-HAND_OBJECT_SCORE = 40  # Score for hand near object
-HAND_FACE_SCORE = 15  # Score for hand near face
-NEARBY_OBJECT_SCORE = 30  # Score for objects near person
 
-# UI thresholds
-UI_YAW_THRESHOLD = 30  # UI threshold for yaw
-UI_PITCH_THRESHOLD = 20  # UI threshold for pitch
+
+# Performance settings (FPS)
+RENDER_FPS = 30  # Client-side render loop FPS (smooth display)
+PROCESS_FPS = 10  # Server-side processing FPS (AI inference)
