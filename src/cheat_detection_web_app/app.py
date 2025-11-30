@@ -31,7 +31,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 print("Initializing YOLODetector...")
 detector = YOLODetector()
-detector.auto_save_enabled = True
+detector.auto_save_enabled = False
 print("YOLODetector ready.")
 
 print("Initializing SuspicionScorer...")
@@ -83,8 +83,31 @@ def handle_video_frame(data):
                 'bbox': [float(x) for x in det['bbox']]
             }
             if 'behavior' in det:
-                sanitized['behavior'] = det['behavior']
-                # Add unified suspicion score calculation
+                behavior = det['behavior']
+                sanitized_behavior = {}
+                
+                if 'head_orientation' in behavior:
+                    sanitized_behavior['head_orientation'] = behavior['head_orientation']
+                
+                if 'hands' in behavior:
+                    sanitized_behavior['hands'] = behavior['hands']
+                
+                if 'suspicion' in behavior:
+                    sanitized_behavior['suspicion'] = behavior['suspicion']
+                
+                if 'pose_landmarks' in behavior and behavior['pose_landmarks']:
+                    landmarks = behavior['pose_landmarks']
+                    sanitized_landmarks = []
+                    for lm in landmarks:
+                        sanitized_landmarks.append({
+                            'x': float(lm.x) if hasattr(lm, 'x') else float(lm.get('x', 0)),
+                            'y': float(lm.y) if hasattr(lm, 'y') else float(lm.get('y', 0)),
+                            'z': float(lm.z) if hasattr(lm, 'z') else float(lm.get('z', 0)),
+                            'visibility': float(lm.visibility) if hasattr(lm, 'visibility') else float(lm.get('visibility', 0))
+                        })
+                    sanitized_behavior['pose_landmarks'] = sanitized_landmarks
+                
+                sanitized['behavior'] = sanitized_behavior
                 suspicion_result = suspicion_scorer.score_detection(det)
                 sanitized['unified_score'] = round(suspicion_result['smoothed'] * 100)
             if 'track_id' in det:
@@ -96,10 +119,8 @@ def handle_video_frame(data):
             int(k): int(v) for k, v in raw_seat_assignments.items()
         } if raw_seat_assignments else {}
 
-        annotated_frame = detector.draw_detections(frame, detection_result)
-
-        _, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        annotated_frame_encoded = base64.b64encode(buffer).decode('utf-8')
+        _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        raw_frame_encoded = base64.b64encode(buffer).decode('utf-8')
 
         class_counts = {}
         for det in detections:
@@ -153,7 +174,7 @@ def handle_video_frame(data):
                         })
 
         emit('processed_frame', {
-            'annotated_frame': annotated_frame_encoded,
+            'annotated_frame': raw_frame_encoded,
             'detections': detections,
             'seat_assignments': seat_assignments,
             'seat_map_data': seat_map_data,
@@ -235,9 +256,7 @@ def process_file():
                 int(k): int(v) for k, v in raw_seat_assignments.items()
             } if raw_seat_assignments else {}
 
-            annotated_img = detector.draw_detections(img, detection_result)
-
-            _, buffer = cv2.imencode('.jpg', annotated_img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 85])
             annotated_img_encoded = base64.b64encode(buffer).decode('utf-8')
 
             class_counts = {}
@@ -261,12 +280,24 @@ def process_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@socketio.on('update_suspicion_threshold')
-def update_suspicion_threshold(data):
-    threshold = data.get('threshold', 20)
-    detector.evidence_saver.suspicion_threshold = threshold
-    print(f"Updated suspicion threshold to: {threshold}")
-    emit('threshold_updated', {'threshold': threshold})
+@socketio.on('update_thresholds')
+def update_thresholds(data):
+    yaw = data.get('yaw', 30)
+    pitch = data.get('pitch', 20)
+    suspicion = data.get('suspicion', 20)
+    
+    from src.detection import suspicion_config
+    suspicion_config.SUSPICION_THRESHOLD = suspicion
+    
+    detector.evidence_saver.suspicion_threshold = suspicion
+    
+    if hasattr(detector, 'suspicion_scorer'):
+        detector.suspicion_scorer.yaw_threshold = yaw
+        detector.suspicion_scorer.pitch_threshold = pitch
+        detector.suspicion_scorer.suspicion_threshold = suspicion
+    
+    print(f"Updated thresholds - Yaw: {yaw}°, Pitch: {pitch}°, Suspicion: {suspicion}")
+    emit('thresholds_updated', {'yaw': yaw, 'pitch': pitch, 'suspicion': suspicion})
 
 @socketio.on('toggle_auto_save')
 def toggle_auto_save(data):

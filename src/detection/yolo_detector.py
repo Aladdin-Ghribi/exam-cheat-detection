@@ -94,34 +94,7 @@ class YOLODetector:
         print(f"Switched to {model_size} model ({model_path})")
         return True
 
-    def detect(self, source, save_image=False, save_path=None):
-        results = self.model.predict(
-            source=source,
-            conf=CONFIDENCE_THRESHOLD,
-            imgsz=self.img_size,
-            classes=self.target_class_ids,
-            save=save_image,
-            save_txt=False,
-            stream=True,
-            half=False,
-            device=self.device,
-            verbose=False
-        )
 
-        for r in results:
-            detections = []
-            if r.boxes is not None:
-                for box, cls_id_tensor, conf_tensor in zip(r.boxes.xyxy, r.boxes.cls, r.boxes.conf):
-                   cls_id = int(cls_id_tensor)
-                   conf = float(conf_tensor)
-                   x1, y1, x2, y2 = box.tolist()
-                   if cls_id in self.target_class_ids:
-                        detections.append({
-                            'class_id': cls_id,
-                            'confidence': conf,
-                            'bbox': [x1, y1, x2, y2]
-                        })
-            yield detections, r.orig_img
 
     def detect_frame(self, frame):
         """Run detection on a single frame with frame skipping support."""
@@ -178,7 +151,7 @@ class YOLODetector:
             seat_assignments = seat_result['zone_assignments']
 
         if self.enable_pose:
-            self._annotate_behavior(detections)
+            self._annotate_behavior(detections, frame)
 
         if self.auto_save_enabled:
             self.evidence_saver.process_frame(frame, detections)
@@ -199,7 +172,7 @@ class YOLODetector:
 
         return result
 
-    def _annotate_behavior(self, detections):
+    def _annotate_behavior(self, detections, frame):
         object_detections = [det for det in detections if det['class_id'] != PERSON_CLASS_ID]
         active_keys = set()
         for detection in detections:
@@ -235,6 +208,23 @@ class YOLODetector:
             if pose and pose.get('success'):
                 behavior['head_orientation'] = pose.get('head_orientation')
                 behavior['face_region'] = pose.get('face_region')
+                
+                # Transform landmarks from cropped person image to full frame coordinates
+                landmarks = pose.get('landmarks')
+                if landmarks:
+                    x1, y1, x2, y2 = detection['bbox']
+                    width = x2 - x1
+                    height = y2 - y1
+                    transformed_landmarks = []
+                    for lm in landmarks:
+                        transformed_landmarks.append({
+                            'x': (x1 + lm['x'] * width) / frame.shape[1],  # Normalize to full frame width
+                            'y': (y1 + lm['y'] * height) / frame.shape[0],  # Normalize to full frame height
+                            'z': lm['z'],
+                            'visibility': lm['visibility']
+                        })
+                    behavior['pose_landmarks'] = transformed_landmarks
+                
                 behavior['hands']['left'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'left')
                 behavior['hands']['right'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'right')
             detection['behavior'] = behavior
@@ -323,82 +313,9 @@ class YOLODetector:
             return names[class_id]
         return str(class_id)
 
-    def draw_detections(self, frame, detection_result):
-        annotated_frame = frame.copy()
-        detections = detection_result['detections']
-        seat_assignments = detection_result.get('seat_assignments')
 
-        if self.enable_seat_mapping and seat_assignments is not None:
-            annotated_frame = self.seat_manager.draw_zones(annotated_frame, seat_assignments)
 
-        for det in detections:
-            x1, y1, x2, y2 = map(int, det['bbox'])
-            label = f"{self.model.names[det['class_id']]} {det['confidence']:.2f}"
 
-            if 'track_id' in det:
-                label = f"[ID:{det['track_id']}] {label}"
-                color = (0, 0, 255)
-
-                if 'stable_position' in det:
-                    cx, cy = det['stable_position']
-                    cv2.circle(annotated_frame, (cx, cy), 8, (255, 255, 0), -1)
-                    cv2.circle(annotated_frame, (cx, cy), 8, (0, 0, 0), 2)
-            else:
-                color = (0, 255, 0)
-
-            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-
-            if 'pose' in det and self.enable_pose and det['pose']['success']:
-                pose_result = det['pose']
-
-                if pose_result['head']:
-                    for landmark in pose_result['head']:
-                        x = int(x1 + landmark['x'] * (x2 - x1))
-                        y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (0, 0, 255), -1)
-
-                if pose_result['shoulders']:
-                    for landmark in pose_result['shoulders']:
-                        x = int(x1 + landmark['x'] * (x2 - x1))
-                        y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (0, 255, 0), -1)
-
-                if pose_result['hands']:
-                    for landmark in pose_result['hands']:
-                        x = int(x1 + landmark['x'] * (x2 - x1))
-                        y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (255, 0, 0), -1)
-
-                person_img = frame[int(y1):int(y2), int(x1):int(x2)]
-                if person_img.size > 0:
-                    import numpy as np
-                    temp_img = np.zeros_like(person_img)
-                    skeleton_img = self.pose_detector.draw_landmarks(
-                        temp_img,
-                        pose_result['landmarks'],
-                        connections=True
-                    )
-
-                    mask = skeleton_img > 0
-                    annotated_frame[y1:y2, x1:x2][mask] = skeleton_img[mask]
-
-            (text_width, text_height), baseline = cv2.getTextSize(
-                label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-            cv2.rectangle(annotated_frame, (x1, y1 - text_height - baseline),
-                          (x1 + text_width, y1), color, thickness=cv2.FILLED)
-            cv2.putText(annotated_frame, label, (x1, y1 - baseline),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-
-        return annotated_frame
-
-    def get_room_map(self, seat_assignments=None):
-        if not self.enable_seat_mapping:
-            return None
-
-        import numpy as np
-        room_map = np.zeros((self.seat_manager.room_height, self.seat_manager.room_width, 3), dtype=np.uint8)
-
-        return self.seat_manager.draw_zones(room_map, seat_assignments)
 
     def set_auto_save(self, enabled):
         self.auto_save_enabled = enabled
