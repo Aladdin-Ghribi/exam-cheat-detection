@@ -1,0 +1,35 @@
+:root {
+    /* Core Colors */
+    --bg-primary: #1A2630;
+    --bg-secondary: #263952;
+    --bg-card: #263952;
+    --text-primary: rgba(255, 255, 255, 0.95);
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --accent-color: #00E5FF;
+    /* Cyan accent for "premium" feel */
+    --danger-color: #FF4444;
+    --success-color: #00C851;
+    --warning-color: #FFBB33;
+
+    /* Spacing & Layout */
+    --sidebar-width: 250px;
+    --header-height: 70px;
+    --border-radius: 12px;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: "Manrope", sans-serif !important;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+}
+
+* {
+    font-family: "Manrope", sans-serif !important;
+}

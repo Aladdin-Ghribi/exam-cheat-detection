@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cheat Detection System V2</title>
+
+  <!-- Boxicons (CDN for now, will provide download instructions later) -->
+  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="static/css/variables.css">
+  <link rel="stylesheet" href="static/css/reset.css">
+  <link rel="stylesheet" href="static/css/dashboard.css">
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <i class='bx bxs-shield-plus logo-icon'></i>
+        <h2 class="sidebar-title">ProctorAI</h2>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <i class='bx bxs-grid-alt'></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="monitor">
+          <i class='bx bxs-cctv'></i>
+          <span>Monitor</span>
+        </a>
+        <a href="#" class="nav-item" data-page="history">
+          <i class='bx bxs-time-five'></i>
+          <span>History</span>
+        </a>
+        <a href="#" class="nav-item" data-page="settings">
+          <i class='bx bxs-cog'></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <img src="https://ui-avatars.com/api/?name=Admin&background=random" alt="Admin">
+          <div class="user-info">
+            <h4>Admin User</h4>
+            <p>Proctor Access</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="toggle-btn" id="sidebar-toggle">
+            <i class='bx bx-menu'></i>
+          </button>
+          <h1 id="page-title">Dashboard</h1>
+        </div>
+      </header>
+
+      <!-- Dynamic Views -->
+      <div id="content-area">
+        <!-- Dashboard View -->
+        <div id="view-dashboard" class="page-view active">
+          <!-- Welcome Section -->
+          <div class="welcome-section">
+            <div class="welcome-text">
+              <h2 class="page-heading">Dashboard</h2>
+              <p class="welcome-message">Welcome back, <span class="username">Admin</span></p>
+            </div>
+
+            <div class="info-cards">
+              <div class="info-card">
+                <div class="info-card-content">
+                  <div class="info-card-time" id="current-time">19:30</div>
+                  <div class="info-card-date" id="current-date">
+                    <i class='bx bx-calendar'></i>
+                    <span>2025-12-04</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-card">
+                <div class="info-card-label">Up Time</div>
+                <div class="info-card-content">
+                  <div class="info-card-value" id="system-uptime">10d 3m</div>
+                  <div class="info-card-subtitle">System process</div>
+                </div>
+              </div>
+
+              <div class="info-card">
+                <div class="info-card-label">Detection Status</div>
+                <div class="info-card-content">
+                  <div class="info-card-value status-active">
+                    <i class='bx bx-check-circle'></i>
+                    <span>Active</span>
+                  </div>
+                  <div class="info-card-subtitle">AI Engine Running</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon warning">
+                <i class='bx bxs-error-circle'></i>
+              </div>
+              <div class="stat-info">
+                <h3>Total Alerts</h3>
+                <p class="stat-value">12</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon success">
+                <i class='bx bxs-user-check'></i>
+              </div>
+              <div class="stat-info">
+                <h3>Active Cameras</h3>
+                <p class="stat-value">3</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon info">
+                <i class='bx bxs-camera'></i>
+              </div>
+              <div class="stat-info">
+                <h3>Cameras Connected</h3>
+                <p class="stat-value">5</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="cameras-grid-container">
+            <h3>Live Feeds</h3>
+            <div class="cameras-grid" id="cameras-grid">
+              <!-- Sample Camera Card -->
+              <div class="camera-card">
+                <div class="camera-preview">
+                  <div class="camera-placeholder">
+                    <i class='bx bxs-camera'></i>
+                    <span>No Signal</span>
+                  </div>
+                  <div class="camera-status">
+                    <span class="status-indicator active"></span>
+                    <span class="status-text">Active</span>
+                  </div>
+                </div>
+                <div class="camera-info">
+                  <h4 class="camera-name">Camera 01</h4>
+                  <p class="camera-location">
+                    <i class='bx bx-map-pin'></i>
+                    <span>Front Entrance</span>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Add Camera Placeholder -->
+              <div class="camera-card-placeholder">
+                <i class='bx bxs-camera-plus'></i>
+                <p>Add Camera</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other views hidden by default -->
+        <div id="view-monitor" class="page-view hidden">
+          <h2>Active Monitoring</h2>
+          <p>Select a camera to view details.</p>
+        </div>
+        <div id="view-history" class="page-view hidden">
+          <h2>Evidence History</h2>
+        </div>
+        <div id="view-settings" class="page-view hidden">
+          <h2>System Settings</h2>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="static/js/router.js"></script>
+  <script src="static/js/sidebar.js"></script>
+  <script src="static/js/dashboard.js"></script>
+</body>
+
+</html>
