@@ -44,36 +44,30 @@ class FlaggedEvidenceSaver:
 
     def process_frame(self, frame, detections, timestamp=None):
         """
-        Process a frame and save evidence if suspicion threshold is exceeded.
+        Process a frame and save evidence for EACH person individually if they exceed threshold.
 
         Args:
             frame: OpenCV image array
             detections: List of detection dictionaries with behavior.suspicion.smoothed
             timestamp: Optional timestamp, defaults to current time
         """
-        # Check if auto-save is enabled
         if not self.auto_save_enabled:
             return
 
         if timestamp is None:
             timestamp = datetime.now()
 
-        # Calculate overall suspicion score (max of individual scores)
-        # Extract suspicion score from behavior.suspicion.smoothed if available
-        max_suspicion = 0
+        # Check each person individually - FIXED for multi-person flagging
         for det in detections:
-            if 'behavior' in det and 'suspicion' in det['behavior']:
-                suspicion = det['behavior']['suspicion']
-                if 'smoothed' in suspicion:
-                    max_suspicion = max(max_suspicion, suspicion['smoothed'])
-            elif 'suspicion_score' in det:
-                max_suspicion = max(max_suspicion, det['suspicion_score'])
-
-        # Convert to 0-100 scale for threshold comparison
-        # Use rounding to ensure proper conversion
-        score_100 = min(100, round(max_suspicion * 100))
-        if score_100 >= self.suspicion_threshold:
-            self._save_evidence(frame, detections, timestamp, max_suspicion)
+            if det.get('class_id') != 0:  # Skip non-person objects
+                continue
+            
+            suspicion_score = self._get_suspicion_score(det)
+            score_100 = min(100, round(suspicion_score * 100))
+            
+            # Flag this person if they exceed threshold individually
+            if score_100 >= self.suspicion_threshold:
+                self._save_evidence(frame, [det], timestamp, suspicion_score)
 
     def _save_evidence(self, frame, detections, timestamp, max_suspicion):
         """
