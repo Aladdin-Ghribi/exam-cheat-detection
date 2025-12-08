@@ -113,7 +113,7 @@ function renderEventCards() {
 
     // Use real evidence image for first few cards (testing), then placeholders
     const evidenceThumbnail = index < 6
-      ? '../../assets/figma_design/image.png'  // Real test image
+      ? 'static/assets/studentTestPic.png'  // Real test image
       : `https://picsum.photos/400/300?random=${index}`;  // Placeholder
 
     return `
