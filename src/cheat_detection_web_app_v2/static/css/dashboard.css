@@ -781,6 +781,7 @@ body {
 
 .radio-label input[type="radio"] {
   cursor: pointer;
+  accent-color: #0071FF;
 }
 
 .toggle-switch {
