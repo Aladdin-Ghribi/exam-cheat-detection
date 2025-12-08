@@ -473,6 +473,19 @@ body {
   font-weight: 400;
 }
 
+/* ============================================
+   MAIN CONTENT RESPONSIVE TO SIDEBAR
+   ============================================ */
+
+main {
+  margin-left: var(--sidebar-width);
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+main.sidebar-collapsed {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
 .welcome-message .username {
   color: var(--text-primary);
   font-weight: 600;

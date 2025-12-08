@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="static/css/variables.css">
   <link rel="stylesheet" href="static/css/reset.css">
   <link rel="stylesheet" href="static/css/dashboard.css">
+  <link rel="stylesheet" href="static/css/history.css">
 </head>
 
 <body>
@@ -183,8 +184,249 @@
           <p>Select a camera to view details.</p>
         </div>
         <div id="view-history" class="page-view hidden">
-          <h2>Evidence History</h2>
+          <div class="history-container">
+            <!-- Filter Panel -->
+            <aside class="history-filter-panel" id="history-filter-panel">
+              <div class="filter-header">
+                <h3>Filters</h3>
+                <button class="filter-toggle-btn" id="filter-toggle-btn">
+                  <i class='bx bx-filter-alt'></i>
+                </button>
+              </div>
+
+              <div class="filter-content">
+                <!-- Search -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-search'></i>
+                    Search Student
+                  </label>
+                  <input type="text" class="filter-search" id="student-search" placeholder="Name or ID...">
+                </div>
+
+                <!-- Date Range -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-calendar'></i>
+                    Date Range
+                  </label>
+                  <div class="date-inputs">
+                    <input type="date" class="filter-date" id="date-from" placeholder="From">
+                    <input type="date" class="filter-date" id="date-to" placeholder="To">
+                  </div>
+                </div>
+
+                <!-- Event Type -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-flag'></i>
+                    Event Type
+                  </label>
+                  <div class="filter-checkboxes">
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="all" checked>
+                      <span>All Events</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="phone">
+                      <span>Phone Detected</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="looking_away">
+                      <span>Looking Away</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="multiple_people">
+                      <span>Multiple People</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="suspicious_object">
+                      <span>Suspicious Object</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Severity -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-error-circle'></i>
+                    Severity
+                  </label>
+                  <div class="filter-checkboxes">
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="severity-filter" value="high" checked>
+                      <span class="severity-badge severity-high">High</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="severity-filter" value="medium" checked>
+                      <span class="severity-badge severity-medium">Medium</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="severity-filter" value="low" checked>
+                      <span class="severity-badge severity-low">Low</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Status -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-shield-alt-2'></i>
+                    Review Status
+                  </label>
+                  <div class="filter-checkboxes">
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="status-filter" value="pending" checked>
+                      <span class="status-badge status-pending">Pending</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="status-filter" value="confirmed" checked>
+                      <span class="status-badge status-confirmed">Confirmed</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="status-filter" value="declined" checked>
+                      <span class="status-badge status-declined">Declined</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Clear Filters -->
+                <button class="btn-clear-filters" id="clear-filters">
+                  <i class='bx bx-x'></i>
+                  Clear All Filters
+                </button>
+              </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <div class="history-main-content">
+              <!-- Header -->
+              <div class="history-header">
+                <div class="history-title-section">
+                  <h2 class="history-page-title">Flagged Events</h2>
+                  <span class="results-count" id="results-count">24 events found</span>
+                </div>
+                <div class="history-actions">
+                  <button class="btn-secondary">
+                    <i class='bx bx-export'></i>
+                    Export
+                  </button>
+                </div>
+              </div>
+
+              <!-- Student Events Grid -->
+              <div class="student-events-grid" id="student-events-grid">
+                <!-- Cards will be dynamically inserted here by JavaScript -->
+              </div>
+
+              <!-- Empty State -->
+              <div class="empty-state hidden" id="empty-state">
+                <i class='bx bx-search-alt'></i>
+                <h3>No Events Found</h3>
+                <p>Try adjusting your filters or search criteria</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Event Modal -->
+          <div class="event-detail-modal hidden" id="event-detail-modal">
+            <div class="modal-overlay" id="modal-overlay"></div>
+            <div class="modal-content">
+              <div class="modal-header">
+                <div class="modal-student-info">
+                  <img src="" alt="Student" class="modal-student-photo" id="modal-student-photo">
+                  <div class="modal-student-details">
+                    <h3 id="modal-student-name">Student Name</h3>
+                    <p id="modal-student-id">ID: STU12345</p>
+                    <span class="modal-exam-badge" id="modal-exam-name">Mathematics Final</span>
+                  </div>
+                </div>
+                <button class="modal-close-btn" id="modal-close-btn">
+                  <i class='bx bx-x'></i>
+                </button>
+              </div>
+
+              <div class="modal-body">
+                <!-- Event Summary -->
+                <div class="modal-section">
+                  <h4 class="modal-section-title">
+                    <i class='bx bx-info-circle'></i>
+                    Event Summary
+                  </h4>
+                  <div class="event-summary-grid">
+                    <div class="summary-item">
+                      <span class="summary-label">Total Events</span>
+                      <span class="summary-value" id="modal-total-events">0</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Highest Severity</span>
+                      <span class="summary-value" id="modal-highest-severity">-</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Last Event</span>
+                      <span class="summary-value" id="modal-last-event">-</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Status</span>
+                      <span class="summary-value" id="modal-status">-</span>
+                    </div>
+                  </div>
+
+                  <!-- Status Actions (for Pending events) -->
+                  <div class="modal-status-actions" id="modal-status-actions" style="display: none;">
+                    <!-- Buttons inserted dynamically -->
+                  </div>
+                </div>
+
+                <!-- Event Timeline -->
+                <div class="modal-section">
+                  <h4 class="modal-section-title">
+                    <i class='bx bx-time-five'></i>
+                    Event Timeline
+                  </h4>
+                  <div class="event-timeline" id="event-timeline">
+                    <!-- Timeline items will be inserted here -->
+                  </div>
+                </div>
+
+                <!-- Evidence Gallery -->
+                <div class="modal-section">
+                  <h4 class="modal-section-title">
+                    <i class='bx bx-image-alt'></i>
+                    Evidence Gallery
+                  </h4>
+                  <div class="evidence-gallery" id="evidence-gallery">
+                    <!-- Evidence images will be inserted here -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-footer">
+                <button class="btn-secondary">
+                  <i class='bx bx-printer'></i>
+                  Print Report
+                </button>
+                <button class="btn-primary">
+                  <i class='bx bx-download'></i>
+                  Export Evidence
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- Evidence Lightbox for Enlarged View -->
+        <div class="evidence-lightbox hidden" id="evidence-lightbox">
+          <div class="lightbox-overlay" onclick="closeEvidenceLightbox()"></div>
+          <div class="lightbox-content">
+            <button class="lightbox-close-btn" onclick="closeEvidenceLightbox()">
+              <i class='bx bx-x'></i>
+            </button>
+            <img src="" alt="Evidence" id="lightbox-image">
+            <div class="lightbox-caption" id="lightbox-caption"></div>
+          </div>
+        </div>
+
         <div id="view-settings" class="page-view hidden">
           <h2>System Settings</h2>
         </div>
@@ -196,6 +438,7 @@
   <script src="static/js/router.js"></script>
   <script src="static/js/sidebar.js"></script>
   <script src="static/js/dashboard.js"></script>
+  <script src="static/js/history.js"></script>
 </body>
 
 </html>
