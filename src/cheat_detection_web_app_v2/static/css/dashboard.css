@@ -15,6 +15,11 @@ body {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
   height: 100vh;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.app-container.sidebar-collapsed {
+  grid-template-columns: 80px 1fr;
 }
 
 /* Sidebar */
@@ -172,6 +177,40 @@ body {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-btn {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-btn {
+  background-color: #0071FF;
+  color: white;
+}
+
+.save-btn:hover {
+  background-color: #0056CC;
+}
+
+.logout-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.logout-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .toggle-btn {
@@ -568,4 +607,302 @@ main.sidebar-collapsed {
   font-size: 0.875rem;
   color: var(--text-secondary);
   font-weight: 400;
+}
+
+/* Settings Navigation */
+.settings-nav {
+  display: flex;
+  gap: 0;
+  background-color: var(--bg-secondary);
+  padding: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  overflow-x: auto;
+}
+
+.settings-nav-item {
+  padding: 1rem 1.5rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.settings-nav-item:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.settings-nav-item.active {
+  color: white;
+  border-bottom-color: #0071FF;
+}
+
+.settings-content {
+  padding: 2rem;
+}
+
+.settings-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+.setting-section {
+  display: block;
+}
+
+.setting-section.hidden {
+  display: none;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+.accounts-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.accounts-table thead {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.accounts-table th,
+.accounts-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.accounts-table th {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.accounts-table td {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.accounts-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.edit-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.form-control {
+  width: 300px;
+  padding: 0.625rem;
+  background-color: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+}
+
+.form-slider {
+  width: 300px;
+  margin-right: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+}
+
+.form-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #0071FF;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.form-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #0071FF;
+  cursor: pointer;
+  border-radius: 50%;
+  border: none;
+}
+
+.slider-value {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"] {
+  cursor: pointer;
+  accent-color: #0071FF;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #0071FF;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+.form-control[type="number"] {
+  width: 150px;
+}
+
+.form-control[type="text"] {
+  width: 300px;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.action-btn {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-btn {
+  background-color: #00C851;
+  color: white;
+}
+
+.add-btn:hover {
+  background-color: #00A041;
+}
+
+.remove-btn {
+  background-color: #FF4444;
+  color: white;
+}
+
+.remove-btn:hover {
+  background-color: #CC0000;
+}
+
+.password-wrapper {
+  position: relative;
+  width: 300px;
+}
+
+.password-wrapper .form-control {
+  padding-right: 40px;
+}
+
+.password-wrapper i {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: auto;
+}
+
+.password-wrapper i:hover {
+  color: rgba(255, 255, 255, 0.8);
 }

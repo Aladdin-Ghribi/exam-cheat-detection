@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="static/css/variables.css">
+  <link rel="stylesheet" href="static/css/reset.css">
+  <link rel="stylesheet" href="static/css/login.css">
+</head>
+
+<body>
+  <div class="container">
+    <div class="login-section">
+      <h2>LOGIN</h2>
+      <input type="text" placeholder="Enter email or username" />
+      <div class="password-wrapper">
+        <input type="password" placeholder="Password" id="passwordInput" />
+        <svg id="eyeIcon" width="100" height="77" viewBox="0 0 100 77" fill="none" xmlns="http://www.w3.org/2000/svg" onclick="togglePassword()">
+          <path d="M67.4375 67.7911L57.35 58.0728C53.449 59.4156 49.2322 59.6643 45.1901 58.7899C41.1481 57.9155 37.447 55.954 34.5176 53.1335C31.5882 50.3131 29.5509 46.7497 28.6427 42.858C27.7345 38.9663 27.9928 34.9063 29.3875 31.1504L16.5125 18.7544C5.8625 27.8709 0 38.2331 0 38.2331C0 38.2331 18.75 71.3294 50 71.3294C56.0025 71.3093 61.9371 70.1051 67.4375 67.7911ZM32.5625 8.67502C38.0628 6.36083 43.9975 5.15662 50 5.13672C81.25 5.13672 100 38.2331 100 38.2331C100 38.2331 94.1312 48.5892 83.4938 57.7178L70.6062 45.3097C72.001 41.5538 72.2593 37.4938 71.3511 33.6021C70.4429 29.7104 68.4055 26.147 65.4761 23.3266C62.5467 20.5061 58.8457 18.5446 54.8036 17.6702C50.7616 16.7958 46.5447 17.0445 42.6437 18.3873L32.5625 8.67502Z" fill="#1B3C55"/>
+          <path d="M34.5367 36.1051C34.1929 38.4177 34.4132 40.7756 35.1802 42.992C35.9472 45.2083 37.2398 47.2223 38.9555 48.8742C40.6713 50.5261 42.763 51.7706 45.065 52.5091C47.367 53.2475 49.816 53.4597 52.218 53.1286L34.5367 36.1051ZM65.4742 40.3655L47.793 23.3359C50.1949 23.0049 52.6439 23.217 54.9459 23.9555C57.2479 24.694 59.3397 25.9385 61.0554 27.5904C62.7711 29.2423 64.0637 31.2562 64.8307 33.4726C65.5977 35.689 65.818 38.0469 65.4742 40.3595V40.3655ZM85.293 76.4706L10.293 4.2604L14.718 0L89.718 72.2102L85.293 76.4706Z" fill="#1B3C55"/>
+        </svg>
+      </div>
+      <button>Login</button>
+    </div>
+    <div class="illustration-section">
+      <img src="static/assets/camera.png" alt="Security Camera" />
+      <svg width="288" height="20" viewBox="0 0 288 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M6 30C6 13.4315 19.4315 0 36 0C52.5685 0 66 13.4315 66 30C66 46.5685 52.5685 60 36 60C19.4315 60 6 46.5685 6 30Z" fill="#0A5FC9"/>
+<rect x="78" width="60" height="60" rx="30" fill="#D9D9D9"/>
+<rect x="150" width="60" height="60" rx="30" fill="#D9D9D9"/>
+<rect x="222" width="60" height="60" rx="30" fill="#D9D9D9"/>
+</svg>
+<br>
+      <p>Always monitoring your day<br/>On the shot, you see the main page with all <br> the rooms available, and users can view each camera <br> with the help of remote control</p>
+    </div>
+  </div>
+  
+  <script>
+    function togglePassword() {
+      const passwordInput = document.getElementById('passwordInput');
+      const eyeIcon = document.getElementById('eyeIcon');
+      
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.innerHTML = '<path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12" stroke="#1B3C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 12C1 12 5 20 12 20C19 20 23 12 23 12" stroke="#1B3C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#1B3C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+        eyeIcon.setAttribute('viewBox', '0 0 24 24');
+      } else {
+        passwordInput.type = 'password';
+        eyeIcon.innerHTML = '<path d="M67.4375 67.7911L57.35 58.0728C53.449 59.4156 49.2322 59.6643 45.1901 58.7899C41.1481 57.9155 37.447 55.954 34.5176 53.1335C31.5882 50.3131 29.5509 46.7497 28.6427 42.858C27.7345 38.9663 27.9928 34.9063 29.3875 31.1504L16.5125 18.7544C5.8625 27.8709 0 38.2331 0 38.2331C0 38.2331 18.75 71.3294 50 71.3294C56.0025 71.3093 61.9371 70.1051 67.4375 67.7911ZM32.5625 8.67502C38.0628 6.36083 43.9975 5.15662 50 5.13672C81.25 5.13672 100 38.2331 100 38.2331C100 38.2331 94.1312 48.5892 83.4938 57.7178L70.6062 45.3097C72.001 41.5538 72.2593 37.4938 71.3511 33.6021C70.4429 29.7104 68.4055 26.147 65.4761 23.3266C62.5467 20.5061 58.8457 18.5446 54.8036 17.6702C50.7616 16.7958 46.5447 17.0445 42.6437 18.3873L32.5625 8.67502Z" fill="#1B3C55"/><path d="M34.5367 36.1051C34.1929 38.4177 34.4132 40.7756 35.1802 42.992C35.9472 45.2083 37.2398 47.2223 38.9555 48.8742C40.6713 50.5261 42.763 51.7706 45.065 52.5091C47.367 53.2475 49.816 53.4597 52.218 53.1286L34.5367 36.1051ZM65.4742 40.3655L47.793 23.3359C50.1949 23.0049 52.6439 23.217 54.9459 23.9555C57.2479 24.694 59.3397 25.9385 61.0554 27.5904C62.7711 29.2423 64.0637 31.2562 64.8307 33.4726C65.5977 35.689 65.818 38.0469 65.4742 40.3595V40.3655ZM85.293 76.4706L10.293 4.2604L14.718 0L89.718 72.2102L85.293 76.4706Z" fill="#1B3C55"/>';
+        eyeIcon.setAttribute('viewBox', '0 0 100 77');
+      }
+    }
+  </script>
+</body>
+</html>
