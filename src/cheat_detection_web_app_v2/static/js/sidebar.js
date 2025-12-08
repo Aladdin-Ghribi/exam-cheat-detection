@@ -1,11 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Sidebar Toggle Logic
   const toggleBtn = document.getElementById('sidebar-toggle');
   const sidebar = document.getElementById('sidebar');
+  const appContainer = document.querySelector('.app-container');
 
-  if (toggleBtn && sidebar) {
+  if (toggleBtn && sidebar && appContainer) {
     toggleBtn.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
+      appContainer.classList.toggle('sidebar-collapsed');
     });
   }
 });
