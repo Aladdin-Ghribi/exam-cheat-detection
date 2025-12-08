@@ -1,0 +1,90 @@
+.container {
+  display: flex;
+  flex: 1;
+  height: 100vh;
+}
+
+.login-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 60px;
+}
+
+.login-section h2 {
+  font-size: 32px;
+  margin-bottom: 30px;
+}
+
+.login-section input {
+  padding: 12px;
+  margin-bottom: 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
+  background-color: #d3d3d3;
+}
+
+.login-section input::placeholder {
+  color: #1C262F;
+}
+
+.password-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.password-wrapper input {
+  margin-bottom: 0;
+  padding-right: 45px;
+}
+
+.password-wrapper svg {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.login-section button {
+  padding: 12px;
+  background-color: #253952;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 320px;
+  box-sizing: border-box;
+}
+
+.illustration-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 40px;
+  text-align: center;
+}
+
+.illustration-section img {
+  max-width: 300px;
+  margin-bottom: 20px;
+}
+
+.illustration-section p {
+  font-size: 16px;
+  color: #c0c0c0;
+}
