@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="static/css/variables.css">
   <link rel="stylesheet" href="static/css/reset.css">
   <link rel="stylesheet" href="static/css/dashboard.css">
+  <link rel="stylesheet" href="static/css/history.css">
   <link rel="stylesheet" href="static/css/profile.css">
 </head>
 
@@ -187,8 +188,250 @@
           <p>Select a camera to view details.</p>
         </div>
         <div id="view-history" class="page-view hidden">
-          <h2>Evidence History</h2>
+          <!-- History Page Container -->
+          <div class="history-container">
+            <!-- Main Content Area (LEFT SIDE - Order 1) -->
+            <div class="history-main-content">
+              <!-- History Header -->
+              <div class="history-header">
+                <div class="history-title-section">
+                  <h2 class="history-page-title">Event History</h2>
+                  <span class="results-count" id="results-count">0 events found</span>
+                </div>
+                <div class="history-actions">
+                  <button class="btn-secondary">
+                    <i class='bx bx-download'></i>
+                    Export
+                  </button>
+                </div>
+              </div>
+
+              <!-- Student Events Grid -->
+              <div class="student-events-grid" id="student-events-grid">
+                <!-- Event cards will be dynamically inserted here -->
+              </div>
+
+              <!-- Empty State -->
+              <div class="empty-state hidden" id="empty-state">
+                <i class='bx bx-folder-open'></i>
+                <h3>No Events Found</h3>
+                <p>Try adjusting your filters to see more results</p>
+              </div>
+            </div>
+
+            <!-- Filter Panel (RIGHT SIDE - Order 2) -->
+            <aside class="history-filter-panel">
+              <div class="filter-header">
+                <h3>Filters</h3>
+                <button class="filter-toggle-btn">
+                  <i class='bx bx-filter-alt'></i>
+                </button>
+              </div>
+
+              <div class="filter-content">
+                <!-- Search -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-search'></i>
+                    Search Student
+                  </label>
+                  <input type="text" class="filter-search" id="student-search" placeholder="Name or ID...">
+                </div>
+
+                <!-- Date Range -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-calendar'></i>
+                    Date Range
+                  </label>
+                  <div class="date-inputs">
+                    <input type="date" class="filter-date" id="date-from">
+                    <input type="date" class="filter-date" id="date-to">
+                  </div>
+                </div>
+
+                <!-- Event Type -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-error'></i>
+                    Event Type
+                  </label>
+                  <div class="filter-checkboxes">
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="all" checked>
+                      <span>All Events</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="phone">
+                      <span>Phone Detected</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="looking_away">
+                      <span>Looking Away</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="multiple_people">
+                      <span>Multiple People</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="event-type-filter" value="suspicious_object">
+                      <span>Suspicious Object</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Severity -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-error-circle'></i>
+                    Severity
+                  </label>
+                  <div class="filter-checkboxes">
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="severity-filter" value="high" checked>
+                      <span class="severity-badge severity-high">High</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="severity-filter" value="medium" checked>
+                      <span class="severity-badge severity-medium">Medium</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="severity-filter" value="low" checked>
+                      <span class="severity-badge severity-low">Low</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Status -->
+                <div class="filter-group">
+                  <label class="filter-label">
+                    <i class='bx bx-shield-alt-2'></i>
+                    Review Status
+                  </label>
+                  <div class="filter-checkboxes">
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="status-filter" value="pending" checked>
+                      <span class="status-badge status-pending">Pending</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="status-filter" value="confirmed" checked>
+                      <span class="status-badge status-confirmed">Confirmed</span>
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" class="status-filter" value="declined" checked>
+                      <span class="status-badge status-declined">Declined</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Clear Filters -->
+                <button class="btn-clear-filters" id="clear-filters">
+                  <i class='bx bx-x'></i>
+                  Clear All Filters
+                </button>
+              </div>
+            </aside>
+          </div>
+
+          <!-- Event Detail Modal -->
+          <div class="event-detail-modal hidden" id="event-detail-modal">
+            <div class="modal-overlay" id="modal-overlay"></div>
+            <div class="modal-content">
+              <!-- Modal Header -->
+              <div class="modal-header">
+                <div class="modal-student-info">
+                  <img src="" alt="Student" class="modal-student-photo" id="modal-student-photo">
+                  <div class="modal-student-details">
+                    <h3 id="modal-student-name">Student Name</h3>
+                    <p id="modal-student-id">ID: STU00000</p>
+                    <span class="modal-exam-badge" id="modal-exam-name">Exam Name</span>
+                  </div>
+                </div>
+                <button class="modal-close-btn" id="modal-close-btn">
+                  <i class='bx bx-x'></i>
+                </button>
+              </div>
+
+              <!-- Modal Body -->
+              <div class="modal-body">
+                <!-- Event Summary -->
+                <div class="modal-section">
+                  <h3 class="modal-section-title">
+                    <i class='bx bx-info-circle'></i>
+                    Event Summary
+                  </h3>
+                  <div class="event-summary-grid">
+                    <div class="summary-item">
+                      <span class="summary-label">Total Events</span>
+                      <span class="summary-value" id="modal-total-events">0</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Highest Severity</span>
+                      <span class="summary-value" id="modal-highest-severity">-</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Last Event</span>
+                      <span class="summary-value" id="modal-last-event">-</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="summary-label">Status</span>
+                      <span class="summary-value" id="modal-status">-</span>
+                    </div>
+                  </div>
+
+                  <!-- Status Actions (for Pending events) -->
+                  <div class="modal-status-actions" id="modal-status-actions" style="display: none;">
+                    <!-- Buttons inserted dynamically -->
+                  </div>
+                </div>
+
+                <!-- Event Timeline -->
+                <div class="modal-section">
+                  <h3 class="modal-section-title">
+                    <i class='bx bx-time'></i>
+                    Event Timeline
+                  </h3>
+                  <div class="event-timeline" id="event-timeline">
+                    <!-- Timeline items will be dynamically inserted here -->
+                  </div>
+                </div>
+
+                <!-- Evidence Gallery -->
+                <div class="modal-section">
+                  <h3 class="modal-section-title">
+                    <i class='bx bx-image-alt'></i>
+                    Evidence Gallery
+                  </h3>
+                  <div class="evidence-gallery" id="evidence-gallery">
+                    <!-- Evidence images will be dynamically inserted here -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal Footer -->
+              <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeEventDetailModal()">Close</button>
+                <button class="btn-primary">
+                  <i class='bx bx-download'></i>
+                  Export Evidence
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Evidence Lightbox for Enlarged View -->
+          <div class="evidence-lightbox hidden" id="evidence-lightbox">
+            <div class="lightbox-overlay" onclick="closeEvidenceLightbox()"></div>
+            <div class="lightbox-content">
+              <button class="lightbox-close-btn" onclick="closeEvidenceLightbox()">
+                <i class='bx bx-x'></i>
+              </button>
+              <img src="" alt="Evidence" id="lightbox-image">
+              <div class="lightbox-caption" id="lightbox-caption"></div>
+            </div>
+          </div>
         </div>
+
 
 
         <div id="view-settings" class="page-view hidden">
@@ -222,21 +465,31 @@
                     <td>admin@proctor.com</td>
                     <td>••••••••</td>
                     <td>Administrator</td>
-                    <td><button class="edit-btn"><svg width="20" height="20" viewBox="0 0 110 117" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path fill-rule="evenodd" clip-rule="evenodd" d="M93.0553 4.41701L104.308 13.3777C105.395 14.4005 106.008 15.829 105.999 17.3214C105.991 18.8136 105.363 20.2354 104.265 21.2462L95.714 31.4788L66.6187 66.1792C66.1092 66.762 65.4316 67.1716 64.6785 67.3505L49.5883 70.7709C47.6086 70.8701 45.8847 69.4308 45.6289 67.4655V51.9585C45.6799 51.2104 45.981 50.5019 46.484 49.9465L75.0404 17.6605L84.8419 5.95477C86.7806 3.413 90.3275 2.74896 93.0553 4.41701Z" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-                       <path d="M68.9502 109.352L68.9541 111.049V113.13H35.7139V111.075L35.7188 109.352H68.9502ZM5.38184 87.7942L7.51562 87.7981C9.0333 98.8036 17.7162 107.527 28.7139 109.097V111.233L28.709 112.908C15.6217 111.289 5.26735 100.888 3.70605 87.7942H5.38184ZM100.963 87.7942C99.4015 100.889 89.046 111.29 75.958 112.908L75.9541 110.842V109.097C86.9519 107.527 95.6334 98.8036 97.1514 87.7981L99.2871 87.7942H100.963ZM75.666 89.1448V92.9241H29.0098V89.1448H75.666ZM101.169 60.8469V80.7893L99.0557 80.7942H97.3896V60.8469H101.169ZM7.27832 47.3743V80.7942H5.6123L3.5 80.7893V47.3772L4.94824 47.3743H7.27832ZM28.7139 16.9348V19.0706C17.7164 20.6408 9.03358 29.3634 7.51562 40.3684L4.93262 40.3743H3.70508C5.26581 27.2793 15.6212 16.8774 28.709 15.2581L28.7139 16.9348ZM78.3799 20.0676C79.541 22.0107 81.1192 24.1134 83.0654 25.8752L83.3662 26.1418C85.7498 28.2157 88.5635 29.6895 91.7852 29.8889L92.626 33.6926C87.9296 33.7231 83.9623 31.6696 80.8857 28.9924L80.5352 28.6819C78.1113 26.4893 76.2053 23.8829 74.8525 21.5237L78.3799 20.0676ZM48.834 15.0374V18.8157H35.7188L35.7139 16.7258V15.0374H48.834Z" fill="black" stroke="white" stroke-width="7"/>
-                    </svg></button></td>
+                    <td><button class="edit-btn"><svg width="20" height="20" viewBox="0 0 110 117" fill="none"
+                          xmlns="http://www.w3.org/2000/svg">
+                          <path fill-rule="evenodd" clip-rule="evenodd"
+                            d="M93.0553 4.41701L104.308 13.3777C105.395 14.4005 106.008 15.829 105.999 17.3214C105.991 18.8136 105.363 20.2354 104.265 21.2462L95.714 31.4788L66.6187 66.1792C66.1092 66.762 65.4316 67.1716 64.6785 67.3505L49.5883 70.7709C47.6086 70.8701 45.8847 69.4308 45.6289 67.4655V51.9585C45.6799 51.2104 45.981 50.5019 46.484 49.9465L75.0404 17.6605L84.8419 5.95477C86.7806 3.413 90.3275 2.74896 93.0553 4.41701Z"
+                            stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+                          <path
+                            d="M68.9502 109.352L68.9541 111.049V113.13H35.7139V111.075L35.7188 109.352H68.9502ZM5.38184 87.7942L7.51562 87.7981C9.0333 98.8036 17.7162 107.527 28.7139 109.097V111.233L28.709 112.908C15.6217 111.289 5.26735 100.888 3.70605 87.7942H5.38184ZM100.963 87.7942C99.4015 100.889 89.046 111.29 75.958 112.908L75.9541 110.842V109.097C86.9519 107.527 95.6334 98.8036 97.1514 87.7981L99.2871 87.7942H100.963ZM75.666 89.1448V92.9241H29.0098V89.1448H75.666ZM101.169 60.8469V80.7893L99.0557 80.7942H97.3896V60.8469H101.169ZM7.27832 47.3743V80.7942H5.6123L3.5 80.7893V47.3772L4.94824 47.3743H7.27832ZM28.7139 16.9348V19.0706C17.7164 20.6408 9.03358 29.3634 7.51562 40.3684L4.93262 40.3743H3.70508C5.26581 27.2793 15.6212 16.8774 28.709 15.2581L28.7139 16.9348ZM78.3799 20.0676C79.541 22.0107 81.1192 24.1134 83.0654 25.8752L83.3662 26.1418C85.7498 28.2157 88.5635 29.6895 91.7852 29.8889L92.626 33.6926C87.9296 33.7231 83.9623 31.6696 80.8857 28.9924L80.5352 28.6819C78.1113 26.4893 76.2053 23.8829 74.8525 21.5237L78.3799 20.0676ZM48.834 15.0374V18.8157H35.7188L35.7139 16.7258V15.0374H48.834Z"
+                            fill="black" stroke="white" stroke-width="7" />
+                        </svg></button></td>
                   </tr>
 
-                     <tr>
+                  <tr>
                     <td>user</td>
                     <td>user@gmail.com.com</td>
                     <td>••••••••</td>
                     <td>Proctor</td>
-                    <td><button class="edit-btn"><svg width="20" height="20" viewBox="0 0 110 117" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M93.0553 4.41701L104.308 13.3777C105.395 14.4005 106.008 15.829 105.999 17.3214C105.991 18.8136 105.363 20.2354 104.265 21.2462L95.714 31.4788L66.6187 66.1792C66.1092 66.762 65.4316 67.1716 64.6785 67.3505L49.5883 70.7709C47.6086 70.8701 45.8847 69.4308 45.6289 67.4655V51.9585C45.6799 51.2104 45.981 50.5019 46.484 49.9465L75.0404 17.6605L84.8419 5.95477C86.7806 3.413 90.3275 2.74896 93.0553 4.41701Z" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M68.9502 109.352L68.9541 111.049V113.13H35.7139V111.075L35.7188 109.352H68.9502ZM5.38184 87.7942L7.51562 87.7981C9.0333 98.8036 17.7162 107.527 28.7139 109.097V111.233L28.709 112.908C15.6217 111.289 5.26735 100.888 3.70605 87.7942H5.38184ZM100.963 87.7942C99.4015 100.889 89.046 111.29 75.958 112.908L75.9541 110.842V109.097C86.9519 107.527 95.6334 98.8036 97.1514 87.7981L99.2871 87.7942H100.963ZM75.666 89.1448V92.9241H29.0098V89.1448H75.666ZM101.169 60.8469V80.7893L99.0557 80.7942H97.3896V60.8469H101.169ZM7.27832 47.3743V80.7942H5.6123L3.5 80.7893V47.3772L4.94824 47.3743H7.27832ZM28.7139 16.9348V19.0706C17.7164 20.6408 9.03358 29.3634 7.51562 40.3684L4.93262 40.3743H3.70508C5.26581 27.2793 15.6212 16.8774 28.709 15.2581L28.7139 16.9348ZM78.3799 20.0676C79.541 22.0107 81.1192 24.1134 83.0654 25.8752L83.3662 26.1418C85.7498 28.2157 88.5635 29.6895 91.7852 29.8889L92.626 33.6926C87.9296 33.7231 83.9623 31.6696 80.8857 28.9924L80.5352 28.6819C78.1113 26.4893 76.2053 23.8829 74.8525 21.5237L78.3799 20.0676ZM48.834 15.0374V18.8157H35.7188L35.7139 16.7258V15.0374H48.834Z" fill="black" stroke="white" stroke-width="7"/>
-</svg></button></td>
+                    <td><button class="edit-btn"><svg width="20" height="20" viewBox="0 0 110 117" fill="none"
+                          xmlns="http://www.w3.org/2000/svg">
+                          <path fill-rule="evenodd" clip-rule="evenodd"
+                            d="M93.0553 4.41701L104.308 13.3777C105.395 14.4005 106.008 15.829 105.999 17.3214C105.991 18.8136 105.363 20.2354 104.265 21.2462L95.714 31.4788L66.6187 66.1792C66.1092 66.762 65.4316 67.1716 64.6785 67.3505L49.5883 70.7709C47.6086 70.8701 45.8847 69.4308 45.6289 67.4655V51.9585C45.6799 51.2104 45.981 50.5019 46.484 49.9465L75.0404 17.6605L84.8419 5.95477C86.7806 3.413 90.3275 2.74896 93.0553 4.41701Z"
+                            stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+                          <path
+                            d="M68.9502 109.352L68.9541 111.049V113.13H35.7139V111.075L35.7188 109.352H68.9502ZM5.38184 87.7942L7.51562 87.7981C9.0333 98.8036 17.7162 107.527 28.7139 109.097V111.233L28.709 112.908C15.6217 111.289 5.26735 100.888 3.70605 87.7942H5.38184ZM100.963 87.7942C99.4015 100.889 89.046 111.29 75.958 112.908L75.9541 110.842V109.097C86.9519 107.527 95.6334 98.8036 97.1514 87.7981L99.2871 87.7942H100.963ZM75.666 89.1448V92.9241H29.0098V89.1448H75.666ZM101.169 60.8469V80.7893L99.0557 80.7942H97.3896V60.8469H101.169ZM7.27832 47.3743V80.7942H5.6123L3.5 80.7893V47.3772L4.94824 47.3743H7.27832ZM28.7139 16.9348V19.0706C17.7164 20.6408 9.03358 29.3634 7.51562 40.3684L4.93262 40.3743H3.70508C5.26581 27.2793 15.6212 16.8774 28.709 15.2581L28.7139 16.9348ZM78.3799 20.0676C79.541 22.0107 81.1192 24.1134 83.0654 25.8752L83.3662 26.1418C85.7498 28.2157 88.5635 29.6895 91.7852 29.8889L92.626 33.6926C87.9296 33.7231 83.9623 31.6696 80.8857 28.9924L80.5352 28.6819C78.1113 26.4893 76.2053 23.8829 74.8525 21.5237L78.3799 20.0676ZM48.834 15.0374V18.8157H35.7188L35.7139 16.7258V15.0374H48.834Z"
+                            fill="black" stroke="white" stroke-width="7" />
+                        </svg></button></td>
                   </tr>
 
                 </tbody>
@@ -253,7 +506,8 @@
               </div>
               <div class="form-group">
                 <label>Confidence Threshold:</label>
-                <input type="range" class="form-slider" id="confidence-slider" min="0.1" max="1.0" step="0.01" value="0.5">
+                <input type="range" class="form-slider" id="confidence-slider" min="0.1" max="1.0" step="0.01"
+                  value="0.5">
                 <span class="slider-value" id="confidence-value">0.5</span>
               </div>
               <div class="form-group">
@@ -303,7 +557,8 @@
               </div>
               <div class="form-group">
                 <label>Hand-Face Distance Threshold:</label>
-                <input type="range" class="form-slider" id="hand-face-slider" min="1.0" max="3.0" step="0.1" value="2.0">
+                <input type="range" class="form-slider" id="hand-face-slider" min="1.0" max="3.0" step="0.1"
+                  value="2.0">
                 <span class="slider-value" id="hand-face-value">2.0</span>
               </div>
               <div class="form-group">
@@ -399,7 +654,8 @@
               </div>
               <div class="form-group">
                 <label>Suspicion Threshold for Saving:</label>
-                <input type="range" class="form-slider" id="suspicion-save-slider" min="0" max="100" step="1" value="70">
+                <input type="range" class="form-slider" id="suspicion-save-slider" min="0" max="100" step="1"
+                  value="70">
                 <span class="slider-value" id="suspicion-save-value">70</span>
               </div>
               <div class="form-group">
@@ -482,7 +738,8 @@
             <div id="advanced-content" class="setting-section hidden">
               <div class="form-group">
                 <label>Smoothing Factor:</label>
-                <input type="range" class="form-slider" id="smoothing-slider" min="0.1" max="0.9" step="0.1" value="0.5">
+                <input type="range" class="form-slider" id="smoothing-slider" min="0.1" max="0.9" step="0.1"
+                  value="0.5">
                 <span class="slider-value" id="smoothing-value">0.5</span>
               </div>
               <div class="form-group">
@@ -492,17 +749,20 @@
               </div>
               <div class="form-group">
                 <label>Visibility Threshold:</label>
-                <input type="range" class="form-slider" id="visibility-slider" min="0.3" max="0.9" step="0.1" value="0.6">
+                <input type="range" class="form-slider" id="visibility-slider" min="0.3" max="0.9" step="0.1"
+                  value="0.6">
                 <span class="slider-value" id="visibility-value">0.6</span>
               </div>
               <h2 class="settings-title" style="margin-top: 3rem;">Backup & Restore Settings</h2>
               <div class="form-group">
                 <label>Backup Settings:</label>
-                <button class="action-btn" style="background-color: #0071FF; color: white;">Export configuration</button>
+                <button class="action-btn" style="background-color: #0071FF; color: white;">Export
+                  configuration</button>
               </div>
               <div class="form-group">
                 <label>Restore Settings:</label>
-                <button class="action-btn" style="background-color: #0071FF; color: white;">Import configuration</button>
+                <button class="action-btn" style="background-color: #0071FF; color: white;">Import
+                  configuration</button>
               </div>
               <div class="form-group">
                 <label>Reset to Defaults:</label>
@@ -565,7 +825,7 @@
         </div>
       </div>
 
-      
+
     </main>
   </div>
 
@@ -573,6 +833,7 @@
   <script src="static/js/router.js"></script>
   <script src="static/js/sidebar.js"></script>
   <script src="static/js/dashboard.js"></script>
+  <script src="static/js/history.js"></script>
   <script src="static/js/settings.js"></script>
   <script src="static/js/profile.js"></script>
 </body>

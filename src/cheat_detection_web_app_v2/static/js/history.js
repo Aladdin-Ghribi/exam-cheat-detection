@@ -351,6 +351,12 @@ function openEventDetailModal(eventId) {
 
   const modal = document.getElementById('event-detail-modal');
 
+  // Blur the top header when modal opens
+  const topHeader = document.querySelector('.top-header');
+  if (topHeader) {
+    topHeader.classList.add('blur-background');
+  }
+
   // Populate modal header
   document.getElementById('modal-student-photo').src = event.studentPhoto;
   document.getElementById('modal-student-name').textContent = event.studentName;
@@ -404,6 +410,12 @@ function closeEventDetailModal() {
   const modal = document.getElementById('event-detail-modal');
   modal.classList.add('hidden');
   document.body.style.overflow = '';
+
+  // Remove blur from the top header when modal closes
+  const topHeader = document.querySelector('.top-header');
+  if (topHeader) {
+    topHeader.classList.remove('blur-background');
+  }
 }
 
 function renderEventTimeline(events) {
