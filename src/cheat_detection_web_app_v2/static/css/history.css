@@ -662,7 +662,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1000;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -684,6 +684,7 @@
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
+  z-index: 9998;
 }
 
 .modal-content {
@@ -699,6 +700,7 @@
   transform: scale(0.9) translateY(20px);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
 }
 
 .event-detail-modal:not(.hidden) .modal-content {
@@ -1076,7 +1078,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2000;
+  z-index: 10001;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1098,6 +1100,7 @@
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.9);
   backdrop-filter: blur(8px);
+  z-index: 10001;
 }
 
 .lightbox-content {
@@ -1108,6 +1111,7 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  z-index: 10002;
 }
 
 .lightbox-close-btn {

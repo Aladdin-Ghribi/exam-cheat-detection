@@ -167,10 +167,17 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0 2rem;
-  background-color: var(--bg-primary);
+  /* background-color: var(--bg-primary); */
   position: sticky;
   top: 0;
   z-index: 10;
+  transition: filter 0.3s ease;
+}
+
+/* Blur effect for modal background */
+.blur-background {
+  filter: blur(8px);
+  pointer-events: none;
 }
 
 .header-left {
@@ -834,11 +841,11 @@ main.sidebar-collapsed {
   border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
   background-color: #0071FF;
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
   transform: translateX(26px);
 }
 
