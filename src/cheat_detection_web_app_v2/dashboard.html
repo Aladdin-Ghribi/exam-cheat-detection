@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="static/css/dashboard.css">
   <link rel="stylesheet" href="static/css/history.css">
   <link rel="stylesheet" href="static/css/profile.css">
+  <link rel="stylesheet" href="static/css/monitor.css">
 </head>
 
 <body>
@@ -72,7 +73,6 @@
           <h1 id="page-title">Dashboard</h1>
         </div>
         <div class="header-right">
-          <button class="header-btn save-btn">Save Changes</button>
         </div>
       </header>
 
@@ -184,8 +184,180 @@
 
         <!-- Other views hidden by default -->
         <div id="view-monitor" class="page-view hidden">
-          <h2>Active Monitoring</h2>
-          <p>Select a camera to view details.</p>
+          <!-- Monitor Page Container -->
+          <div class="monitor-container">
+            <!-- Left Panel: Video Feed & Statistics -->
+            <div class="monitor-main-panel">
+              <!-- Session Controls -->
+              <div class="session-controls">
+                <div class="session-info">
+                  <input type="text" id="exam-name-input" class="exam-name-input" placeholder="Enter Exam Name..." />
+                  <span class="session-status" id="session-status">No Active Session</span>
+                </div>
+                <div class="session-buttons">
+                  <button class="btn-start-pipeline" id="start-pipeline-btn">
+                    <i class='bx bx-play-circle'></i>
+                    Start Pipeline
+                  </button>
+                  <button class="btn-stop-pipeline hidden" id="stop-pipeline-btn">
+                    <i class='bx bx-stop-circle'></i>
+                    Stop Pipeline
+                  </button>
+                </div>
+              </div>
+
+              <!-- Video Feed -->
+              <div class="video-feed-container">
+                <div class="video-feed" id="video-feed">
+                  <div class="video-placeholder">
+                    <i class='bx bxs-video-off'></i>
+                    <p>No Active Camera Feed</p>
+                    <span>Start the pipeline to begin monitoring</span>
+                  </div>
+                </div>
+                <div class="video-overlay">
+                  <div class="video-time" id="video-time">00:00:00</div>
+                  <div class="video-camera-label">Camera 01</div>
+                </div>
+              </div>
+
+              <!-- Statistics Section -->
+              <div class="monitor-statistics">
+                <div class="stat-card-monitor">
+                  <div class="stat-icon-monitor warning">
+                    <i class='bx bxs-error-circle'></i>
+                  </div>
+                  <div class="stat-info-monitor">
+                    <span class="stat-label-monitor">Total Alerts</span>
+                    <span class="stat-value-monitor" id="total-alerts-stat">0</span>
+                  </div>
+                </div>
+                <div class="stat-card-monitor">
+                  <div class="stat-icon-monitor danger">
+                    <i class='bx bxs-shield-x'></i>
+                  </div>
+                  <div class="stat-info-monitor">
+                    <span class="stat-label-monitor">Confirmed</span>
+                    <span class="stat-value-monitor" id="confirmed-alerts-stat">0</span>
+                  </div>
+                </div>
+                <div class="stat-card-monitor">
+                  <div class="stat-icon-monitor success">
+                    <i class='bx bxs-check-circle'></i>
+                  </div>
+                  <div class="stat-info-monitor">
+                    <span class="stat-label-monitor">Declined</span>
+                    <span class="stat-value-monitor" id="declined-alerts-stat">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Panel: Alerts -->
+            <div class="monitor-alerts-panel">
+              <div class="alerts-header">
+                <h3>Alerts</h3>
+                <span class="alerts-count" id="alerts-count">0 Pending</span>
+              </div>
+              <div class="alerts-list" id="alerts-list">
+                <!-- Alert cards will be dynamically inserted here -->
+                <div class="no-alerts-state" id="no-alerts-state">
+                  <i class='bx bx-bell-off'></i>
+                  <p>No pending alerts</p>
+                  <span>Alerts will appear here when detected</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert Review Modal -->
+          <div class="alert-review-modal hidden" id="alert-review-modal">
+            <div class="modal-overlay-alert" id="modal-overlay-alert"></div>
+            <div class="modal-content-alert">
+              <!-- Modal Header -->
+              <div class="modal-header-alert">
+                <h3>Review Alert</h3>
+                <button class="modal-close-btn-alert" id="modal-close-alert-btn">
+                  <i class='bx bx-x'></i>
+                </button>
+              </div>
+
+              <!-- Modal Body -->
+              <div class="modal-body-alert">
+                <!-- Alert Evidence -->
+                <div class="alert-evidence-section">
+                  <img src="" alt="Alert Evidence" id="alert-evidence-image" class="alert-evidence-img"
+                    onclick="openImageZoom(this.src)" style="cursor: zoom-in;" title="Click to zoom">
+                  <div class="alert-details-grid">
+                    <div class="alert-detail-item">
+                      <span class="alert-detail-label">Suspicion Score</span>
+                      <span class="alert-detail-value" id="alert-suspicion-score">--</span>
+                    </div>
+                    <div class="alert-detail-item">
+                      <span class="alert-detail-label">Detected At</span>
+                      <span class="alert-detail-value" id="alert-timestamp">--</span>
+                    </div>
+                    <div class="alert-detail-item full-width">
+                      <span class="alert-detail-label">Reasons</span>
+                      <span class="alert-detail-value" id="alert-reasons">--</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Student Information Form -->
+                <div class="student-info-form">
+                  <h4>Student Information</h4>
+                  <p class="form-instruction">Ask the student for their ID and name, then enter below:</p>
+
+                  <div class="form-group-alert">
+                    <label for="student-id-input">Student ID</label>
+                    <input type="text" id="student-id-input" class="form-input-alert" placeholder="e.g., STU12345"
+                      required>
+                  </div>
+
+                  <div class="form-group-alert">
+                    <label for="student-name-input">Student Name</label>
+                    <input type="text" id="student-name-input" class="form-input-alert" placeholder="e.g., John Doe"
+                      required>
+                  </div>
+
+                  <div class="form-group-alert">
+                    <label for="review-notes-input">Notes (Optional)</label>
+                    <textarea id="review-notes-input" class="form-textarea-alert"
+                      placeholder="Add any additional notes about this alert..." rows="3"></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal Footer -->
+              <div class="modal-footer-alert">
+                <button class="btn-decline-alert" id="btn-decline-alert">
+                  <i class='bx bx-x-circle'></i>
+                  Decline
+                </button>
+                <button class="btn-confirm-alert" id="btn-confirm-alert">
+                  <i class='bx bx-check-circle'></i>
+                  Confirm Cheating
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image Zoom Lightbox -->
+          <div class="image-zoom-lightbox hidden" id="image-zoom-lightbox">
+            <div class="zoom-overlay" onclick="closeImageZoom()"></div>
+            <div class="zoom-content">
+              <button class="zoom-close-btn" onclick="closeImageZoom()">
+                <i class='bx bx-x'></i>
+              </button>
+              <img src="" alt="Zoomed Evidence" id="zoomed-image">
+            </div>
+          </div>
+
+          <!-- Sound Notification Toggle -->
+          <button class="sound-toggle-btn" id="sound-toggle-btn" title="Alert Sounds: OFF">
+            <i class='bx bx-volume-mute' id="sound-icon"></i>
+          </button>
         </div>
         <div id="view-history" class="page-view hidden">
           <!-- History Page Container -->
@@ -836,6 +1008,7 @@
   <script src="static/js/history.js"></script>
   <script src="static/js/settings.js"></script>
   <script src="static/js/profile.js"></script>
+  <script src="static/js/monitor.js"></script>
 </body>
 
 </html>
