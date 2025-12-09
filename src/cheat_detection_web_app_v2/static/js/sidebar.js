@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.querySelector('main');
   const appContainer = document.querySelector('.app-container');
+  const userProfileBtn = document.getElementById('user-profile-btn');
 
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener('click', () => {
@@ -19,4 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+
 });
