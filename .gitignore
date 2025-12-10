@@ -45,6 +45,8 @@ output/
 # Potentially large sample data (if you add more later)
 data/samples/
 data/
+assets/
+output/
 # Logs
 *.log
 docs/
