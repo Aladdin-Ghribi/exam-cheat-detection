@@ -4,8 +4,7 @@ This file ensures consistent thresholds and weights across all components.
 """
 
 # Main suspicion threshold (0-100 scale)
-SUSPICION_THRESHOLD = 20  # Default threshold for flagging suspicious behavior
-
+SUSPICION_THRESHOLD = 15  # Lowered threshold for more sensitive detection
 
 
 # Scoring weights
@@ -39,7 +38,6 @@ MEDIUM_RISK_OBJECTS = frozenset({
     'handbag',
     'backpack'
 })
-
 
 
 # Performance settings (FPS)
