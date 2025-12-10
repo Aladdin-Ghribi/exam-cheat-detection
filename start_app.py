@@ -12,19 +12,20 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(current_dir, 'src')
 sys.path.insert(0, src_dir)
 
+
 def main():
     """Start the web application."""
     print("🚀 Starting Exam Cheat Detection Web Application")
     print("=" * 50)
-    
+
     # Check if required directories exist
     required_dirs = [
-        'src/cheat_detection_web_app',
+        'src/cheat_detection_web_app_v2',
         'src/detection',
         'data/samples',
         'output'
     ]
-    
+
     for dir_path in required_dirs:
         full_path = os.path.join(current_dir, dir_path)
         if not os.path.exists(full_path):
@@ -32,7 +33,7 @@ def main():
             return False
         else:
             print(f"✅ Directory found: {dir_path}")
-    
+
     # Check if YOLO model exists
     model_files = ['yolo11m.pt', 'yolo11n.pt', 'yolo11s.pt']
     model_found = False
@@ -41,20 +42,20 @@ def main():
             print(f"✅ YOLO model found: {model_file}")
             model_found = True
             break
-    
+
     if not model_found:
         print("❌ No YOLO model files found. Please ensure at least one model file exists.")
         return False
-    
+
     print("\n" + "=" * 50)
     print("🌐 Starting web server...")
     print("📱 Open your browser to: http://localhost:5000")
     print("🛑 Press Ctrl+C to stop the server")
     print("=" * 50)
-    
+
     try:
-        # Import and run the Flask app
-        from src.cheat_detection_web_app.app import app, socketio
+        # Import and run the Flask app (v2)
+        from src.cheat_detection_web_app_v2.app import app, socketio
         socketio.run(app, debug=True, host='0.0.0.0', port=5000)
     except KeyboardInterrupt:
         print("\n🛑 Server stopped by user")
@@ -64,6 +65,7 @@ def main():
         import traceback
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = main()

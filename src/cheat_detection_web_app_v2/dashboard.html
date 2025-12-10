@@ -21,6 +21,9 @@
   <link rel="stylesheet" href="static/css/history.css">
   <link rel="stylesheet" href="static/css/profile.css">
   <link rel="stylesheet" href="static/css/monitor.css">
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 
 <body>
@@ -203,6 +206,14 @@
                     <i class='bx bx-stop-circle'></i>
                     Stop Pipeline
                   </button>
+                  <label class="debug-toggle" title="Show detection bounding boxes">
+                    <input type="checkbox" id="show-debug-boxes" checked>
+                    <span>Debug Boxes</span>
+                  </label>
+                  <span class="pipeline-speed-display" id="pipeline-speed" style="display: none;">
+                    <i class='bx bx-chip'></i>
+                    <span id="pipeline-speed-text">0ms</span>
+                  </span>
                 </div>
               </div>
 
@@ -217,7 +228,10 @@
                 </div>
                 <div class="video-overlay">
                   <div class="video-time" id="video-time">00:00:00</div>
-                  <div class="video-camera-label">Camera 01</div>
+                  <div class="video-overlay-right">
+                    <span class="pipeline-speed" id="pipeline-speed" style="display: none;">0ms</span>
+                    <div class="video-camera-label">Camera 01</div>
+                  </div>
                 </div>
               </div>
 
@@ -440,10 +454,6 @@
                     <label class="checkbox-label">
                       <input type="checkbox" class="event-type-filter" value="looking_away">
                       <span>Looking Away</span>
-                    </label>
-                    <label class="checkbox-label">
-                      <input type="checkbox" class="event-type-filter" value="multiple_people">
-                      <span>Multiple People</span>
                     </label>
                     <label class="checkbox-label">
                       <input type="checkbox" class="event-type-filter" value="suspicious_object">

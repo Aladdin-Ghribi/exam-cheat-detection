@@ -1,4 +1,4 @@
-// History Page - Mock Data and Functionality
+﻿// History Page - Mock Data and Functionality
 
 // Generate mock student events data
 const generateMockEvents = () => {
@@ -8,7 +8,6 @@ const generateMockEvents = () => {
   const eventTypes = [
     { value: 'phone', label: 'Phone Detected', icon: 'bx-mobile' },
     { value: 'looking_away', label: 'Looking Away', icon: 'bx-show-alt' },
-    { value: 'multiple_people', label: 'Multiple People', icon: 'bx-group' },
     { value: 'suspicious_object', label: 'Suspicious Object', icon: 'bx-error' }
   ];
 
@@ -81,18 +80,146 @@ let allEvents = [];
 let filteredEvents = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Generate mock data
-  allEvents = generateMockEvents();
-  filteredEvents = [...allEvents];
-
-  // Initial render
-  renderEventCards();
-  updateResultsCount();
+  // Fetch real data from backend
+  fetchHistoryCards();
 
   // Setup event listeners
   setupFilterListeners();
   setupModalListeners();
 });
+
+async function fetchHistoryCards() {
+  try {
+    const response = await fetch('/api/history/cards');
+    const data = await response.json();
+
+    if (data.cards && data.cards.length > 0) {
+      // Transform backend cards to frontend format
+      allEvents = data.cards.map(card => transformCardToEvent(card));
+      filteredEvents = [...allEvents];
+
+      renderEventCards();
+      updateResultsCount();
+    } else {
+      // No cards found
+      allEvents = [];
+      filteredEvents = [];
+      renderEventCards();
+      updateResultsCount();
+    }
+  } catch (error) {
+    console.error('Error fetching history cards:', error);
+    // Show empty state on error
+    allEvents = [];
+    filteredEvents = [];
+    renderEventCards();
+    updateResultsCount();
+  }
+}
+
+function transformCardToEvent(card) {
+  // Transform backend card format to frontend event format
+  const events = card.events || [];
+  const latestEvent = events[0] || {};
+
+  // Determine highest severity from all events
+  const severityOrder = { high: 3, medium: 2, low: 1 };
+  const highestSeverity = events.reduce((max, e) => {
+    const score = e.suspicion_score || 0;
+    const severity = score >= 80 ? 'high' : (score >= 50 ? 'medium' : 'low');
+    return severityOrder[severity] > severityOrder[max] ? severity : max;
+  }, 'low');
+
+  return {
+    id: card.card_id,
+    studentId: card.student_id,
+    studentName: card.student_name,
+    studentPhoto: `https://ui-avatars.com/api/?name=${encodeURIComponent(card.student_name)}&background=random&size=200`,
+    examName: card.session_name || 'Unknown Session',
+    events: events.map(e => {
+      const reasons = e.reasons || [];
+      const firstReason = reasons[0] || '';
+
+      // Map backend reasons to frontend filter values
+      let eventType = 'suspicious';
+      if (firstReason.includes('Phone')) {
+        eventType = 'phone';
+      } else if (firstReason.includes('Looking away')) {
+        eventType = 'looking_away';
+      } else if (firstReason.includes('Suspicious object')) {
+        eventType = 'suspicious_object';
+      } else if (firstReason.includes('face')) {
+        eventType = 'hand_face';
+      }
+
+      return {
+        eventId: e.event_id,
+        type: eventType,
+        typeLabel: formatEventType(reasons),
+        typeIcon: getEventIcon(reasons),
+        severity: e.suspicion_score >= 80 ? 'high' : (e.suspicion_score >= 50 ? 'medium' : 'low'),
+        timestamp: new Date(e.timestamp),
+        suspicionScore: e.suspicion_score,
+        confidence: e.confidence || (e.suspicion_score / 100.0),
+        reasons: reasons,
+        description: reasons.length > 0 ? reasons.join(', ') : 'Suspicious behavior detected',
+        notes: e.notes || '',
+        status: e.status || 'pending',
+        evidenceCount: e.evidence_count || 2,
+        evidencePath: `/api/evidence/${card.card_id}/${e.event_id}`,
+        evidence: e.evidence || {}
+      };
+    }),
+    totalEvents: events.length,
+    highestSeverity: highestSeverity,
+    lastEventTime: events.length > 0 ? new Date(latestEvent.timestamp) : new Date(),
+    status: card.status || 'pending',
+    sessionId: card.session_id
+  };
+}
+
+function formatEventType(reasons) {
+  if (!reasons || reasons.length === 0) return 'Suspicious Behavior';
+  const reason = reasons[0];
+  if (reason.includes('Phone')) return 'Phone Detected';
+  if (reason.includes('Looking away')) return 'Looking Away';
+  if (reason.includes('Suspicious object')) return 'Suspicious Object';
+  if (reason.includes('face')) return 'Hand Near Face';
+  return 'Suspicious Behavior';
+}
+
+function getEventIcon(reasons) {
+  if (!reasons || reasons.length === 0) return 'bx-error';
+  const reason = reasons[0];
+  if (reason.includes('Phone')) return 'bx-mobile';
+  if (reason.includes('Looking away')) return 'bx-show-alt';
+  if (reason.includes('Suspicious object')) return 'bx-error';
+  if (reason.includes('face')) return 'bx-face';
+  return 'bx-error';
+}
+
+function getUniqueEventTypeBadges(events) {
+  // Get unique event types from all events
+  const uniqueTypes = new Map();
+
+  events.forEach(event => {
+    const typeKey = event.typeLabel;
+    if (!uniqueTypes.has(typeKey)) {
+      uniqueTypes.set(typeKey, {
+        label: event.typeLabel,
+        icon: event.typeIcon
+      });
+    }
+  });
+
+  // Generate badges HTML
+  return Array.from(uniqueTypes.values()).map(type => `
+    <span class="event-type-badge" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; width: fit-content;">
+      <i class='bx ${type.icon}' style="font-size: 0.75rem;"></i>
+      ${type.label}
+    </span>
+  `).join('');
+}
 
 // Render student event cards
 function renderEventCards() {
@@ -111,10 +238,11 @@ function renderEventCards() {
     const latestEvent = event.events[0];
     const timeAgo = getTimeAgo(latestEvent.timestamp);
 
-    // Use real evidence image for first few cards (testing), then placeholders
-    const evidenceThumbnail = index < 6
-      ? 'static/assets/studentTestPic.png'  // Real test image
-      : `https://picsum.photos/400/300?random=${index}`;  // Placeholder
+    // Use first event's crop image as thumbnail
+    const firstEvidence = latestEvent.evidence || {};
+    const evidenceThumbnail = firstEvidence.crop
+      ? `/api/evidence/${event.id}/${firstEvidence.crop}`
+      : 'static/assets/studentTestPic.png';  // Fallback
 
     return `
             <div class="student-event-card" data-event-id="${event.id}">
@@ -129,10 +257,9 @@ function renderEventCards() {
 
                 <div class="event-card-body">
                     <div class="event-meta-row">
-                        <span class="event-type-badge">
-                            <i class='bx ${latestEvent.typeIcon}'></i>
-                            ${latestEvent.typeLabel}
-                        </span>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1;">
+                            ${getUniqueEventTypeBadges(event.events)}
+                        </div>
                         <span class="severity-badge severity-${event.highestSeverity}">
                             ${event.highestSeverity}
                         </span>
@@ -351,6 +478,9 @@ function openEventDetailModal(eventId) {
 
   const modal = document.getElementById('event-detail-modal');
 
+  // Store card ID for evidence gallery
+  modal.dataset.currentCardId = event.id;
+
   // Blur the top header when modal opens
   const topHeader = document.querySelector('.top-header');
   if (topHeader) {
@@ -441,6 +571,10 @@ function renderEventTimeline(events) {
                         <i class='bx bx-image-alt'></i>
                         Evidence: ${event.evidenceCount} images
                     </span>
+                    <span class="timeline-meta-item">
+                        <i class='bx ${event.status === 'confirmed' ? 'bx-check-circle' : (event.status === 'declined' ? 'bx-x-circle' : 'bx-time')}'></i>
+                        Status: <strong style="color: ${event.status === 'confirmed' ? '#FF4444' : (event.status === 'declined' ? '#4CAF50' : '#FFA500')}">${event.status.toUpperCase()}</strong>
+                    </span>
                 </div>
             </div>
         </div>
@@ -450,12 +584,28 @@ function renderEventTimeline(events) {
 function renderEvidenceGallery(events) {
   const gallery = document.getElementById('evidence-gallery');
 
+  // Get the current event card ID from modal
+  const modal = document.getElementById('event-detail-modal');
+  const currentEventCardId = modal.dataset.currentCardId;
+
   // Generate evidence images from events
   const evidenceImages = [];
-  events.forEach((event, eventIndex) => {
-    for (let i = 0; i < event.evidenceCount; i++) {
+  events.forEach((event) => {
+    const evidence = event.evidence || {};
+
+    // Add crop image if exists
+    if (evidence.crop) {
       evidenceImages.push({
-        url: `https://picsum.photos/200/200?random=${eventIndex * 10 + i}`,
+        url: `/api/evidence/${currentEventCardId}/${evidence.crop}`,
+        timestamp: event.timestamp,
+        eventType: event.typeLabel
+      });
+    }
+
+    // Add frame image if exists
+    if (evidence.frame) {
+      evidenceImages.push({
+        url: `/api/evidence/${currentEventCardId}/${evidence.frame}`,
         timestamp: event.timestamp,
         eventType: event.typeLabel
       });
