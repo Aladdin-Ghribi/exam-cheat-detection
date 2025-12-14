@@ -82,7 +82,7 @@ body {
 }
 
 .nav-item {
-  display: flex !important;
+  display: flex;
   flex-direction: row !important;
   align-items: center;
   gap: 1rem;
@@ -122,6 +122,10 @@ body {
 
 .nav-item.active {
   color: white;
+}
+
+.nav-item.hidden {
+  display: none !important;
 }
 
 .nav-item.active::before {
@@ -756,17 +760,17 @@ main.sidebar-collapsed {
   -webkit-appearance: none;
   appearance: none;
   height: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #D3D3D3;
   border-radius: 3px;
   outline: none;
 }
 
 .form-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
+  -webkit-appearance:none;
   appearance: none;
   width: 16px;
   height: 16px;
-  background: #0071FF;
+  background:#0071FF;
   cursor: pointer;
   border-radius: 50%;
 }
@@ -774,7 +778,7 @@ main.sidebar-collapsed {
 .form-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: #0071FF;
+  background: #0071FF ;
   cursor: pointer;
   border-radius: 50%;
   border: none;
