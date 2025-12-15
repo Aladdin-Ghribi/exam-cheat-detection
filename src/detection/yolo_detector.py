@@ -67,6 +67,8 @@ class YOLODetector:
 
         self.evidence_saver = FlaggedEvidenceSaver()
         self.auto_save_enabled = True
+        self.show_pose = True  # Default to showing pose skeleton
+        self.show_confidence = True  # Default to showing confidence scores
 
     def _get_img_size(self):
         """Get appropriate image size based on model size and device."""

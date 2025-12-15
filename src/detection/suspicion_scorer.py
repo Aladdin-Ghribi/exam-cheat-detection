@@ -30,6 +30,8 @@ class SuspicionScorer:
         self.yaw_threshold = 30
         self.pitch_threshold = 20
         self.suspicion_threshold = SUSPICION_THRESHOLD
+        self.hand_face_threshold = 2.0
+        self.hand_object_threshold = 55
 
     def score_detection(self, detection):
         """
@@ -298,7 +300,8 @@ class SuspicionScorer:
 
             threshold = entry.get('face_threshold')
             if threshold is None or threshold <= 0.0:
-                threshold = 0.15
+                # Convert hand_face_threshold from UI (1.0-3.0) to internal scale (0.1-0.3)
+                threshold = self.hand_face_threshold / 10.0
 
             # Graduated scoring based on proximity
             if distance < threshold * 0.5:  # Very close to face
@@ -330,9 +333,12 @@ class SuspicionScorer:
 
         width = max(bbox[2] - bbox[0], 1.0)
         height = max(bbox[3] - bbox[1], 1.0)
-        threshold = min(width, height) * 0.25
+        # Use the user-configured threshold or fall back to a calculated one
+        threshold = self.hand_object_threshold
         if threshold <= 0.0:
-            threshold = 25.0
+            threshold = min(width, height) * 0.25
+            if threshold <= 0.0:
+                threshold = 25.0
 
         expanded = threshold * 1.6
         max_score = 0.0

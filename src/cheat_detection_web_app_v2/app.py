@@ -1,9 +1,19 @@
-﻿# src/cheat_detection_web_app_v2/app.py
+﻿ 
 """
 Exam Cheat Detection Web Application v2
 Flask-SocketIO backend with session management and event card logic
 """
 
+import os
+import sys
+import torch
+from pathlib import Path
+
+# Path setup - MUST BE FIRST
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# Now import project modules
 from src.detection.suspicion_config import SUSPICION_THRESHOLD
 from src.detection.suspicion_scorer import SuspicionScorer
 from src.detection.yolo_detector import YOLODetector
@@ -11,17 +21,10 @@ from flask_socketio import SocketIO, emit
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 import numpy as np
 import cv2
-import os
-import sys
 import json
 import base64
 import uuid
 from datetime import datetime
-from pathlib import Path
-
-# Path setup
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ============================================
@@ -34,6 +37,14 @@ app = Flask(__name__,
 app.config['SECRET_KEY'] = 'exam-cheat-detection-v2-secret-key'
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# Add cache-control headers to prevent back button access
+@app.after_request
+def add_security_headers(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 # Paths
 DATA_DIR = PROJECT_ROOT / 'data'
@@ -58,6 +69,141 @@ print("Loading YOLODetector...")
 detector = YOLODetector()
 detector.auto_save_enabled = False  # We handle saving manually now
 print("YOLODetector ready")
+
+# Load configuration from config.json if it exists
+if CONFIG_FILE.exists():
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+            
+        # Apply configuration settings to detector
+        if 'model_size' in config and hasattr(detector, 'model_size'):
+            if detector.model_size != config['model_size']:
+                print(f"Loading model size from config: {config['model_size']}")
+                detector.switch_model(config['model_size'])
+        
+        if 'confidence_threshold' in config and hasattr(detector, 'confidence_threshold'):
+            print(f"Loading confidence threshold from config: {config['confidence_threshold']}")
+            detector.confidence_threshold = config['confidence_threshold']
+        
+        if 'img_processing_size' in config and hasattr(detector, 'img_size'):
+            print(f"Loading image processing size from config: {config['img_processing_size']}")
+            detector.img_size = config['img_processing_size']
+        
+        if 'model_complexity' in config and hasattr(detector, 'model_complexity'):
+            print(f"Loading model complexity from config: {config['model_complexity']}")
+            detector.model_complexity = config['model_complexity']
+        
+        if 'yaw_threshold' in config and hasattr(detector, 'yaw_threshold'):
+            print(f"Loading yaw threshold from config: {config['yaw_threshold']}")
+            detector.yaw_threshold = config['yaw_threshold']
+        
+        if 'pitch_threshold' in config and hasattr(detector, 'pitch_threshold'):
+            print(f"Loading pitch threshold from config: {config['pitch_threshold']}")
+            detector.pitch_threshold = config['pitch_threshold']
+        
+        if 'roll_threshold' in config and hasattr(detector, 'roll_threshold'):
+            print(f"Loading roll threshold from config: {config['roll_threshold']}")
+            detector.roll_threshold = config['roll_threshold']
+        
+        if 'suspicion_threshold' in config and hasattr(detector, 'suspicion_threshold'):
+            print(f"Loading suspicion threshold from config: {config['suspicion_threshold']}")
+            detector.suspicion_threshold = config['suspicion_threshold']
+        
+        if 'hand_face_threshold' in config and hasattr(detector, 'suspicion_scorer'):
+            print(f"Loading hand-face threshold from config: {config['hand_face_threshold']}")
+            detector.suspicion_scorer.hand_face_threshold = config['hand_face_threshold']
+        
+        if 'hand_object_threshold' in config and hasattr(detector, 'suspicion_scorer'):
+            print(f"Loading hand-object threshold from config: {config['hand_object_threshold']}")
+            detector.suspicion_scorer.hand_object_threshold = config['hand_object_threshold']
+        
+        if 'enable_frame_skipping' in config and hasattr(detector, 'enable_frame_skipping'):
+            print(f"Loading frame skipping from config: {config['enable_frame_skipping']}")
+            detector.enable_frame_skipping = config['enable_frame_skipping']
+        
+        if 'frame_skip_threshold_ms' in config and hasattr(detector, 'frame_skip_threshold_ms'):
+            print(f"Loading frame skip threshold from config: {config['frame_skip_threshold_ms']}")
+            detector.frame_skip_threshold_ms = config['frame_skip_threshold_ms']
+        
+        if 'max_frame_skip' in config and hasattr(detector, 'max_frame_skip'):
+            print(f"Loading max frame skip from config: {config['max_frame_skip']}")
+            detector.max_frame_skip = config['max_frame_skip']
+        
+        if 'processing_interval_ms' in config and hasattr(detector, 'processing_interval_ms'):
+            print(f"Loading processing interval from config: {config['processing_interval_ms']}")
+            detector.processing_interval_ms = config['processing_interval_ms']
+        
+        if 'camera_source' in config and hasattr(detector, 'camera_source'):
+            print(f"Loading camera source from config: {config['camera_source']}")
+            detector.camera_source = config['camera_source']
+        
+        if 'camera_resolution' in config and hasattr(detector, 'camera_resolution'):
+            print(f"Loading camera resolution from config: {config['camera_resolution']}")
+            detector.camera_resolution = config['camera_resolution']
+            
+            # Update image size based on resolution
+            if config['camera_resolution'] == "480p":
+                detector.img_processing_size = (640, 480)
+            elif config['camera_resolution'] == "720p":
+                detector.img_processing_size = (1280, 720)
+            elif config['camera_resolution'] == "1080p":
+                detector.img_processing_size = (1920, 1080)
+        
+        if 'camera_fps' in config and hasattr(detector, 'camera_fps'):
+            print(f"Loading camera FPS from config: {config['camera_fps']}")
+            detector.camera_fps = config['camera_fps']
+        
+        if 'camera_label' in config and hasattr(detector, 'camera_label'):
+            print(f"Loading camera label from config: {config['camera_label']}")
+            detector.camera_label = config['camera_label']
+        
+        if 'auto_reconnect' in config and hasattr(detector, 'auto_reconnect'):
+            print(f"Loading auto-reconnect from config: {config['auto_reconnect']}")
+            detector.auto_reconnect = config['auto_reconnect']
+        
+        if 'auto_save' in config and hasattr(detector, 'auto_save_enabled'):
+            print(f"Loading auto-save from config: {config['auto_save']}")
+            detector.auto_save_enabled = config['auto_save']
+        
+        if 'suspicion_save_threshold' in config and hasattr(detector, 'suspicion_save_threshold'):
+            print(f"Loading suspicion save threshold from config: {config['suspicion_save_threshold']}")
+            detector.suspicion_save_threshold = config['suspicion_save_threshold']
+        
+        if 'retention_period' in config and hasattr(detector, 'retention_period'):
+            print(f"Loading retention period from config: {config['retention_period']}")
+            detector.retention_period = config['retention_period']
+        
+        if 'session_recording' in config and hasattr(detector, 'session_recording'):
+            print(f"Loading session recording from config: {config['session_recording']}")
+            detector.session_recording = config['session_recording']
+        
+        if 'show_bbox' in config and hasattr(detector, 'show_bbox'):
+            print(f"Loading show bounding boxes from config: {config['show_bbox']}")
+            detector.show_bbox = config['show_bbox']
+
+        if 'show_pose' in config and hasattr(detector, 'show_pose'):
+            print(f"Loading show pose skeleton from config: {config['show_pose']}")
+            detector.show_pose = config['show_pose']
+
+        if 'show_confidence' in config and hasattr(detector, 'show_confidence'):
+            print(f"Loading show confidence scores from config: {config['show_confidence']}")
+            detector.show_confidence = config['show_confidence']
+        
+        if 'device' in config and hasattr(detector, 'device'):
+            torch_device = config['device']
+            if config['device'] == 'gpu' and torch.cuda.is_available():
+                torch_device = 'cuda'
+            elif config['device'] == 'gpu':
+                print("GPU selected in config but CUDA not available, using CPU")
+                torch_device = 'cpu'
+            print(f"Loading device from config: {torch_device}")
+            detector.device = torch_device
+            detector.model.to(torch_device)
+            
+        print("Configuration loaded from config.json")
+    except Exception as e:
+        print(f"Error loading configuration from config.json: {e}")
 
 print("Loading SuspicionScorer...")
 suspicion_scorer = SuspicionScorer()
@@ -563,8 +709,8 @@ def handle_video_frame(data):
 
             processed_detections.append(sanitized)
 
-        # Draw detection boxes on frame if debug enabled
-        if debug_boxes:
+        # Draw detection boxes on frame if show_bbox is enabled
+        if hasattr(detector, 'show_bbox') and detector.show_bbox:
             output_frame = draw_detection_boxes(frame, detections)
         else:
             output_frame = frame
@@ -709,13 +855,19 @@ def handle_get_pending_alerts():
 
 @app.route('/')
 def index():
+    """Serve the login page as entry point"""
+    return send_from_directory(Path(__file__).parent, 'login.html')
+
+
+@app.route('/dashboard')
+def dashboard():
     """Serve the main dashboard"""
     return send_from_directory(Path(__file__).parent, 'dashboard.html')
 
 
-@app.route('/login')
-def login():
-    """Serve the login page"""
+@app.route('/logout')
+def logout():
+    """Logout user and redirect to login page"""
     return send_from_directory(Path(__file__).parent, 'login.html')
 
 
@@ -770,13 +922,49 @@ def get_evidence_file(card_id, event_id, filename):
     return jsonify({'error': 'File not found'}), 404
 
 
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    """Authenticate user credentials"""
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Username and password required'}), 400
+    
+    if not USERS_FILE.exists():
+        return jsonify({'success': False, 'error': 'User database not found'}), 500
+    
+    with open(USERS_FILE, 'r') as f:
+        users = json.load(f)
+    
+    for user in users:
+        if user.get('username') == username and user.get('password') == password:
+            return jsonify({
+                'success': True,
+                'user': {
+                    'id': user.get('id'),
+                    'username': user.get('username'),
+                    'email': user.get('email'),
+                    'role': user.get('role')
+                }
+            })
+    
+    return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
+
+
 @app.route('/api/users', methods=['GET'])
 def get_users():
     """Get list of users (for settings/admin)"""
     if USERS_FILE.exists():
         with open(USERS_FILE, 'r') as f:
             users = json.load(f)
-        return jsonify({'users': [{k: v for k, v in u.items() if k != 'password'} for u in users]})
+        # Include passwords for admin users (check current user role from localStorage)
+        current_user_role = request.args.get('current_user_role', '')
+        if current_user_role == 'administrator':
+            return jsonify({'users': users})
+        else:
+            return jsonify({'users': [{k: v for k, v in u.items() if k != 'password'} for u in users]})
     return jsonify({'users': []})
 
 
@@ -797,9 +985,306 @@ def get_config():
 def update_config():
     """Update configuration"""
     config = request.get_json()
+
+    # Check if model_size changed and switch model if needed
+    if 'model_size' in config:
+        new_model_size = config['model_size']
+        if detector.model_size != new_model_size:
+            print(f"Switching model from {detector.model_size} to {new_model_size}")
+            if detector.switch_model(new_model_size):
+                print(f"Model switched successfully to {new_model_size}")
+            else:
+                print(f"Failed to switch model to {new_model_size}")
+                return jsonify({'success': False, 'error': f'Failed to switch to model size {new_model_size}'})
+    
+    # Update image processing size if changed
+    if 'img_processing_size' in config:
+        new_img_size = config['img_processing_size']
+        if hasattr(detector, 'img_size') and detector.img_size != new_img_size:
+            print(f"Updating image processing size from {detector.img_size} to {new_img_size}")
+            detector.img_size = new_img_size
+    
+    # Update confidence threshold if changed
+    if 'confidence_threshold' in config:
+        new_conf_threshold = config['confidence_threshold']
+        if hasattr(detector, 'confidence_threshold') and detector.confidence_threshold != new_conf_threshold:
+            print(f"Updating confidence threshold from {detector.confidence_threshold} to {new_conf_threshold}")
+            detector.confidence_threshold = new_conf_threshold
+    
+    # Update device if changed
+    if 'device' in config:
+        new_device = config['device']
+        if hasattr(detector, 'device') and detector.device != new_device:
+            print(f"Updating device from {detector.device} to {new_device}")
+            # Convert string values to torch device format
+            torch_device = new_device
+            if new_device == 'gpu' and torch.cuda.is_available():
+                torch_device = 'cuda'
+            elif new_device == 'gpu':
+                print("GPU selected but CUDA not available, using CPU")
+                torch_device = 'cpu'
+            
+            # Update detector device
+            detector.device = torch_device
+            detector.model.to(torch_device)
+    
+    # Update model complexity if changed
+    if 'model_complexity' in config:
+        new_complexity = config['model_complexity']
+        if hasattr(detector, 'model_complexity') and detector.model_complexity != new_complexity:
+            print(f"Updating model complexity from {detector.model_complexity} to {new_complexity}")
+            detector.model_complexity = new_complexity
+    
+    # Update yaw threshold if changed
+    if 'yaw_threshold' in config:
+        new_yaw_threshold = config['yaw_threshold']
+        if hasattr(detector, 'yaw_threshold') and detector.yaw_threshold != new_yaw_threshold:
+            print(f"Updating yaw threshold from {detector.yaw_threshold} to {new_yaw_threshold}")
+            detector.yaw_threshold = new_yaw_threshold
+    
+    # Update pitch threshold if changed
+    if 'pitch_threshold' in config:
+        new_pitch_threshold = config['pitch_threshold']
+        if hasattr(detector, 'pitch_threshold') and detector.pitch_threshold != new_pitch_threshold:
+            print(f"Updating pitch threshold from {detector.pitch_threshold} to {new_pitch_threshold}")
+            detector.pitch_threshold = new_pitch_threshold
+    
+    # Update roll threshold if changed
+    if 'roll_threshold' in config:
+        new_roll_threshold = config['roll_threshold']
+        if hasattr(detector, 'roll_threshold') and detector.roll_threshold != new_roll_threshold:
+            print(f"Updating roll threshold from {detector.roll_threshold} to {new_roll_threshold}")
+            detector.roll_threshold = new_roll_threshold
+    
+    # Update suspicion threshold if changed
+    if 'suspicion_threshold' in config:
+        new_suspicion_threshold = config['suspicion_threshold']
+        if hasattr(detector, 'suspicion_threshold') and detector.suspicion_threshold != new_suspicion_threshold:
+            print(f"Updating suspicion threshold from {detector.suspicion_threshold} to {new_suspicion_threshold}")
+            detector.suspicion_threshold = new_suspicion_threshold
+    
+    # Update hand-face threshold if changed
+    if 'hand_face_threshold' in config:
+        new_hand_face_threshold = config['hand_face_threshold']
+        if hasattr(detector, 'suspicion_scorer'):
+            if detector.suspicion_scorer.hand_face_threshold != new_hand_face_threshold:
+                print(f"Updating hand-face threshold from {detector.suspicion_scorer.hand_face_threshold} to {new_hand_face_threshold}")
+                detector.suspicion_scorer.hand_face_threshold = new_hand_face_threshold
+    
+    # Update hand-object threshold if changed
+    if 'hand_object_threshold' in config:
+        new_hand_object_threshold = config['hand_object_threshold']
+        if hasattr(detector, 'suspicion_scorer'):
+            if detector.suspicion_scorer.hand_object_threshold != new_hand_object_threshold:
+                print(f"Updating hand-object threshold from {detector.suspicion_scorer.hand_object_threshold} to {new_hand_object_threshold}")
+                detector.suspicion_scorer.hand_object_threshold = new_hand_object_threshold
+    
+    # Update frame skipping if changed
+    if 'enable_frame_skipping' in config:
+        new_enable_frame_skipping = config['enable_frame_skipping']
+        if hasattr(detector, 'enable_frame_skipping') and detector.enable_frame_skipping != new_enable_frame_skipping:
+            print(f"Updating frame skipping from {detector.enable_frame_skipping} to {new_enable_frame_skipping}")
+            detector.enable_frame_skipping = new_enable_frame_skipping
+    
+    # Update frame skip threshold if changed
+    if 'frame_skip_threshold_ms' in config:
+        new_frame_skip_threshold_ms = config['frame_skip_threshold_ms']
+        if hasattr(detector, 'frame_skip_threshold_ms') and detector.frame_skip_threshold_ms != new_frame_skip_threshold_ms:
+            print(f"Updating frame skip threshold from {detector.frame_skip_threshold_ms} to {new_frame_skip_threshold_ms}")
+            detector.frame_skip_threshold_ms = new_frame_skip_threshold_ms
+    
+    # Update max frame skip if changed
+    if 'max_frame_skip' in config:
+        new_max_frame_skip = config['max_frame_skip']
+        if hasattr(detector, 'max_frame_skip') and detector.max_frame_skip != new_max_frame_skip:
+            print(f"Updating max frame skip from {detector.max_frame_skip} to {new_max_frame_skip}")
+            detector.max_frame_skip = new_max_frame_skip
+    
+    # Update processing interval if changed
+    if 'processing_interval_ms' in config:
+        new_processing_interval_ms = config['processing_interval_ms']
+        if hasattr(detector, 'processing_interval_ms') and detector.processing_interval_ms != new_processing_interval_ms:
+            print(f"Updating processing interval from {detector.processing_interval_ms} to {new_processing_interval_ms}")
+            detector.processing_interval_ms = new_processing_interval_ms
+    
+    # Update camera source if changed
+    if 'camera_source' in config:
+        new_camera_source = config['camera_source']
+        if hasattr(detector, 'camera_source') and detector.camera_source != new_camera_source:
+            print(f"Updating camera source from {detector.camera_source} to {new_camera_source}")
+            detector.camera_source = new_camera_source
+    
+    # Update camera resolution if changed
+    if 'camera_resolution' in config:
+        new_camera_resolution = config['camera_resolution']
+        if hasattr(detector, 'camera_resolution') and detector.camera_resolution != new_camera_resolution:
+            print(f"Updating camera resolution from {detector.camera_resolution} to {new_camera_resolution}")
+            detector.camera_resolution = new_camera_resolution
+            
+            # Update image size based on resolution
+            if new_camera_resolution == "480p":
+                detector.img_processing_size = (640, 480)
+            elif new_camera_resolution == "720p":
+                detector.img_processing_size = (1280, 720)
+            elif new_camera_resolution == "1080p":
+                detector.img_processing_size = (1920, 1080)
+    
+    # Update camera FPS if changed
+    if 'camera_fps' in config:
+        new_camera_fps = config['camera_fps']
+        if hasattr(detector, 'camera_fps') and detector.camera_fps != new_camera_fps:
+            print(f"Updating camera FPS from {detector.camera_fps} to {new_camera_fps}")
+            detector.camera_fps = new_camera_fps
+    
+    # Update camera label if changed
+    if 'camera_label' in config:
+        new_camera_label = config['camera_label']
+        if hasattr(detector, 'camera_label') and detector.camera_label != new_camera_label:
+            print(f"Updating camera label from {detector.camera_label} to {new_camera_label}")
+            detector.camera_label = new_camera_label
+    
+    # Update auto-reconnect if changed
+    if 'auto_reconnect' in config:
+        new_auto_reconnect = config['auto_reconnect']
+        if hasattr(detector, 'auto_reconnect') and detector.auto_reconnect != new_auto_reconnect:
+            print(f"Updating auto-reconnect from {detector.auto_reconnect} to {new_auto_reconnect}")
+            detector.auto_reconnect = new_auto_reconnect
+    
+    # Update auto-save if changed
+    if 'auto_save' in config:
+        new_auto_save = config['auto_save']
+        if hasattr(detector, 'auto_save_enabled') and detector.auto_save_enabled != new_auto_save:
+            print(f"Updating auto-save from {detector.auto_save_enabled} to {new_auto_save}")
+            detector.auto_save_enabled = new_auto_save
+    
+    # Update suspicion save threshold if changed
+    if 'suspicion_save_threshold' in config:
+        new_suspicion_save_threshold = config['suspicion_save_threshold']
+        if hasattr(detector, 'suspicion_save_threshold') and detector.suspicion_save_threshold != new_suspicion_save_threshold:
+            print(f"Updating suspicion save threshold from {detector.suspicion_save_threshold} to {new_suspicion_save_threshold}")
+            detector.suspicion_save_threshold = new_suspicion_save_threshold
+    
+    # Update retention period if changed
+    if 'retention_period' in config:
+        new_retention_period = config['retention_period']
+        if hasattr(detector, 'retention_period') and detector.retention_period != new_retention_period:
+            print(f"Updating retention period from {detector.retention_period} to {new_retention_period}")
+            detector.retention_period = new_retention_period
+    
+    # Update session recording if changed
+    if 'session_recording' in config:
+        new_session_recording = config['session_recording']
+        if hasattr(detector, 'session_recording') and detector.session_recording != new_session_recording:
+            print(f"Updating session recording from {detector.session_recording} to {new_session_recording}")
+            detector.session_recording = new_session_recording
+    
+    # Update show bounding boxes if changed
+    if 'show_bbox' in config:
+        new_show_bbox = config['show_bbox']
+        if hasattr(detector, 'show_bbox') and detector.show_bbox != new_show_bbox:
+            print(f"Updating show bounding boxes from {detector.show_bbox} to {new_show_bbox}")
+            detector.show_bbox = new_show_bbox
+
+    # Update show pose skeleton if changed
+    if 'show_pose' in config:
+        new_show_pose = config['show_pose']
+        if hasattr(detector, 'show_pose') and detector.show_pose != new_show_pose:
+            print(f"Updating show pose skeleton from {detector.show_pose} to {new_show_pose}")
+            detector.show_pose = new_show_pose
+
+    # Update show confidence scores if changed
+    if 'show_confidence' in config:
+        new_show_confidence = config['show_confidence']
+        if hasattr(detector, 'show_confidence') and detector.show_confidence != new_show_confidence:
+            print(f"Updating show confidence scores from {detector.show_confidence} to {new_show_confidence}")
+            detector.show_confidence = new_show_confidence
+
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=2)
     return jsonify({'success': True})
+
+
+@app.route('/api/user/update', methods=['POST'])
+def update_user():
+    """Update user profile information"""
+    data = request.get_json()
+    user_id = data.get('id')
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    role = data.get('role', '').strip()
+
+    if not user_id or not username:
+        return jsonify({'success': False, 'error': 'User ID and username are required'}), 400
+
+    if not USERS_FILE.exists():
+        return jsonify({'success': False, 'error': 'User database not found'}), 500
+
+    with open(USERS_FILE, 'r') as f:
+        users = json.load(f)
+
+    # Check if current user is admin (from localStorage, passed in request)
+    current_user_role = data.get('current_user_role', '')
+    is_admin = current_user_role == 'administrator'
+
+    user_found = False
+    for user in users:
+        if user.get('id') == user_id:
+            # Update allowed fields
+            user['username'] = username
+            if password:  # Only update password if provided
+                user['password'] = password
+            # Only allow role update if current user is admin
+            if is_admin and role:
+                user['role'] = role
+            user_found = True
+            break
+
+    if not user_found:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    with open(USERS_FILE, 'w') as f:
+        json.dump(users, f, indent=2)
+
+    return jsonify({'success': True, 'message': 'Profile updated successfully'})
+
+
+@app.route('/api/user/delete', methods=['POST'])
+def delete_user():
+    """Delete a user account"""
+    data = request.get_json()
+    user_id = data.get('id')
+
+    if not user_id:
+        return jsonify({'success': False, 'error': 'User ID is required'}), 400
+
+    if not USERS_FILE.exists():
+        return jsonify({'success': False, 'error': 'User database not found'}), 500
+
+    with open(USERS_FILE, 'r') as f:
+        users = json.load(f)
+
+    # Check if current user is admin (from localStorage, passed in request)
+    current_user_role = data.get('current_user_role', '')
+    if current_user_role != 'administrator':
+        return jsonify({'success': False, 'error': 'Only administrators can delete users'}), 403
+
+    user_found = False
+    for i, user in enumerate(users):
+        if user.get('id') == user_id:
+            # Prevent admin from deleting themselves
+            if user.get('role') == 'administrator' and len([u for u in users if u.get('role') == 'administrator']) <= 1:
+                return jsonify({'success': False, 'error': 'Cannot delete the last administrator account'}), 400
+            users.pop(i)
+            user_found = True
+            break
+
+    if not user_found:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    with open(USERS_FILE, 'w') as f:
+        json.dump(users, f, indent=2)
+
+    return jsonify({'success': True, 'message': 'User deleted successfully'})
 
 
 # ============================================
@@ -839,6 +1324,12 @@ def init_data_files():
             "yaw_threshold": 30,
             "pitch_threshold": 20,
             "roll_threshold": 45,
+            "hand_face_threshold": 2.0,
+            "hand_object_threshold": 55,
+            "render_fps": 30,
+            
+            # Device setting
+            "device": "gpu" if torch.cuda.is_available() else "cpu",
 
             # Model settings
             "model_size": "medium",
@@ -846,6 +1337,7 @@ def init_data_files():
             "img_size_gpu": IMG_SIZE_GPU,
             "img_size_cpu": IMG_SIZE_CPU,
             "img_size_nano": IMG_SIZE_NANO,
+            "img_processing_size": IMG_SIZE_GPU if torch.cuda.is_available() else IMG_SIZE_CPU,
 
             # Performance
             "enable_frame_skipping": ENABLE_FRAME_SKIPPING,
@@ -853,6 +1345,21 @@ def init_data_files():
             "max_frame_skip": MAX_FRAME_SKIP,
             "render_fps": 30,
             "process_fps": 10,
+            "processing_interval_ms": 50,
+            
+            # Camera
+            "camera_source": "Webcam",
+            "camera_resolution": "720p",
+            "camera_fps": 30,
+            "camera_label": "Main Camera",
+            "auto_reconnect": True,
+            "auto_save": True,
+            "suspicion_save_threshold": 70,
+            "retention_period": 7,
+            "show_bbox": True,
+            "show_pose": True,
+            "show_confidence": True,
+            "show_track_ids": True,
 
             # Suspicion scoring weights
             "head_weight": HEAD_WEIGHT,

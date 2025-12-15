@@ -126,10 +126,14 @@ async function startWebcamPreview() {
   }
 }
 
-function startLocalDisplayLoop() {
-  // Display webcam feed at 30fps continuously with detection boxes
+function startLocalDisplayLoop(customIntervalMs) {
+  // Use custom interval if provided, otherwise default to 30fps (33ms)
+  const intervalMs = customIntervalMs || 33;
+  
+  // Display webcam feed at specified fps continuously with detection boxes
   displayInterval = setInterval(() => {
     if (videoElement && canvasContext) {
+      console.log(`[DEBUG] Display loop running, lastDetections count: ${lastDetections.length}`);
       // Draw webcam frame to canvas
       canvasContext.drawImage(videoElement, 0, 0);
 
@@ -145,7 +149,7 @@ function startLocalDisplayLoop() {
       const frameData = canvasElement.toDataURL('image/jpeg', 0.8);
       displayLocalFrame(frameData);
     }
-  }, 33); // ~30 FPS
+  }, intervalMs); // Use the custom interval
 }
 
 function displayLocalFrame(dataUrl) {
@@ -187,9 +191,11 @@ function stopWebcam() {
 }
 
 function startPipelineProcessing() {
+  console.log('[DEBUG] startPipelineProcessing called');
   isPipelineRunning = true;
   // Send frames to server at ~10 FPS for processing
   pipelineInterval = setInterval(captureAndSendFrame, 100);
+  console.log('[DEBUG] Pipeline processing started');
 }
 
 function stopPipelineProcessing() {
@@ -204,6 +210,7 @@ function stopPipelineProcessing() {
 }
 
 function captureAndSendFrame() {
+  console.log(`[DEBUG] captureAndSendFrame: isPipelineRunning=${isPipelineRunning}, videoElement=${!!videoElement}, canvasContext=${!!canvasContext}`);
   if (!isPipelineRunning || !videoElement || !canvasContext) return;
 
   const startTime = performance.now();
@@ -271,6 +278,7 @@ function updatePipelineSpeed(ms) {
 }
 
 function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
+  console.log('[DEBUG] drawBoundingBoxes called with detections:', detections);
   // Draw bounding boxes on the canvas for all detections
   detections.forEach(det => {
     if (!det.bbox) return;
@@ -299,7 +307,14 @@ function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
     // Build label text
     const trackId = det.track_id || '?';
     const className = det.class_id === 0 ? 'Person' : `Class ${det.class_id}`;
-    const labelText = `${className} #${trackId} | ${Math.round(score)}% ${label}`;
+    
+    // Check if track IDs should be shown
+    const showTrackToggle = document.getElementById('show-track-toggle');
+    const shouldShowTrack = showTrackToggle ? showTrackToggle.checked : true;
+    
+    // Build label text with or without track ID based on toggle
+    const trackText = shouldShowTrack ? `#${trackId} | ` : '';
+    const labelText = `${className} ${trackText}${Math.round(score)}% ${label}`;
 
     // Draw label background
     ctx.font = '12px Arial';
@@ -312,6 +327,79 @@ function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
     // Draw label text
     ctx.fillStyle = 'white';
     ctx.fillText(labelText, x1 + 4, y1 - 6);
+    
+    // Draw confidence score if enabled
+    const showConfidence = document.getElementById('show-confidence-toggle');
+    const shouldShowConfidence = showConfidence ? showConfidence.checked : true;
+    
+    // Debug: Log confidence display state
+    if (showConfidence) {
+      console.log(`[DEBUG] show-confidence-toggle.checked: ${showConfidence.checked}, shouldShowConfidence: ${shouldShowConfidence}`);
+    }
+    
+    if (shouldShowConfidence && det.unified_score !== undefined) {
+      // Draw confidence score above the bounding box
+      console.log(`[DEBUG] Drawing confidence score: ${det.unified_score}`);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // Semi-transparent white background
+      ctx.fillRect(x1, y2 - 25, 60, 20);
+      
+      ctx.fillStyle = 'black';
+      ctx.font = '12px Arial';
+      ctx.fillText(`${Math.round(det.unified_score)}%`, x1 + 5, y2 - 10);
+    }
+  });
+}
+
+// Draw pose skeleton on canvas
+function drawPoseSkeleton(ctx, landmarks, canvasWidth, canvasHeight) {
+  if (!landmarks || landmarks.length === 0) return;
+  
+  // Convert normalized coordinates to canvas coordinates
+  const points = landmarks.map(lm => ({
+    x: lm.x * canvasWidth,
+    y: lm.y * canvasHeight,
+    visibility: lm.visibility
+  }));
+  
+  // Define pose connections (MediaPipe pose landmarks)
+  const connections = [
+    [0, 1], [1, 2], [2, 3], [3, 7], // Face
+    [0, 4], [4, 5], [5, 6], [6, 8], // Face
+    [9, 10], [11, 12], [11, 13], [11, 23], [12, 24], [12, 25], // Arms
+    [13, 15], [14, 16], [15, 17], [16, 18], [17, 19], [18, 20], // Arms
+    [19, 21], [20, 22], // Arms
+    [11, 23], [23, 24], [24, 25], // Torso
+    [23, 25], [25, 26], [26, 27], [27, 28], [28, 29], [29, 30], [30, 31], // Legs
+    [27, 29], [29, 31], [28, 30], [30, 32] // Legs
+  ];
+  
+  // Draw connections
+  ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)'; // Green with transparency
+  ctx.lineWidth = 2;
+  
+  connections.forEach(([startIdx, endIdx]) => {
+    if (startIdx >= points.length || endIdx >= points.length) return;
+    
+    const startPoint = points[startIdx];
+    const endPoint = points[endIdx];
+    
+    // Only draw if both points are visible enough
+    if (startPoint.visibility > 0.3 && endPoint.visibility > 0.3) {
+      ctx.beginPath();
+      ctx.moveTo(startPoint.x, startPoint.y);
+      ctx.lineTo(endPoint.x, endPoint.y);
+      ctx.stroke();
+    }
+  });
+  
+  // Draw landmarks
+  ctx.fillStyle = 'rgba(0, 255, 0, 0.9)'; // Bright green
+  points.forEach(point => {
+    if (point.visibility > 0.3) {
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+      ctx.fill();
+    }
   });
 }
 
@@ -403,6 +491,7 @@ function setupMonitorEventListeners() {
 // ============================================
 
 async function startPipeline() {
+  console.log('[DEBUG] startPipeline called');
   const examNameInput = document.getElementById('exam-name-input');
   const examName = examNameInput.value.trim();
 
