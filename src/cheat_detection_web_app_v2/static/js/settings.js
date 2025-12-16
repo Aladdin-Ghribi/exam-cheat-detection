@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const settingsNavItems = document.querySelectorAll('.settings-nav-item');
   const settingsTitle = document.getElementById('settings-title');
-  
+
   // Add event listener for track ID toggle
   const showTrackToggle = document.getElementById('show-track-toggle');
   if (showTrackToggle) {
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ enable_frame_skipping: e.target.checked });
     });
   }
-  
+
   // Set up frame skip threshold input event listener
   const frameSkipThresholdInput = document.querySelector('input[type="number"][min="50"][max="200"]');
   if (frameSkipThresholdInput) {
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  
+
   // Set up max frame skip input event listener
   const maxFrameSkipInput = document.querySelector('input[type="number"][min="1"][max="5"]');
   if (maxFrameSkipInput) {
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  
+
   // Set up processing interval input event listener
   const processingIntervalInput = document.querySelector('input[type="number"][value="50"]');
   if (processingIntervalInput && !processingIntervalInput.hasAttribute('min') && !processingIntervalInput.hasAttribute('max')) {
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  
+
   // Set up camera source dropdown event listener
   const cameraSourceSelect = document.querySelector('select.form-control');
   if (cameraSourceSelect) {
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ camera_source: value });
     });
   }
-  
+
   // Set up camera resolution dropdown event listener
   const cameraResolutionSelects = document.querySelectorAll('select.form-control');
   if (cameraResolutionSelects.length > 1) {
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ camera_resolution: value });
     });
   }
-  
+
   // Set up camera FPS radio button event listeners
   const cameraFPSRadios = document.querySelectorAll('input[name="camera-fps"]');
   cameraFPSRadios.forEach(radio => {
@@ -137,20 +137,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-  
+
   // Set up camera label input event listener
   const cameraLabelInput = document.getElementById('camera-label');
   if (cameraLabelInput) {
     cameraLabelInput.addEventListener('change', (e) => {
       const value = e.target.value;
       saveConfig({ camera_label: value });
-      
+
       // Update camera name in dashboard
       const cameraNameElement = document.getElementById('camera-name');
       if (cameraNameElement) {
         cameraNameElement.textContent = value || 'Camera 01';
       }
-      
+
       // Update video camera label
       const videoCameraLabelElement = document.getElementById('video-camera-label');
       if (videoCameraLabelElement) {
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  
+
   // Set up auto-reconnect toggle event listener
   const autoReconnectToggle = document.getElementById('auto-reconnect-toggle');
   if (autoReconnectToggle) {
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ auto_reconnect: value });
     });
   }
-  
+
   // Set up auto-save toggle event listener
   const autoSaveToggle = document.getElementById('auto-save-toggle');
   if (autoSaveToggle) {
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ auto_save: value });
     });
   }
-  
+
   // Set up retention period input event listener
   const retentionPeriodInput = document.getElementById('retention-period-input');
   if (retentionPeriodInput) {
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  
+
   // Set up session recording toggle event listener
   const sessionRecordingToggle = document.getElementById('session-recording-toggle');
   if (sessionRecordingToggle) {
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ session_recording: value });
     });
   }
-  
+
   // Set up show bounding boxes toggle event listener
   const showBboxToggle = document.getElementById('show-bbox-toggle');
   if (showBboxToggle) {
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ show_confidence: value });
     });
   }
-  
+
   // Set up FPS radio button event listeners
   const fpsRadios = document.querySelectorAll('input[name="fps"]');
   fpsRadios.forEach(radio => {
@@ -235,23 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-  
-  // Function to update display FPS
-  function updateDisplayFPS(fps) {
-    // Clear existing interval if any
-    if (typeof displayInterval !== 'undefined') {
-      clearInterval(displayInterval);
-    }
-    
-    // Calculate new interval in milliseconds
-    const intervalMs = Math.round(1000 / fps);
-    
-    // Restart display loop with new FPS
-    if (typeof startLocalDisplayLoop === 'function') {
-      startLocalDisplayLoop(intervalMs);
-    }
-  }
-  
+
   const sliders = [
     { slider: 'yaw-slider', value: 'yaw-value', suffix: '°' },
     { slider: 'pitch-slider', value: 'pitch-value', suffix: '°' },
@@ -269,38 +253,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const val = decimals ? parseFloat(e.target.value).toFixed(decimals) : e.target.value;
         valueEl.textContent = val + suffix;
       });
-      
+
       // Add change event listener to save the value
       if (slider === 'yaw-slider') {
         sliderEl.addEventListener('change', (e) => {
           saveConfig({ yaw_threshold: parseInt(e.target.value) });
         });
       }
-      
+
       if (slider === 'pitch-slider') {
         sliderEl.addEventListener('change', (e) => {
           saveConfig({ pitch_threshold: parseInt(e.target.value) });
         });
       }
-      
+
       if (slider === 'roll-slider') {
         sliderEl.addEventListener('change', (e) => {
           saveConfig({ roll_threshold: parseInt(e.target.value) });
         });
       }
-      
+
       if (slider === 'suspicion-slider') {
         sliderEl.addEventListener('change', (e) => {
           saveConfig({ suspicion_threshold: parseInt(e.target.value) });
         });
       }
-      
+
       if (slider === 'hand-face-slider') {
         sliderEl.addEventListener('change', (e) => {
           saveConfig({ hand_face_threshold: parseFloat(e.target.value) });
         });
       }
-      
+
       if (slider === 'hand-object-slider') {
         sliderEl.addEventListener('change', (e) => {
           saveConfig({ hand_object_threshold: parseInt(e.target.value) });
@@ -315,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
     suspicionSaveSlider.addEventListener('input', (e) => {
       suspicionSaveValue.textContent = e.target.value;
     });
-    
+
     suspicionSaveSlider.addEventListener('change', (e) => {
       const value = parseInt(e.target.value);
       saveConfig({ suspicion_save_threshold: value });
@@ -327,6 +311,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (smoothingSlider && smoothingValue) {
     smoothingSlider.addEventListener('input', (e) => {
       smoothingValue.textContent = parseFloat(e.target.value).toFixed(1);
+    });
+
+    smoothingSlider.addEventListener('change', (e) => {
+      saveConfig({ smoothing_factor: parseFloat(e.target.value) });
     });
   }
 
@@ -355,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ model_size: e.target.value });
     });
   }
-  
+
   // Image Processing Size dropdown
   const imgProcessingSize = document.getElementById('img-processing-size');
   if (imgProcessingSize) {
@@ -363,7 +351,15 @@ document.addEventListener('DOMContentLoaded', () => {
       saveConfig({ img_processing_size: parseInt(e.target.value) });
     });
   }
-  
+
+  // Model Complexity dropdown
+  const modelComplexity = document.getElementById('model-complexity');
+  if (modelComplexity) {
+    modelComplexity.addEventListener('change', (e) => {
+      saveConfig({ model_complexity: parseInt(e.target.value) });
+    });
+  }
+
   // Device Selection radio buttons
   const deviceCpu = document.getElementById('device-cpu');
   const deviceGpu = document.getElementById('device-gpu');
@@ -373,11 +369,42 @@ document.addEventListener('DOMContentLoaded', () => {
         saveConfig({ device: 'cpu' });
       }
     });
-    
+
     deviceGpu.addEventListener('change', (e) => {
       if (e.target.checked) {
         saveConfig({ device: 'gpu' });
       }
+    });
+  }
+
+  // History Length input
+  const historyLengthInput = document.getElementById('history-length-input');
+  if (historyLengthInput) {
+    historyLengthInput.addEventListener('change', (e) => {
+      const value = parseInt(e.target.value);
+      if (value >= 3 && value <= 20) {
+        saveConfig({ history_length: value });
+      }
+    });
+  }
+
+  // Add User button (Admin section)
+  const addUserBtn = document.getElementById('add-user-btn');
+  if (addUserBtn) {
+    addUserBtn.addEventListener('click', () => {
+      createUser();
+    });
+  }
+
+  // Toggle password visibility for new user password
+  const toggleNewPassword = document.getElementById('toggle-new-password');
+  const newUserPassword = document.getElementById('new-user-password');
+  if (toggleNewPassword && newUserPassword) {
+    toggleNewPassword.addEventListener('click', () => {
+      const type = newUserPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+      newUserPassword.setAttribute('type', type);
+      toggleNewPassword.classList.toggle('bx-show');
+      toggleNewPassword.classList.toggle('bx-hide');
     });
   }
 });
@@ -593,24 +620,24 @@ function saveAdminUserChanges(userId, username, password, role) {
       current_user_role: user.role
     })
   })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // Close modal
-      const modal = document.getElementById('admin-edit-modal');
-      if (modal) modal.remove();
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Close modal
+        const modal = document.getElementById('admin-edit-modal');
+        if (modal) modal.remove();
 
-      alert('User account updated successfully!');
-      // Reload the accounts overview
-      loadAccountsOverview();
-    } else {
-      alert('Error updating user account: ' + data.error);
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('An error occurred while updating the user account.');
-  });
+        alert('User account updated successfully!');
+        // Reload the accounts overview
+        loadAccountsOverview();
+      } else {
+        alert('Error updating user account: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while updating the user account.');
+    });
 }
 
 function deleteAdminUser(userId) {
@@ -625,24 +652,100 @@ function deleteAdminUser(userId) {
       current_user_role: user.role
     })
   })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // Close modal
-      const modal = document.getElementById('admin-edit-modal');
-      if (modal) modal.remove();
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Close modal
+        const modal = document.getElementById('admin-edit-modal');
+        if (modal) modal.remove();
 
-      alert('User deleted successfully!');
-      // Reload the accounts overview
-      loadAccountsOverview();
-    } else {
-      alert('Error deleting user: ' + data.error);
-    }
+        alert('User deleted successfully!');
+        // Reload the accounts overview
+        loadAccountsOverview();
+      } else {
+        alert('Error deleting user: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while deleting the user.');
+    });
+}
+
+// Create a new user (admin only)
+function createUser() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  // Get form values
+  const username = document.getElementById('new-user-username')?.value?.trim();
+  const email = document.getElementById('new-user-email')?.value?.trim();
+  const password = document.getElementById('new-user-password')?.value?.trim();
+  const role = document.getElementById('new-user-role')?.value;
+
+  // Validate client-side
+  if (!username) {
+    alert('Please enter a username');
+    return;
+  }
+  if (!email) {
+    alert('Please enter an email address');
+    return;
+  }
+  if (!password) {
+    alert('Please enter a password');
+    return;
+  }
+
+  fetch('/api/user/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      username: username,
+      email: email,
+      password: password,
+      role: role,
+      current_user_role: user.role
+    })
   })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('An error occurred while deleting the user.');
-  });
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(`User "${username}" created successfully!`);
+
+        // Clear the form
+        document.getElementById('new-user-username').value = '';
+        document.getElementById('new-user-email').value = '';
+        document.getElementById('new-user-password').value = '';
+        document.getElementById('new-user-role').value = 'proctor';
+
+        // Reload the accounts overview to show the new user
+        loadAccountsOverview();
+      } else {
+        alert('Error creating user: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while creating the user.');
+    });
+}
+
+// Function to update display FPS - global scope for loadConfig to access
+function updateDisplayFPS(fps) {
+  // Clear existing interval if any
+  if (typeof displayInterval !== 'undefined') {
+    clearInterval(displayInterval);
+  }
+
+  // Calculate new interval in milliseconds
+  const intervalMs = Math.round(1000 / fps);
+
+  // Restart display loop with new FPS
+  if (typeof startLocalDisplayLoop === 'function') {
+    startLocalDisplayLoop(intervalMs);
+  }
 }
 
 function loadConfig() {
@@ -662,13 +765,13 @@ function loadConfig() {
         confidenceSlider.value = config.confidence_threshold;
         confidenceValue.textContent = parseFloat(config.confidence_threshold).toFixed(2);
       }
-      
+
       // Set image processing size dropdown
       const imgProcessingSize = document.getElementById('img-processing-size');
       if (imgProcessingSize && config.img_processing_size !== undefined) {
         imgProcessingSize.value = config.img_processing_size;
       }
-      
+
       // Set device selection radio buttons
       const deviceCpu = document.getElementById('device-cpu');
       const deviceGpu = document.getElementById('device-gpu');
@@ -679,13 +782,13 @@ function loadConfig() {
           deviceCpu.checked = true;
         }
       }
-      
+
       // Set Model Complexity dropdown
       const modelComplexity = document.getElementById('model-complexity');
       if (modelComplexity && config.model_complexity !== undefined) {
         modelComplexity.value = config.model_complexity;
       }
-      
+
       // Set Yaw Threshold slider
       const yawSlider = document.getElementById('yaw-slider');
       const yawValue = document.getElementById('yaw-value');
@@ -693,7 +796,7 @@ function loadConfig() {
         yawSlider.value = config.yaw_threshold;
         yawValue.textContent = config.yaw_threshold + '°';
       }
-      
+
       // Set Pitch Threshold slider
       const pitchSlider = document.getElementById('pitch-slider');
       const pitchValue = document.getElementById('pitch-value');
@@ -701,7 +804,7 @@ function loadConfig() {
         pitchSlider.value = config.pitch_threshold;
         pitchValue.textContent = config.pitch_threshold + '°';
       }
-      
+
       // Set Roll Threshold slider
       const rollSlider = document.getElementById('roll-slider');
       const rollValue = document.getElementById('roll-value');
@@ -709,7 +812,7 @@ function loadConfig() {
         rollSlider.value = config.roll_threshold;
         rollValue.textContent = config.roll_threshold + '°';
       }
-      
+
       // Set Suspicion Score Threshold slider
       const suspicionSlider = document.getElementById('suspicion-slider');
       const suspicionValue = document.getElementById('suspicion-value');
@@ -717,7 +820,7 @@ function loadConfig() {
         suspicionSlider.value = config.suspicion_threshold;
         suspicionValue.textContent = config.suspicion_threshold;
       }
-      
+
       // Set Hand-Face Distance Threshold slider
       const handFaceSlider = document.getElementById('hand-face-slider');
       const handFaceValue = document.getElementById('hand-face-value');
@@ -725,7 +828,7 @@ function loadConfig() {
         handFaceSlider.value = config.hand_face_threshold;
         handFaceValue.textContent = config.hand_face_threshold;
       }
-      
+
       // Set Hand-Object Distance Threshold slider
       const handObjectSlider = document.getElementById('hand-object-slider');
       const handObjectValue = document.getElementById('hand-object-value');
@@ -733,7 +836,7 @@ function loadConfig() {
         handObjectSlider.value = config.hand_object_threshold;
         handObjectValue.textContent = config.hand_object_threshold + ' pixels';
       }
-      
+
       // Set Render FPS radio buttons
       if (config.render_fps !== undefined) {
         const fpsRadios = document.querySelectorAll('input[name="fps"]');
@@ -742,11 +845,11 @@ function loadConfig() {
             radio.checked = true;
           }
         });
-        
+
         // Update display FPS with loaded value
         updateDisplayFPS(config.render_fps);
       }
-      
+
       // Set Frame Skipping toggle
       if (config.enable_frame_skipping !== undefined) {
         const frameSkipToggle = document.getElementById('frame-skip-toggle');
@@ -754,7 +857,7 @@ function loadConfig() {
           frameSkipToggle.checked = config.enable_frame_skipping;
         }
       }
-      
+
       // Set Frame Skip Threshold input
       if (config.frame_skip_threshold_ms !== undefined) {
         const frameSkipThresholdInput = document.querySelector('input[type="number"][min="50"][max="200"]');
@@ -762,7 +865,7 @@ function loadConfig() {
           frameSkipThresholdInput.value = config.frame_skip_threshold_ms;
         }
       }
-      
+
       // Set Max Frame Skip input
       if (config.max_frame_skip !== undefined) {
         const maxFrameSkipInput = document.querySelector('input[type="number"][min="1"][max="5"]');
@@ -770,7 +873,7 @@ function loadConfig() {
           maxFrameSkipInput.value = config.max_frame_skip;
         }
       }
-      
+
       // Set Processing Interval input
       if (config.processing_interval_ms !== undefined) {
         const processingIntervalInput = document.querySelector('input[type="number"][value="50"]');
@@ -778,7 +881,7 @@ function loadConfig() {
           processingIntervalInput.value = config.processing_interval_ms;
         }
       }
-      
+
       // Set Camera Source dropdown
       if (config.camera_source !== undefined) {
         const cameraSourceSelect = document.querySelector('select.form-control');
@@ -793,7 +896,7 @@ function loadConfig() {
           }
         }
       }
-      
+
       // Set Camera Resolution dropdown
       if (config.camera_resolution !== undefined) {
         const cameraResolutionSelects = document.querySelectorAll('select.form-control');
@@ -809,7 +912,7 @@ function loadConfig() {
           }
         }
       }
-      
+
       // Set Camera FPS radio buttons
       if (config.camera_fps !== undefined) {
         const cameraFPSRadios = document.querySelectorAll('input[name="camera-fps"]');
@@ -819,27 +922,27 @@ function loadConfig() {
           }
         });
       }
-      
+
       // Set Camera label input
       if (config.camera_label !== undefined) {
         const cameraLabelInput = document.getElementById('camera-label');
         if (cameraLabelInput) {
           cameraLabelInput.value = config.camera_label;
         }
-        
+
         // Update camera name in dashboard
         const cameraNameElement = document.getElementById('camera-name');
         if (cameraNameElement) {
           cameraNameElement.textContent = config.camera_label || 'Camera 01';
         }
-        
+
         // Update video camera label
         const videoCameraLabelElement = document.getElementById('video-camera-label');
         if (videoCameraLabelElement) {
           videoCameraLabelElement.textContent = config.camera_label || 'Camera 01';
         }
       }
-      
+
       // Set auto-reconnect toggle
       if (config.auto_reconnect !== undefined) {
         const autoReconnectToggle = document.getElementById('auto-reconnect-toggle');
@@ -847,7 +950,7 @@ function loadConfig() {
           autoReconnectToggle.checked = config.auto_reconnect;
         }
       }
-      
+
       // Set auto-save toggle
       if (config.auto_save !== undefined) {
         const autoSaveToggle = document.getElementById('auto-save-toggle');
@@ -855,7 +958,7 @@ function loadConfig() {
           autoSaveToggle.checked = config.auto_save;
         }
       }
-      
+
       // Set suspicion save threshold
       if (config.suspicion_save_threshold !== undefined) {
         const suspicionSaveSlider = document.getElementById('suspicion-save-slider');
@@ -865,7 +968,7 @@ function loadConfig() {
           suspicionSaveValue.textContent = config.suspicion_save_threshold;
         }
       }
-      
+
       // Set retention period
       if (config.retention_period !== undefined) {
         const retentionPeriodInput = document.getElementById('retention-period-input');
@@ -873,7 +976,7 @@ function loadConfig() {
           retentionPeriodInput.value = config.retention_period;
         }
       }
-      
+
       // Set session recording toggle
       if (config.session_recording !== undefined) {
         const sessionRecordingToggle = document.getElementById('session-recording-toggle');
@@ -881,7 +984,7 @@ function loadConfig() {
           sessionRecordingToggle.checked = config.session_recording;
         }
       }
-      
+
       // Set show bounding boxes toggle
       if (config.show_bbox !== undefined) {
         const showBboxToggle = document.getElementById('show-bbox-toggle');
@@ -889,7 +992,7 @@ function loadConfig() {
           showBboxToggle.checked = config.show_bbox;
         }
       }
-      
+
       // Set show track IDs toggle
       if (config.show_track_ids !== undefined) {
         const showTrackToggle = document.getElementById('show-track-toggle');
@@ -914,15 +1017,15 @@ function saveConfig(updates) {
     },
     body: JSON.stringify(updates)
   })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      console.log('Config updated successfully');
-    } else {
-      console.error('Error updating config:', data.error);
-    }
-  })
-  .catch(error => {
-    console.error('Error saving config:', error);
-  });
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        console.log('Config updated successfully');
+      } else {
+        console.error('Error updating config:', data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error saving config:', error);
+    });
 }

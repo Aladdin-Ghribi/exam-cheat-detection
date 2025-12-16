@@ -1,3 +1,11 @@
+from .suspicion_scorer import SuspicionScorer
+from .flagged_evidence_saver import FlaggedEvidenceSaver
+from .pose_detector import PoseDetector
+from .exam_seat_manager import ExamSeatManager
+from .object_tracker import ObjectTracker
+from config import YOLO_MODEL, YOLO_MODEL_OPTIONS, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU, IMG_SIZE_NANO, ENABLE_FRAME_SKIPPING, FRAME_SKIP_THRESHOLD_MS, MAX_FRAME_SKIP
+from ultralytics import YOLO
+import cv2
 import os
 import sys
 import math
@@ -6,24 +14,17 @@ import torch
 sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
-import cv2
-from ultralytics import YOLO
-from config import YOLO_MODEL, YOLO_MODEL_OPTIONS, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU, IMG_SIZE_NANO, ENABLE_FRAME_SKIPPING, FRAME_SKIP_THRESHOLD_MS, MAX_FRAME_SKIP
-from .object_tracker import ObjectTracker
-from .exam_seat_manager import ExamSeatManager
-from .pose_detector import PoseDetector
-from .flagged_evidence_saver import FlaggedEvidenceSaver
-from .suspicion_scorer import SuspicionScorer
 
 CHEATING_RELATED_CLASSES = {
-  'cell_phone' : 67,
-  'book' : 73,
-  'laptop' : 63,
-  'backpack' : 24,
-  'handbag': 26,
+    'cell_phone': 67,
+    'book': 73,
+    'laptop': 63,
+    'backpack': 24,
+    'handbag': 26,
 }
 
 PERSON_CLASS_ID = 0
+
 
 class YOLODetector:
     def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=True, enable_pose=True, room_config=None, model_size="medium"):
@@ -31,9 +32,10 @@ class YOLODetector:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model_size = model_size
         self.img_size = self._get_img_size()
-        self.target_class_ids = [PERSON_CLASS_ID] + list(CHEATING_RELATED_CLASSES.values())
+        self.target_class_ids = [PERSON_CLASS_ID] + \
+            list(CHEATING_RELATED_CLASSES.values())
         self.CHEATING_RELATED_CLASSES = CHEATING_RELATED_CLASSES
-        
+
         # Frame skipping for performance
         self.frame_count = 0
         self.skip_frames = 0
@@ -56,8 +58,10 @@ class YOLODetector:
             self.seat_manager = ExamSeatManager()
 
         if self.enable_pose:
+            # Model complexity for pose detection (0=lite, 1=full, 2=heavy)
+            self.model_complexity = 0  # Default, can be updated via config
             self.pose_detector = PoseDetector(
-                model_complexity=0,
+                model_complexity=self.model_complexity,
                 min_detection_confidence=0.4,
                 min_tracking_confidence=0.4,
                 smoothing_factor=0.7,
@@ -67,6 +71,8 @@ class YOLODetector:
 
         self.evidence_saver = FlaggedEvidenceSaver()
         self.auto_save_enabled = True
+        # Default to showing bounding boxes (can be overridden by config)
+        self.show_bbox = True
         self.show_pose = True  # Default to showing pose skeleton
         self.show_confidence = True  # Default to showing confidence scores
 
@@ -82,21 +88,20 @@ class YOLODetector:
     def switch_model(self, model_size):
         """Switch to a different YOLO model size."""
         if model_size not in YOLO_MODEL_OPTIONS:
-            print(f"Invalid model size. Options: {list(YOLO_MODEL_OPTIONS.keys())}")
+            print(
+                f"Invalid model size. Options: {list(YOLO_MODEL_OPTIONS.keys())}")
             return False
-        
+
         model_path = YOLO_MODEL_OPTIONS[model_size]
         if not os.path.exists(model_path):
             print(f"Model file not found: {model_path}")
             return False
-        
+
         self.model = YOLO(model_path)
         self.model_size = model_size
         self.img_size = self._get_img_size()
         print(f"Switched to {model_size} model ({model_path})")
         return True
-
-
 
     def detect_frame(self, frame):
         """Run detection on a single frame with frame skipping support."""
@@ -139,7 +144,8 @@ class YOLODetector:
                         person_img = frame[int(y1):int(y2), int(x1):int(x2)]
                         if person_img.size > 0:
                             track_id = None
-                            pose_result = self.pose_detector.detect(person_img, track_id)
+                            pose_result = self.pose_detector.detect(
+                                person_img, track_id)
                             detection['pose'] = pose_result
 
                     detections.append(detection)
@@ -162,20 +168,22 @@ class YOLODetector:
             'detections': detections,
             'seat_assignments': seat_assignments
         }
-        
+
         self.last_detections = result
 
         # Check processing time and enable frame skipping if needed
         process_time = (time.time() - start_time) * 1000
         self.last_process_time = process_time
-        
+
         if self.enable_frame_skipping and process_time > self.frame_skip_threshold:
-            self.skip_frames = min(self.max_frame_skip, int(process_time / self.frame_skip_threshold))
+            self.skip_frames = min(self.max_frame_skip, int(
+                process_time / self.frame_skip_threshold))
 
         return result
 
     def _annotate_behavior(self, detections, frame):
-        object_detections = [det for det in detections if det['class_id'] != PERSON_CLASS_ID]
+        object_detections = [
+            det for det in detections if det['class_id'] != PERSON_CLASS_ID]
         active_keys = set()
         for detection in detections:
             if detection['class_id'] != PERSON_CLASS_ID:
@@ -210,7 +218,7 @@ class YOLODetector:
             if pose and pose.get('success'):
                 behavior['head_orientation'] = pose.get('head_orientation')
                 behavior['face_region'] = pose.get('face_region')
-                
+
                 # Transform landmarks from cropped person image to full frame coordinates
                 landmarks = pose.get('landmarks')
                 if landmarks:
@@ -220,15 +228,19 @@ class YOLODetector:
                     transformed_landmarks = []
                     for lm in landmarks:
                         transformed_landmarks.append({
-                            'x': (x1 + lm['x'] * width) / frame.shape[1],  # Normalize to full frame width
-                            'y': (y1 + lm['y'] * height) / frame.shape[0],  # Normalize to full frame height
+                            # Normalize to full frame width
+                            'x': (x1 + lm['x'] * width) / frame.shape[1],
+                            # Normalize to full frame height
+                            'y': (y1 + lm['y'] * height) / frame.shape[0],
                             'z': lm['z'],
                             'visibility': lm['visibility']
                         })
                     behavior['pose_landmarks'] = transformed_landmarks
-                
-                behavior['hands']['left'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'left')
-                behavior['hands']['right'] = self._build_behavior_hand_entry(detection, pose, object_detections, 'right')
+
+                behavior['hands']['left'] = self._build_behavior_hand_entry(
+                    detection, pose, object_detections, 'left')
+                behavior['hands']['right'] = self._build_behavior_hand_entry(
+                    detection, pose, object_detections, 'right')
             detection['behavior'] = behavior
             if self.suspicion_scorer:
                 suspicion = self.suspicion_scorer.score_detection(detection)
@@ -315,10 +327,6 @@ class YOLODetector:
             return names[class_id]
         return str(class_id)
 
-
-
-
-
     def set_auto_save(self, enabled):
         self.auto_save_enabled = enabled
         if hasattr(self, 'evidence_saver'):
@@ -333,3 +341,36 @@ class YOLODetector:
             'frame_count': self.frame_count,
             'skip_frames_active': self.skip_frames
         }
+
+    def set_model_complexity(self, complexity):
+        """
+        Set pose detection model complexity and reinitialize pose_detector.
+
+        Args:
+            complexity: 0 (lite), 1 (full), or 2 (heavy)
+        """
+        if not self.enable_pose:
+            return False
+
+        if complexity not in [0, 1, 2]:
+            print(
+                f"Invalid model complexity: {complexity}. Must be 0, 1, or 2.")
+            return False
+
+        if self.model_complexity == complexity:
+            return True  # Already set
+
+        print(
+            f"Updating pose model complexity from {self.model_complexity} to {complexity}")
+        self.model_complexity = complexity
+
+        # Reinitialize pose detector with new complexity
+        self.pose_detector = PoseDetector(
+            model_complexity=complexity,
+            min_detection_confidence=0.4,
+            min_tracking_confidence=0.4,
+            smoothing_factor=0.7,
+            history_length=10
+        )
+        print(f"Pose detector reinitialized with complexity {complexity}")
+        return True

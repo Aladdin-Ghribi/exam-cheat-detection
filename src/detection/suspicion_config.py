@@ -1,10 +1,28 @@
 """
 Centralized configuration for suspicion scoring parameters.
-This file ensures consistent thresholds and weights across all components.
+This file provides DEFAULT values that can be overridden by config.json.
 """
+import json
+from pathlib import Path
 
-# Main suspicion threshold (0-100 scale)
-SUSPICION_THRESHOLD = 15  # Lowered threshold for more sensitive detection
+
+def load_config():
+    """
+    Load configuration from config.json if it exists.
+    Returns a dictionary with config values, or empty dict if file doesn't exist.
+    """
+    config_path = Path(__file__).parent.parent.parent / 'data' / 'config.json'
+    if config_path.exists():
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+# Main suspicion threshold (0-100 scale) - DEFAULT VALUE
+SUSPICION_THRESHOLD = 15  # Can be overridden by config.json
 
 
 # Scoring weights

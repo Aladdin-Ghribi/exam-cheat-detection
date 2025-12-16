@@ -42,6 +42,25 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => {
             selectedView.classList.add('fade-in');
           }, 10);
+
+          // ===== PAGE-SPECIFIC REFRESH CALLBACKS =====
+          // Refresh History page data when navigating to it
+          if (pageId === 'history' && typeof fetchHistoryCards === 'function') {
+            fetchHistoryCards();
+          }
+
+          // Refresh Settings page data when navigating to it
+          if (pageId === 'settings') {
+            // Load accounts if profile section is visible
+            if (typeof loadAccountsOverview === 'function') {
+              loadAccountsOverview();
+            }
+            // Load config for detection settings
+            if (typeof loadConfig === 'function') {
+              loadConfig();
+            }
+          }
+
         }, 150); // Wait for fade-out to complete
       }
     });

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1",
+    "username": "Admin",
+    "password": "admin123",
+    "email": "admin@proctor.com",
+    "role": "administrator"
+  },
+  {
+    "id": "2",
+    "username": "alaa",
+    "email": "ala@gmail.com",
+    "password": "alaa",
+    "role": "proctor"
+  }
+]

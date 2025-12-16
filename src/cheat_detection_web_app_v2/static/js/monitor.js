@@ -59,6 +59,26 @@ function initSocket() {
     pendingAlerts = data.alerts || [];
     renderAlerts();
   });
+
+  // Listen for config updates (when settings change)
+  socket.on('config_updated', (config) => {
+    if (config.show_bbox !== undefined) {
+      showDebugBoxes = config.show_bbox;
+      console.log('[Monitor] Config updated - show_bbox:', showDebugBoxes);
+    }
+    if (config.show_pose !== undefined) {
+      showPoseSkeleton = config.show_pose;
+      console.log('[Monitor] Config updated - show_pose:', showPoseSkeleton);
+    }
+    if (config.show_confidence !== undefined) {
+      showConfidenceScores = config.show_confidence;
+      console.log('[Monitor] Config updated - show_confidence:', showConfidenceScores);
+    }
+    if (config.show_track_ids !== undefined) {
+      showTrackIds = config.show_track_ids;
+      console.log('[Monitor] Config updated - show_track_ids:', showTrackIds);
+    }
+  });
 }
 
 // ============================================
@@ -76,7 +96,32 @@ let lastPipelineMs = 0;
 
 // Cache for detection data to draw boxes on every frame
 let lastDetections = [];
-let showDebugBoxes = true;
+let showDebugBoxes = false;  // Default false, will be loaded from config
+let showPoseSkeleton = false;  // Default false, will be loaded from config
+let showConfidenceScores = false;  // Default false, will be loaded from config
+let showTrackIds = false;  // Default false, will be loaded from config
+
+// Load current display settings from config
+fetch('/api/config')
+  .then(r => r.json())
+  .then(config => {
+    if (config.show_bbox !== undefined) {
+      showDebugBoxes = config.show_bbox;
+      console.log('[Monitor] Loaded show_bbox from config:', showDebugBoxes);
+    }
+    if (config.show_pose !== undefined) {
+      showPoseSkeleton = config.show_pose;
+      console.log('[Monitor] Loaded show_pose from config:', showPoseSkeleton);
+    }
+    if (config.show_confidence !== undefined) {
+      showConfidenceScores = config.show_confidence;
+      console.log('[Monitor] Loaded show_confidence from config:', showConfidenceScores);
+    }
+    if (config.show_track_ids !== undefined) {
+      showTrackIds = config.show_track_ids;
+      console.log('[Monitor] Loaded show_track_ids from config:', showTrackIds);
+    }
+  });
 
 function initWebcam() {
   // Create hidden video element for webcam
@@ -129,7 +174,7 @@ async function startWebcamPreview() {
 function startLocalDisplayLoop(customIntervalMs) {
   // Use custom interval if provided, otherwise default to 30fps (33ms)
   const intervalMs = customIntervalMs || 33;
-  
+
   // Display webcam feed at specified fps continuously with detection boxes
   displayInterval = setInterval(() => {
     if (videoElement && canvasContext) {
@@ -137,12 +182,27 @@ function startLocalDisplayLoop(customIntervalMs) {
       // Draw webcam frame to canvas
       canvasContext.drawImage(videoElement, 0, 0);
 
-      // Draw bounding boxes if debug enabled and we have detections
-      const debugCheckbox = document.getElementById('show-debug-boxes');
-      const shouldDrawBoxes = debugCheckbox ? debugCheckbox.checked : true;
-
-      if (shouldDrawBoxes && lastDetections.length > 0) {
+      // Draw bounding boxes if enabled and we have detections
+      if (showDebugBoxes && lastDetections.length > 0) {
         drawBoundingBoxes(canvasContext, lastDetections, canvasElement.width, canvasElement.height);
+      }
+
+      // DEBUG: Log pose skeleton status
+      if (lastDetections.length > 0) {
+        console.log('[DEBUG] showPoseSkeleton:', showPoseSkeleton, 'detections:', lastDetections.length);
+      }
+
+      // Draw pose skeleton if enabled and we have detections with pose data
+      if (showPoseSkeleton && lastDetections.length > 0) {
+        console.log('[DEBUG] Pose enabled, checking detections:', lastDetections.length);
+        lastDetections.forEach(det => {
+          if (det.pose_landmarks) {
+            console.log('[DEBUG] Drawing pose for detection, landmarks count:', det.pose_landmarks.length);
+            drawPoseSkeleton(canvasContext, det.pose_landmarks, canvasElement.width, canvasElement.height);
+          } else {
+            console.log('[DEBUG] No pose_landmarks in detection:', Object.keys(det));
+          }
+        });
       }
 
       // Display the frame
@@ -221,9 +281,7 @@ function captureAndSendFrame() {
   // Convert to base64
   const frameData = canvasElement.toDataURL('image/jpeg', 0.8);
 
-  // Check debug boxes checkbox
-  const debugCheckbox = document.getElementById('show-debug-boxes');
-  const showDebugBoxes = debugCheckbox ? debugCheckbox.checked : true;
+  // Bbox display controlled by settings page via config.json
 
   // Send to server
   if (socket && socket.connected) {
@@ -307,13 +365,9 @@ function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
     // Build label text
     const trackId = det.track_id || '?';
     const className = det.class_id === 0 ? 'Person' : `Class ${det.class_id}`;
-    
-    // Check if track IDs should be shown
-    const showTrackToggle = document.getElementById('show-track-toggle');
-    const shouldShowTrack = showTrackToggle ? showTrackToggle.checked : true;
-    
-    // Build label text with or without track ID based on toggle
-    const trackText = shouldShowTrack ? `#${trackId} | ` : '';
+
+    // Build label text with or without track ID based on setting
+    const trackText = showTrackIds ? `#${trackId} | ` : '';
     const labelText = `${className} ${trackText}${Math.round(score)}% ${label}`;
 
     // Draw label background
@@ -327,22 +381,14 @@ function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
     // Draw label text
     ctx.fillStyle = 'white';
     ctx.fillText(labelText, x1 + 4, y1 - 6);
-    
+
     // Draw confidence score if enabled
-    const showConfidence = document.getElementById('show-confidence-toggle');
-    const shouldShowConfidence = showConfidence ? showConfidence.checked : true;
-    
-    // Debug: Log confidence display state
-    if (showConfidence) {
-      console.log(`[DEBUG] show-confidence-toggle.checked: ${showConfidence.checked}, shouldShowConfidence: ${shouldShowConfidence}`);
-    }
-    
-    if (shouldShowConfidence && det.unified_score !== undefined) {
+    if (showConfidenceScores && det.unified_score !== undefined) {
       // Draw confidence score above the bounding box
-      console.log(`[DEBUG] Drawing confidence score: ${det.unified_score}`);
+
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // Semi-transparent white background
       ctx.fillRect(x1, y2 - 25, 60, 20);
-      
+
       ctx.fillStyle = 'black';
       ctx.font = '12px Arial';
       ctx.fillText(`${Math.round(det.unified_score)}%`, x1 + 5, y2 - 10);
@@ -353,14 +399,14 @@ function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
 // Draw pose skeleton on canvas
 function drawPoseSkeleton(ctx, landmarks, canvasWidth, canvasHeight) {
   if (!landmarks || landmarks.length === 0) return;
-  
+
   // Convert normalized coordinates to canvas coordinates
   const points = landmarks.map(lm => ({
     x: lm.x * canvasWidth,
     y: lm.y * canvasHeight,
     visibility: lm.visibility
   }));
-  
+
   // Define pose connections (MediaPipe pose landmarks)
   const connections = [
     [0, 1], [1, 2], [2, 3], [3, 7], // Face
@@ -372,17 +418,17 @@ function drawPoseSkeleton(ctx, landmarks, canvasWidth, canvasHeight) {
     [23, 25], [25, 26], [26, 27], [27, 28], [28, 29], [29, 30], [30, 31], // Legs
     [27, 29], [29, 31], [28, 30], [30, 32] // Legs
   ];
-  
+
   // Draw connections
   ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)'; // Green with transparency
   ctx.lineWidth = 2;
-  
+
   connections.forEach(([startIdx, endIdx]) => {
     if (startIdx >= points.length || endIdx >= points.length) return;
-    
+
     const startPoint = points[startIdx];
     const endPoint = points[endIdx];
-    
+
     // Only draw if both points are visible enough
     if (startPoint.visibility > 0.3 && endPoint.visibility > 0.3) {
       ctx.beginPath();
@@ -391,7 +437,7 @@ function drawPoseSkeleton(ctx, landmarks, canvasWidth, canvasHeight) {
       ctx.stroke();
     }
   });
-  
+
   // Draw landmarks
   ctx.fillStyle = 'rgba(0, 255, 0, 0.9)'; // Bright green
   points.forEach(point => {

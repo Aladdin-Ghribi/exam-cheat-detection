@@ -7,31 +7,46 @@ from .suspicion_config import (
     SMOOTHING_FACTOR,
     HISTORY_LENGTH,
     HIGH_RISK_OBJECTS,
-    MEDIUM_RISK_OBJECTS
+    MEDIUM_RISK_OBJECTS,
+    load_config
 )
 
 
 class SuspicionScorer:
-    def __init__(self):
+    def __init__(self, config=None):
         """
-        Initialize the SuspicionScorer with centralized configuration.
+        Initialize the SuspicionScorer with configuration from config.json.
+
+        Args:
+            config: Optional dictionary with configuration values. 
+                    If not provided, loads from config.json automatically.
         """
-        self.history_length = HISTORY_LENGTH
-        self.smoothing_factor = SMOOTHING_FACTOR
+        # Load config from file if not provided
+        if config is None:
+            config = load_config()
+
+        # Store config for reference
+        self._config = config
+
+        # Smoothing parameters from config or defaults
+        self.history_length = config.get('history_length', HISTORY_LENGTH)
+        self.smoothing_factor = config.get(
+            'smoothing_factor', SMOOTHING_FACTOR)
         self.history = {}
         self.orientation_baseline = {}
         self.baseline_ready_frames = 5
 
-        # Risk objects from config
+        # Risk objects from config (static for now)
         self.high_risk_objects = HIGH_RISK_OBJECTS
         self.medium_risk_objects = MEDIUM_RISK_OBJECTS
 
-        # Dynamic thresholds (can be updated from UI)
-        self.yaw_threshold = 30
-        self.pitch_threshold = 20
-        self.suspicion_threshold = SUSPICION_THRESHOLD
-        self.hand_face_threshold = 2.0
-        self.hand_object_threshold = 55
+        # Dynamic thresholds from config.json
+        self.yaw_threshold = config.get('yaw_threshold', 30)
+        self.pitch_threshold = config.get('pitch_threshold', 20)
+        self.suspicion_threshold = config.get(
+            'suspicion_threshold', SUSPICION_THRESHOLD)
+        self.hand_face_threshold = config.get('hand_face_threshold', 2.0)
+        self.hand_object_threshold = config.get('hand_object_threshold', 55)
 
     def score_detection(self, detection):
         """
@@ -47,7 +62,7 @@ class SuspicionScorer:
 
         # Simple scoring matching app.py logic
         score = 0
-        
+
         # Head orientation (0-50 points)
         if 'head_orientation' in behavior:
             ho = behavior['head_orientation']
@@ -56,7 +71,7 @@ class SuspicionScorer:
                     score += min(30, abs(ho['yaw']) - self.yaw_threshold)
                 if abs(ho.get('pitch', 0)) > self.pitch_threshold:
                     score += min(20, abs(ho['pitch']) - self.pitch_threshold)
-        
+
         # Hand proximity (0-100 points per hand for high-risk objects)
         if 'hands' in behavior:
             for side in ['left', 'right']:
@@ -71,7 +86,7 @@ class SuspicionScorer:
                             score += 40
                     elif hand.get('near_face'):
                         score += 15
-        
+
         # Convert to 0-1 scale
         raw = min(1.0, score / 100.0)
         smoothed = self._smooth(key, raw)
@@ -184,27 +199,41 @@ class SuspicionScorer:
     def _head_component(self, key, orientation):
         """
         Compute the head orientation suspicion component using simple thresholds.
+
+        NOTE: Due to coordinate system mismatch between OpenCV and real-world movements,
+        'pitch' actually measures LEFT/RIGHT head turning, and 'yaw' measures body roll.
+        This is a known "fix" and works correctly.
+
         Args:
             key: Tracking key
             orientation: Head orientation dictionary
         Returns:
-            Suspicion score for head orientation
+            Suspicion score for head orientation (0.0 to 1.0)
         """
         if not orientation:
             return 0.0
 
-        yaw = float(orientation.get('yaw', 0.0))
+        # These are "swapped" from math convention to match reality
+        yaw = float(orientation.get('yaw', 0.0))      # Actually: body roll
+        # Actually: head turn left/right
         pitch = float(orientation.get('pitch', 0.0))
-        
-        score = 0
-        
+
+        score = 0.0
+
+        # Yaw (body roll) component - reaches 100% at 90° roll
         if abs(yaw) > self.yaw_threshold:
-            score += min(30, abs(yaw) - self.yaw_threshold)
+            yaw_excess = abs(yaw) - self.yaw_threshold
+            # Scale to 0-1: 60° beyond threshold = 100%
+            score += min(1.0, yaw_excess / 60.0) * 0.6  # Max 60% contribution
+
+        # Pitch (head turn) component - reaches 100% at ~67° turn
         if abs(pitch) > self.pitch_threshold:
-            score += min(20, abs(pitch) - self.pitch_threshold)
-        
-        # Convert to 0-1 scale (max possible score is 50)
-        return min(1.0, score / 100.0)
+            pitch_excess = abs(pitch) - self.pitch_threshold
+            # Scale to 0-1: 45° beyond threshold = 100%
+            score += min(1.0, pitch_excess / 45.0) * \
+                0.4  # Max 40% contribution
+
+        return min(1.0, score)  # Cap at 100%
 
     def _scale_deviation(self, value, neutral, extreme):
         """
