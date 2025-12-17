@@ -407,7 +407,64 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleNewPassword.classList.toggle('bx-hide');
     });
   }
+
+  // Settings Alert Modal Listeners
+  const alertCloseBtn = document.getElementById('settings-alert-close-btn');
+  const alertOkBtn = document.getElementById('settings-alert-ok-btn');
+  const alertOverlay = document.getElementById('settings-alert-modal');
+
+  if (alertCloseBtn) {
+    alertCloseBtn.addEventListener('click', hideSettingsAlert);
+  }
+  if (alertOkBtn) {
+    alertOkBtn.addEventListener('click', hideSettingsAlert);
+  }
+  if (alertOverlay) {
+    alertOverlay.addEventListener('click', (e) => {
+      if (e.target === alertOverlay) hideSettingsAlert();
+    });
+  }
 });
+
+/**
+ * Custom Alert Modal for Settings
+ * @param {string} type - 'success', 'error', or 'warning'
+ * @param {string} title - Modal title
+ * @param {string} message - Modal message
+ */
+function showSettingsAlert(type, title, message) {
+  const modal = document.getElementById('settings-alert-modal');
+  const iconContainer = document.getElementById('settings-alert-icon-container');
+  const icon = document.getElementById('settings-alert-icon');
+  const titleEl = document.getElementById('settings-alert-title');
+  const messageEl = document.getElementById('settings-alert-message');
+
+  if (!modal) return;
+
+  // Set colors and icon based on type
+  iconContainer.className = 'alert-icon-wrapper ' + type;
+  if (type === 'success') {
+    icon.className = 'bx bx-check-circle';
+  } else if (type === 'error') {
+    icon.className = 'bx bx-x-circle';
+  } else {
+    icon.className = 'bx bx-info-circle';
+  }
+
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideSettingsAlert() {
+  const modal = document.getElementById('settings-alert-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
 
 function loadAccountsOverview() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -573,7 +630,7 @@ function showAdminEditModal(user) {
     const role = modal.querySelector('#admin-edit-role').value;
 
     if (!username || !password || !role) {
-      alert('Username, password, and role are required.');
+      showSettingsAlert('error', 'Incomplete Data', 'Username, password, and role are required.');
       return;
     }
 
@@ -627,11 +684,11 @@ function saveAdminUserChanges(userId, username, password, role) {
         const modal = document.getElementById('admin-edit-modal');
         if (modal) modal.remove();
 
-        alert('User account updated successfully!');
+        showSettingsAlert('success', 'Update Successful', 'User account updated successfully!');
         // Reload the accounts overview
         loadAccountsOverview();
       } else {
-        alert('Error updating user account: ' + data.error);
+        showSettingsAlert('error', 'Update Failed', 'Error updating user account: ' + data.error);
       }
     })
     .catch(error => {
@@ -659,11 +716,11 @@ function deleteAdminUser(userId) {
         const modal = document.getElementById('admin-edit-modal');
         if (modal) modal.remove();
 
-        alert('User deleted successfully!');
+        showSettingsAlert('success', 'User Deleted', 'User deleted successfully!');
         // Reload the accounts overview
         loadAccountsOverview();
       } else {
-        alert('Error deleting user: ' + data.error);
+        showSettingsAlert('error', 'Deletion Failed', 'Error deleting user: ' + data.error);
       }
     })
     .catch(error => {
@@ -684,15 +741,15 @@ function createUser() {
 
   // Validate client-side
   if (!username) {
-    alert('Please enter a username');
+    showSettingsAlert('error', 'Missing Username', 'Please enter a username');
     return;
   }
   if (!email) {
-    alert('Please enter an email address');
+    showSettingsAlert('error', 'Missing Email', 'Please enter an email address');
     return;
   }
   if (!password) {
-    alert('Please enter a password');
+    showSettingsAlert('error', 'Missing Password', 'Please enter a password');
     return;
   }
 
@@ -712,7 +769,7 @@ function createUser() {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        alert(`User "${username}" created successfully!`);
+        showSettingsAlert('success', 'User Created', `User "${username}" created successfully!`);
 
         // Clear the form
         document.getElementById('new-user-username').value = '';
@@ -723,7 +780,7 @@ function createUser() {
         // Reload the accounts overview to show the new user
         loadAccountsOverview();
       } else {
-        alert('Error creating user: ' + data.error);
+        showSettingsAlert('error', 'Creation Failed', 'Error creating user: ' + data.error);
       }
     })
     .catch(error => {
