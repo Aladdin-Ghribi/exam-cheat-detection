@@ -12,5 +12,19 @@
     "email": "ala@gmail.com",
     "password": "alaa",
     "role": "proctor"
+  },
+  {
+    "id": "3",
+    "username": "a",
+    "email": "a",
+    "password": "a",
+    "role": "proctor"
+  },
+  {
+    "id": "4",
+    "username": "m",
+    "email": "m",
+    "password": "m",
+    "role": "proctor"
   }
 ]

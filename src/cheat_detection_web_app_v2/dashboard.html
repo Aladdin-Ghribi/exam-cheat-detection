@@ -171,11 +171,11 @@
               <div class="info-card">
                 <div class="info-card-label">Detection Status</div>
                 <div class="info-card-content">
-                  <div class="info-card-value status-active">
-                    <i class='bx bx-check-circle'></i>
-                    <span>Active</span>
+                  <div class="info-card-value status-active" id="dashboard-status-container">
+                    <i class='bx bx-check-circle' id="dashboard-status-icon"></i>
+                    <span id="dashboard-status-label">Active</span>
                   </div>
-                  <div class="info-card-subtitle">AI Engine Running</div>
+                  <div class="info-card-subtitle" id="dashboard-status-subtitle">AI Engine Running</div>
                 </div>
               </div>
             </div>
@@ -257,13 +257,9 @@
                   <span class="session-status" id="session-status">No Active Session</span>
                 </div>
                 <div class="session-buttons">
-                  <button class="btn-start-pipeline" id="start-pipeline-btn">
-                    <i class='bx bx-play-circle'></i>
-                    Start Pipeline
-                  </button>
-                  <button class="btn-stop-pipeline hidden" id="stop-pipeline-btn">
-                    <i class='bx bx-stop-circle'></i>
-                    Stop Pipeline
+                  <button class="btn-start-pipeline" id="pipeline-toggle-btn">
+                    <i class='bx bx-play-circle' id="pipeline-btn-icon"></i>
+                    <span id="pipeline-btn-text">Start Pipeline</span>
                   </button>
                   <span class="pipeline-speed-display" id="pipeline-speed" style="display: none;">
                     <i class='bx bx-chip'></i>
@@ -427,6 +423,39 @@
           <button class="sound-toggle-btn" id="sound-toggle-btn" title="Alert Sounds: OFF">
             <i class='bx bx-volume-mute' id="sound-icon"></i>
           </button>
+
+          <!-- Stop Pipeline Confirmation Modal -->
+          <div class="modal-overlay-alert hidden" id="stop-modal-overlay">
+            <div class="stop-confirmation-modal" id="stop-confirmation-modal">
+              <div class="stop-modal-header">
+                <div class="warning-icon-large">
+                  <i class='bx bxs-error-circle'></i>
+                </div>
+                <h3>Stop Detection Pipeline?</h3>
+                <button class="stop-modal-close" id="stop-modal-close-btn">
+                  <i class='bx bx-x'></i>
+                </button>
+              </div>
+
+              <div class="stop-modal-body">
+                <p>You have <span id="pending-count" class="pending-count-badge">0</span> pending alerts that haven't
+                  been reviewed yet.</p>
+                <p class="stop-modal-warning">The pipeline will stop, but these alerts will remain available for your
+                  review.</p>
+              </div>
+
+              <div class="stop-modal-footer">
+                <button class="btn-cancel-stop" id="btn-cancel-stop">
+                  <i class='bx bx-arrow-back'></i>
+                  Cancel
+                </button>
+                <button class="btn-confirm-stop" id="btn-confirm-stop">
+                  <i class='bx bx-stop-circle'></i>
+                  Stop Pipeline
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         <div id="view-history" class="page-view hidden">
           <!-- History Page Container -->
@@ -1024,6 +1053,29 @@
 
 
     </main>
+  </div>
+
+  <!-- Settings Custom Alert Modal -->
+  <div class="modal-overlay-alert hidden" id="settings-alert-modal">
+    <div class="settings-alert-modal" id="settings-alert-content">
+      <div class="alert-modal-header">
+        <div class="alert-icon-wrapper" id="settings-alert-icon-container">
+          <i class='bx' id="settings-alert-icon"></i>
+        </div>
+        <h3 id="settings-alert-title">Success</h3>
+        <button class="alert-modal-close" id="settings-alert-close-btn">
+          <i class='bx bx-x'></i>
+        </button>
+      </div>
+
+      <div class="alert-modal-body">
+        <p id="settings-alert-message">Action completed successfully.</p>
+      </div>
+
+      <div class="alert-modal-footer">
+        <button class="btn-alert-ok" id="settings-alert-ok-btn">OK</button>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->

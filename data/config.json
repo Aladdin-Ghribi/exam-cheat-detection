@@ -21,7 +21,7 @@
   "camera_fps": 30,
   "camera_label": "test2",
   "auto_reconnect": true,
-  "auto_save": true,
+  "auto_save": false,
   "suspicion_save_threshold": 70,
   "retention_period": 7,
   "show_bbox": true,

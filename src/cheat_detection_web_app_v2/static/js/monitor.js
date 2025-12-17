@@ -474,6 +474,33 @@ const alertSounds = {
 };
 
 // ============================================
+// DASHBOARD STATUS UPDATE
+// ============================================
+
+function updateDashboardStatus(isActive) {
+  const container = document.getElementById('dashboard-status-container');
+  const icon = document.getElementById('dashboard-status-icon');
+  const label = document.getElementById('dashboard-status-label');
+  const subtitle = document.getElementById('dashboard-status-subtitle');
+
+  if (!container || !icon || !label || !subtitle) return;
+
+  if (isActive) {
+    container.classList.remove('status-idle');
+    container.classList.add('status-active');
+    icon.className = 'bx bx-check-circle';
+    label.textContent = 'Active';
+    subtitle.textContent = 'AI Engine Running';
+  } else {
+    container.classList.remove('status-active');
+    container.classList.add('status-idle');
+    icon.className = 'bx bx-pause-circle';
+    label.textContent = 'Idle';
+    subtitle.textContent = 'Engine Stopped';
+  }
+}
+
+// ============================================
 // INITIALIZATION
 // ============================================
 
@@ -482,6 +509,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initWebcam();
   setupMonitorEventListeners();
   setupSoundToggle();
+
+  // Set initial status to Idle
+  updateDashboardStatus(false);
 });
 
 // ============================================
@@ -489,14 +519,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 
 function setupMonitorEventListeners() {
-  const startBtn = document.getElementById('start-pipeline-btn');
-  if (startBtn) {
-    startBtn.addEventListener('click', startPipeline);
-  }
-
-  const stopBtn = document.getElementById('stop-pipeline-btn');
-  if (stopBtn) {
-    stopBtn.addEventListener('click', stopPipeline);
+  const toggleBtn = document.getElementById('pipeline-toggle-btn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', function () {
+      if (isPipelineRunning) {
+        stopPipeline();
+      } else {
+        startPipeline();
+      }
+    });
   }
 
   const modalOverlay = document.getElementById('modal-overlay-alert');
@@ -529,6 +560,25 @@ function setupMonitorEventListeners() {
 
   if (declineBtn) {
     declineBtn.addEventListener('click', () => reviewAlert('decline'));
+  }
+
+  // Stop confirmation modal buttons
+  const stopModalClose = document.getElementById('stop-modal-close-btn');
+  const stopModalOverlay = document.getElementById('stop-modal-overlay');
+  const btnCancelStop = document.getElementById('btn-cancel-stop');
+  const btnConfirmStop = document.getElementById('btn-confirm-stop');
+
+  if (stopModalClose) {
+    stopModalClose.addEventListener('click', cancelStopPipeline);
+  }
+  if (stopModalOverlay) {
+    stopModalOverlay.addEventListener('click', cancelStopPipeline);
+  }
+  if (btnCancelStop) {
+    btnCancelStop.addEventListener('click', cancelStopPipeline);
+  }
+  if (btnConfirmStop) {
+    btnConfirmStop.addEventListener('click', confirmStopPipeline);
   }
 }
 
@@ -569,12 +619,17 @@ async function startPipeline() {
   };
 
   // Update UI
-  const startBtn = document.getElementById('start-pipeline-btn');
-  const stopBtn = document.getElementById('stop-pipeline-btn');
+  const toggleBtn = document.getElementById('pipeline-toggle-btn');
+  const toggleBtnIcon = document.getElementById('pipeline-btn-icon');
+  const toggleBtnText = document.getElementById('pipeline-btn-text');
   const sessionStatus = document.getElementById('session-status');
 
-  startBtn.classList.add('hidden');
-  stopBtn.classList.remove('hidden');
+  if (toggleBtn) {
+    toggleBtn.classList.remove('btn-start-pipeline');
+    toggleBtn.classList.add('btn-stop-pipeline');
+    if (toggleBtnIcon) toggleBtnIcon.className = 'bx bx-stop-circle';
+    if (toggleBtnText) toggleBtnText.textContent = 'Stop Pipeline';
+  }
   sessionStatus.textContent = 'Active Session: ' + examName;
   sessionStatus.classList.add('active');
   examNameInput.disabled = true;
@@ -582,6 +637,9 @@ async function startPipeline() {
   // Start session timer
   sessionStartTime = Date.now();
   startSessionTimer();
+
+  // Update dashboard status
+  updateDashboardStatus(true);
 
   // Start pipeline processing (sends frames to server)
   startPipelineProcessing();
@@ -594,16 +652,46 @@ function stopPipeline() {
 
   // Check pending alerts
   if (pendingAlerts.length > 0) {
-    const confirmStop = confirm(
-      'You have ' + pendingAlerts.length + ' pending alert(s) that have not been reviewed.\n\n' +
-      'The pipeline will stop but alerts will remain for review.\n\n' +
-      'Continue?'
-    );
-
-    if (!confirmStop) {
-      return;
-    }
+    showStopConfirmationModal();
+    return;
   }
+
+  // No pending alerts, stop immediately
+  confirmStopPipeline();
+}
+
+// ============================================
+// STOP CONFIRMATION MODAL HELPERS
+// ============================================
+
+function showStopConfirmationModal() {
+  const modal = document.getElementById('stop-modal-overlay');
+  const pendingCount = document.getElementById('pending-count');
+
+  if (pendingCount) {
+    pendingCount.textContent = pendingAlerts.length;
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function hideStopConfirmationModal() {
+  const modal = document.getElementById('stop-modal-overlay');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
+
+function cancelStopPipeline() {
+  hideStopConfirmationModal();
+}
+
+function confirmStopPipeline() {
+  hideStopConfirmationModal();
 
   // Stop pipeline processing (but keep camera feed running)
   stopPipelineProcessing();
@@ -617,13 +705,18 @@ function stopPipeline() {
   activeSession.status = 'stopped';
 
   // Update UI
-  const startBtn = document.getElementById('start-pipeline-btn');
-  const stopBtn = document.getElementById('stop-pipeline-btn');
+  const toggleBtn = document.getElementById('pipeline-toggle-btn');
+  const toggleBtnIcon = document.getElementById('pipeline-btn-icon');
+  const toggleBtnText = document.getElementById('pipeline-btn-text');
   const sessionStatus = document.getElementById('session-status');
   const examNameInput = document.getElementById('exam-name-input');
 
-  startBtn.classList.remove('hidden');
-  stopBtn.classList.add('hidden');
+  if (toggleBtn) {
+    toggleBtn.classList.remove('btn-stop-pipeline');
+    toggleBtn.classList.add('btn-start-pipeline');
+    if (toggleBtnIcon) toggleBtnIcon.className = 'bx bx-play-circle';
+    if (toggleBtnText) toggleBtnText.textContent = 'Start Pipeline';
+  }
   examNameInput.disabled = false;
   examNameInput.value = '';
 
@@ -643,7 +736,8 @@ function stopPipeline() {
   }
   sessionStatus.classList.remove('active');
 
-  // Camera feed keeps running - no need to reset video display
+  // Update dashboard status to Idle
+  updateDashboardStatus(false);
 
   console.log('Pipeline stopped');
 }
