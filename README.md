@@ -58,6 +58,6 @@ streamlit run dashboard.py
 - Final delivery package with documentation and demo materials
 
 ## Resources
-- Software: Python, PyTorch, Ultralytics YOLO, MediaPipe, OpenCV, Streamlit
+- Software: Python, PyTorch, Ultralytics YOLO, MediaPipe, OpenCV, Flask
 - Hardware: Laptop with 16GB+ RAM, optional GPU, webcam or CCTV feed
 - Privacy: Save only flagged frames, auto-delete non-events, restrict access to evidence
