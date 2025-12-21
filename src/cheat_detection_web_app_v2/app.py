@@ -506,30 +506,15 @@ def generate_alert_from_detection(detection, frame):
 
     track_id = detection.get('track_id', '?')
 
-    # Use runtime threshold from config, not hardcoded constant
     threshold = runtime_suspicion_threshold
 
-    # Debug: Log every detection's score
-    if suspicion_score > 10:  # Only log if some suspicion
-        print(
-            f"[ALERT CHECK] Track #{track_id}: Score={suspicion_score:.1f}% (Threshold={threshold}%)")
-
     if suspicion_score < threshold:
-        if suspicion_score > 10:
-            print(f"  → Below threshold, no alert generated")
         return None
 
-    print(f"  → ✅ ABOVE THRESHOLD - Generating alert for Track #{track_id}")
-
-    # Build reasons
     reasons = []
     components = suspicion.get('components', {})
 
-    # DEBUG: Print all component values
-    print(
-        f"  [DEBUG] Components: head={components.get('head', 0):.2f}, hands_face={components.get('hands_face', 0):.2f}, hands_object={components.get('hands_object', 0):.2f}")
-
-    # Head orientation - simplified to "Looking away" (threshold 0.1 = 10%)
+    # Head orientation check
     if components.get('head', 0) > 0.1:
         head_orientation = behavior.get('head_orientation', {})
         if head_orientation:
@@ -542,24 +527,17 @@ def generate_alert_from_detection(detection, frame):
     if components.get('hands_face', 0) > 0.1:
         reasons.append("Hand near face")
 
-    # Object detection - categorize by type (threshold 0.1 = 10%)
+    # Object detection check
     if components.get('hands_object', 0) > 0.1:
         hands = behavior.get('hands', {})
-        print(
-            f"  [DEBUG] Object component active! Checking hands: {list(hands.keys())}")
         phone_detected = False
         other_object_detected = False
 
         for side in ['left', 'right']:
             hand = hands.get(side, {})
-            if hand.get('visible'):
-                print(
-                    f"  [DEBUG]   {side}: near_object={hand.get('near_object')}, obj_class={hand.get('object_class')}")
             if hand.get('near_object') and hand.get('object_class'):
                 obj_class = hand.get('object_class', '').lower()
-                print(f"  [DEBUG]   {side} hand near '{obj_class}'")
 
-                # Check if it's a phone
                 if 'phone' in obj_class or 'cell' in obj_class or 'mobile' in obj_class:
                     phone_detected = True
                 else:
@@ -572,9 +550,6 @@ def generate_alert_from_detection(detection, frame):
 
     if not reasons:
         reasons = ["Suspicious behavior detected"]
-        print(f"  [DEBUG] No specific reasons found - using fallback")
-    else:
-        print(f"  [DEBUG] Final reasons: {reasons}")
 
     # Get detection crop
     bbox = detection.get('bbox', [0, 0, 0, 0])
@@ -723,36 +698,20 @@ def handle_video_frame(data):
                 sanitized['unified_score'] = round(
                     suspicion_result['smoothed'] * 100)
 
-                # Debug logging - print every 30 frames (~3 seconds at 10fps)
-                import random
-                if random.random() < 0.03:  # ~3% chance to log
-                    ho = behavior.get('head_orientation', {})
-                    if ho:
-                        print(
-                            f"Debug: Yaw={ho.get('yaw', 0):.1f}, Pitch={ho.get('pitch', 0):.1f}, Score={sanitized['unified_score']}%")
-
                 if active_session and active_session['status'] == 'active':
                     alert = generate_alert_from_detection(det, frame)
                     if alert:
                         track_id = det.get('track_id')
                         should_alert = True
 
-                        # Check if there's already a pending alert for this track
                         for existing_alert in pending_alerts.values():
                             if existing_alert.get('track_id') == track_id:
                                 should_alert = False
-                                print(
-                                    f"  → ⚠️  Alert BLOCKED - Track #{track_id} already has pending alert")
                                 break
 
                         if should_alert:
                             pending_alerts[alert['alert_id']] = alert
                             new_alerts.append(alert)
-                            print(
-                                f"  → 🔔 Alert EMITTED to frontend for Track #{track_id}")
-                        else:
-                            print(
-                                f"  → Duplicate prevented for Track #{track_id}")
 
             processed_detections.append(sanitized)
 

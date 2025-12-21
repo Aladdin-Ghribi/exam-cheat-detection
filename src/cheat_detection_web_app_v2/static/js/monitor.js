@@ -178,8 +178,6 @@ function startLocalDisplayLoop(customIntervalMs) {
   // Display webcam feed at specified fps continuously with detection boxes
   displayInterval = setInterval(() => {
     if (videoElement && canvasContext) {
-      console.log(`[DEBUG] Display loop running, lastDetections count: ${lastDetections.length}`);
-      // Draw webcam frame to canvas
       canvasContext.drawImage(videoElement, 0, 0);
 
       // Draw bounding boxes if enabled and we have detections
@@ -187,20 +185,11 @@ function startLocalDisplayLoop(customIntervalMs) {
         drawBoundingBoxes(canvasContext, lastDetections, canvasElement.width, canvasElement.height);
       }
 
-      // DEBUG: Log pose skeleton status
-      if (lastDetections.length > 0) {
-        console.log('[DEBUG] showPoseSkeleton:', showPoseSkeleton, 'detections:', lastDetections.length);
-      }
-
       // Draw pose skeleton if enabled and we have detections with pose data
       if (showPoseSkeleton && lastDetections.length > 0) {
-        console.log('[DEBUG] Pose enabled, checking detections:', lastDetections.length);
         lastDetections.forEach(det => {
           if (det.pose_landmarks) {
-            console.log('[DEBUG] Drawing pose for detection, landmarks count:', det.pose_landmarks.length);
             drawPoseSkeleton(canvasContext, det.pose_landmarks, canvasElement.width, canvasElement.height);
-          } else {
-            console.log('[DEBUG] No pose_landmarks in detection:', Object.keys(det));
           }
         });
       }
@@ -251,11 +240,8 @@ function stopWebcam() {
 }
 
 function startPipelineProcessing() {
-  console.log('[DEBUG] startPipelineProcessing called');
   isPipelineRunning = true;
-  // Send frames to server at ~10 FPS for processing
   pipelineInterval = setInterval(captureAndSendFrame, 100);
-  console.log('[DEBUG] Pipeline processing started');
 }
 
 function stopPipelineProcessing() {
@@ -270,7 +256,6 @@ function stopPipelineProcessing() {
 }
 
 function captureAndSendFrame() {
-  console.log(`[DEBUG] captureAndSendFrame: isPipelineRunning=${isPipelineRunning}, videoElement=${!!videoElement}, canvasContext=${!!canvasContext}`);
   if (!isPipelineRunning || !videoElement || !canvasContext) return;
 
   const startTime = performance.now();
@@ -336,8 +321,6 @@ function updatePipelineSpeed(ms) {
 }
 
 function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
-  console.log('[DEBUG] drawBoundingBoxes called with detections:', detections);
-  // Draw bounding boxes on the canvas for all detections
   detections.forEach(det => {
     if (!det.bbox) return;
 
