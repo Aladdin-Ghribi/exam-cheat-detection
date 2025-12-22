@@ -14,7 +14,7 @@ A real-time computer vision system that detects cheating behaviors during exams 
 - **Dev A:** Aladdin Ghribi  
 - **Dev B:** Malak Khalaf  
 
-## Week 1 Status — ✅ Complete
+## Week 1 - 11 Status — ✅ Complete
 - **Dev A:** Initialize repo, folder structure, config.py, YOLO smoke script  
 - **Dev B:** Create GitHub Project board, README, Streamlit placeholder, verify environment setup  
 
