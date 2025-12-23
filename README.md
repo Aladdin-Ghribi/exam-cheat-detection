@@ -97,7 +97,7 @@ streamlit run dashboard.py
 | Team Member | Role | Key Contributions |
 | :--- | :--- | :--- |
 | **Aladdin Ghribi** | Dev A | Repo init, YOLO pipelines, Core logic |
-| **Malak Khalaf** | Dev B | Project tracking, Dashboard/UIUX, Documentation |
+| **Malak Khalaf** | Dev B | Project Managment, Frontend/UIUX, Documentation |
 
 ✅ **Current Milestone**: Week 1 - 11 Complete
 🔜 **Next Up (Week 13)**: Full alert integration & final polish.
