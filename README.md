@@ -11,12 +11,12 @@ This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (
 
 ---
 
-## 📸 Demo Preview
+##  Demo Preview
 
 <!-- PLACEHOLDER: Replace this image with a GIF of your system in action! -->
-![Dashboard Preview](assets/figma_design/samples/test1.jpg)
+<img width="508" height="243" alt="Screenshot 2025-12-14 192405" src="https://github.com/user-attachments/assets/0b822cbc-edf7-48ef-bedb-e2b9e01bbd53" />
 
-*(Snapshot from initial testing)*
+
 
 ---
 
@@ -97,7 +97,7 @@ streamlit run dashboard.py
 | Team Member | Role | Key Contributions |
 | :--- | :--- | :--- |
 | **Aladdin Ghribi** | Dev A | Repo init, YOLO pipelines, Core logic |
-| **Malak Khalaf** | Dev B | Project tracking, Dashboard, Documentation |
+| **Malak Khalaf** | Dev B | Project tracking, Dashboard/UIUX, Documentation |
 
 ✅ **Current Milestone**: Week 1 - 11 Complete
 🔜 **Next Up (Week 13)**: Full alert integration & final polish.
