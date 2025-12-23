@@ -34,8 +34,8 @@ This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (
 | :--- | :--- | :--- |
 | **Detection** | YOLOv11 | Object detection (Phones, People) |
 | **Pose/Face** | MediaPipe | Head orientation, hand tracking |
-| **Backend** | Python & OpenCV | Core processing pipeline |
-| **Frontend** | Flask | Proctor Dashboard & Analytics |
+| **Backend** | Flask/Python & OpenCV | Core processing pipeline |
+| **Frontend** | JS/HTML/CSS | Proctor Dashboard & Analytics |
 | **Log** | JSON | Metadata storage |
 
 ---
