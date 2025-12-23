@@ -94,8 +94,7 @@ streamlit run dashboard.py
 
 ##  Project Status (Week 11)
 
-![213760697-1dc03683-ba49-44f2-985e-95fd5ec22d3f](https://github.com/user-attachments/assets/b5165e6f-bc7a-434c-a477-f46bdb6f09bc)
-
+![Demo GIF](data/213760697-1dc03683-ba49-44f2-985e-95fd5ec22d3f.gif)
 
 | Team Member | Role | Key Contributions |
 | :--- | :--- | :--- |
