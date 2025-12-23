@@ -20,7 +20,7 @@ This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (
 
 ---
 
-## 🎯 Objectives
+##  Objectives
 *   **👁️ Visual-Only Monitoring**: No audio scraping or invasive biometrics.
 *   **⚡ Real-Time Alerts**: Instant feedback on suspicious activities.
 *   **🛡️ Privacy First**: Only flagged frames are stored; everything else is discarded.
@@ -28,7 +28,7 @@ This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Component | Technology | Use Case |
 | :--- | :--- | :--- |
@@ -40,7 +40,7 @@ This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (
 
 ---
 
-## 🧩 How It Works
+##  How It Works
 
 ```mermaid
 graph TD
@@ -57,7 +57,7 @@ graph TD
 
 ---
 
-## 🚀 Setup & Installation
+##  Setup & Installation
 
 ### Prerequisites
 *   Python 3.8+
@@ -78,7 +78,7 @@ venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 🏃‍♂️ Running the System
+###  Running the System
 
 **1. Smoke Test (Verify Detection)**
 ```powershell
@@ -92,7 +92,7 @@ streamlit run dashboard.py
 
 ---
 
-## 📅 Project Status (Week 11)
+##  Project Status (Week 11)
 
 | Team Member | Role | Key Contributions |
 | :--- | :--- | :--- |
