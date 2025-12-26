@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="static/css/history.css">
   <link rel="stylesheet" href="static/css/profile.css">
   <link rel="stylesheet" href="static/css/monitor.css">
+  <link rel="stylesheet" href="static/css/help.css">
 
   <!-- Socket.IO -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -73,6 +74,10 @@
         <a href="#" class="nav-item" data-page="settings" id="settings-nav-item">
           <i class='bx bxs-cog'></i>
           <span>Settings</span>
+        </a>
+        <a href="#" class="nav-item" data-page="help">
+          <i class='bx bx-help-circle'></i>
+          <span>Help</span>
         </a>
       </nav>
 
@@ -171,11 +176,11 @@
               <div class="info-card">
                 <div class="info-card-label">Detection Status</div>
                 <div class="info-card-content">
-                  <div class="info-card-value status-active">
-                    <i class='bx bx-check-circle'></i>
-                    <span>Active</span>
+                  <div class="info-card-value status-active" id="dashboard-status-container">
+                    <i class='bx bx-check-circle' id="dashboard-status-icon"></i>
+                    <span id="dashboard-status-label">Active</span>
                   </div>
-                  <div class="info-card-subtitle">AI Engine Running</div>
+                  <div class="info-card-subtitle" id="dashboard-status-subtitle">AI Engine Running</div>
                 </div>
               </div>
             </div>
@@ -257,13 +262,9 @@
                   <span class="session-status" id="session-status">No Active Session</span>
                 </div>
                 <div class="session-buttons">
-                  <button class="btn-start-pipeline" id="start-pipeline-btn">
-                    <i class='bx bx-play-circle'></i>
-                    Start Pipeline
-                  </button>
-                  <button class="btn-stop-pipeline hidden" id="stop-pipeline-btn">
-                    <i class='bx bx-stop-circle'></i>
-                    Stop Pipeline
+                  <button class="btn-start-pipeline" id="pipeline-toggle-btn">
+                    <i class='bx bx-play-circle' id="pipeline-btn-icon"></i>
+                    <span id="pipeline-btn-text">Start Pipeline</span>
                   </button>
                   <span class="pipeline-speed-display" id="pipeline-speed" style="display: none;">
                     <i class='bx bx-chip'></i>
@@ -339,94 +340,7 @@
             </div>
           </div>
 
-          <!-- Alert Review Modal -->
-          <div class="alert-review-modal hidden" id="alert-review-modal">
-            <div class="modal-overlay-alert" id="modal-overlay-alert"></div>
-            <div class="modal-content-alert">
-              <!-- Modal Header -->
-              <div class="modal-header-alert">
-                <h3>Review Alert</h3>
-                <button class="modal-close-btn-alert" id="modal-close-alert-btn">
-                  <i class='bx bx-x'></i>
-                </button>
-              </div>
 
-              <!-- Modal Body -->
-              <div class="modal-body-alert">
-                <!-- Alert Evidence -->
-                <div class="alert-evidence-section">
-                  <img src="" alt="Alert Evidence" id="alert-evidence-image" class="alert-evidence-img"
-                    onclick="openImageZoom(this.src)" style="cursor: zoom-in;" title="Click to zoom">
-                  <div class="alert-details-grid">
-                    <div class="alert-detail-item">
-                      <span class="alert-detail-label">Suspicion Score</span>
-                      <span class="alert-detail-value" id="alert-suspicion-score">--</span>
-                    </div>
-                    <div class="alert-detail-item">
-                      <span class="alert-detail-label">Detected At</span>
-                      <span class="alert-detail-value" id="alert-timestamp">--</span>
-                    </div>
-                    <div class="alert-detail-item full-width">
-                      <span class="alert-detail-label">Reasons</span>
-                      <span class="alert-detail-value" id="alert-reasons">--</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Student Information Form -->
-                <div class="student-info-form">
-                  <h4>Student Information</h4>
-                  <p class="form-instruction">Ask the student for their ID and name, then enter below:</p>
-
-                  <div class="form-group-alert">
-                    <label for="student-id-input">Student ID</label>
-                    <input type="text" id="student-id-input" class="form-input-alert" placeholder="e.g., STU12345"
-                      required>
-                  </div>
-
-                  <div class="form-group-alert">
-                    <label for="student-name-input">Student Name</label>
-                    <input type="text" id="student-name-input" class="form-input-alert" placeholder="e.g., John Doe"
-                      required>
-                  </div>
-
-                  <div class="form-group-alert">
-                    <label for="review-notes-input">Notes (Optional)</label>
-                    <textarea id="review-notes-input" class="form-textarea-alert"
-                      placeholder="Add any additional notes about this alert..." rows="3"></textarea>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Modal Footer -->
-              <div class="modal-footer-alert">
-                <button class="btn-decline-alert" id="btn-decline-alert">
-                  <i class='bx bx-x-circle'></i>
-                  Decline
-                </button>
-                <button class="btn-confirm-alert" id="btn-confirm-alert">
-                  <i class='bx bx-check-circle'></i>
-                  Confirm Cheating
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Image Zoom Lightbox -->
-          <div class="image-zoom-lightbox hidden" id="image-zoom-lightbox">
-            <div class="zoom-overlay" onclick="closeImageZoom()"></div>
-            <div class="zoom-content">
-              <button class="zoom-close-btn" onclick="closeImageZoom()">
-                <i class='bx bx-x'></i>
-              </button>
-              <img src="" alt="Zoomed Evidence" id="zoomed-image">
-            </div>
-          </div>
-
-          <!-- Sound Notification Toggle -->
-          <button class="sound-toggle-btn" id="sound-toggle-btn" title="Alert Sounds: OFF">
-            <i class='bx bx-volume-mute' id="sound-icon"></i>
-          </button>
         </div>
         <div id="view-history" class="page-view hidden">
           <!-- History Page Container -->
@@ -570,103 +484,6 @@
             </aside>
           </div>
 
-          <!-- Event Detail Modal -->
-          <div class="event-detail-modal hidden" id="event-detail-modal">
-            <div class="modal-overlay" id="modal-overlay"></div>
-            <div class="modal-content">
-              <!-- Modal Header -->
-              <div class="modal-header">
-                <div class="modal-student-info">
-                  <img src="" alt="Student" class="modal-student-photo" id="modal-student-photo">
-                  <div class="modal-student-details">
-                    <h3 id="modal-student-name">Student Name</h3>
-                    <p id="modal-student-id">ID: STU00000</p>
-                    <span class="modal-exam-badge" id="modal-exam-name">Exam Name</span>
-                  </div>
-                </div>
-                <button class="modal-close-btn" id="modal-close-btn">
-                  <i class='bx bx-x'></i>
-                </button>
-              </div>
-
-              <!-- Modal Body -->
-              <div class="modal-body">
-                <!-- Event Summary -->
-                <div class="modal-section">
-                  <h3 class="modal-section-title">
-                    <i class='bx bx-info-circle'></i>
-                    Event Summary
-                  </h3>
-                  <div class="event-summary-grid">
-                    <div class="summary-item">
-                      <span class="summary-label">Total Events</span>
-                      <span class="summary-value" id="modal-total-events">0</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-label">Highest Severity</span>
-                      <span class="summary-value" id="modal-highest-severity">-</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-label">Last Event</span>
-                      <span class="summary-value" id="modal-last-event">-</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-label">Status</span>
-                      <span class="summary-value" id="modal-status">-</span>
-                    </div>
-                  </div>
-
-                  <!-- Status Actions (for Pending events) -->
-                  <div class="modal-status-actions" id="modal-status-actions" style="display: none;">
-                    <!-- Buttons inserted dynamically -->
-                  </div>
-                </div>
-
-                <!-- Event Timeline -->
-                <div class="modal-section">
-                  <h3 class="modal-section-title">
-                    <i class='bx bx-time'></i>
-                    Event Timeline
-                  </h3>
-                  <div class="event-timeline" id="event-timeline">
-                    <!-- Timeline items will be dynamically inserted here -->
-                  </div>
-                </div>
-
-                <!-- Evidence Gallery -->
-                <div class="modal-section">
-                  <h3 class="modal-section-title">
-                    <i class='bx bx-image-alt'></i>
-                    Evidence Gallery
-                  </h3>
-                  <div class="evidence-gallery" id="evidence-gallery">
-                    <!-- Evidence images will be dynamically inserted here -->
-                  </div>
-                </div>
-              </div>
-
-              <!-- Modal Footer -->
-              <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeEventDetailModal()">Close</button>
-                <button class="btn-primary">
-                  <i class='bx bx-download'></i>
-                  Export Evidence
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Evidence Lightbox for Enlarged View -->
-          <div class="evidence-lightbox hidden" id="evidence-lightbox">
-            <div class="lightbox-overlay" onclick="closeEvidenceLightbox()"></div>
-            <div class="lightbox-content">
-              <button class="lightbox-close-btn" onclick="closeEvidenceLightbox()">
-                <i class='bx bx-x'></i>
-              </button>
-              <img src="" alt="Evidence" id="lightbox-image">
-              <div class="lightbox-caption" id="lightbox-caption"></div>
-            </div>
-          </div>
         </div>
 
 
@@ -1020,10 +837,687 @@
             </div>
           </div>
         </div>
-      </div>
 
+        <!-- Help Page -->
+        <div id="view-help" class="page-view hidden">
+          <div class="help-container">
+            <div class="help-header">
+              <h1><i class='bx bx-book-open'></i> System Help</h1>
+              <p class="help-subtitle">Complete guide to using the Exam Cheat Detection System</p>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="help-tabs">
+              <button type="button" class="help-tab active" data-tab="quick-start">
+                <i class='bx bx-rocket'></i>
+                Quick Start
+              </button>
+              <button type="button" class="help-tab" data-tab="user-guide">
+                <i class='bx bx-user'></i>
+                User Guide
+              </button>
+              <button type="button" class="help-tab" data-tab="admin-guide">
+                <i class='bx bx-shield-alt-2'></i>
+                Admin Guide
+              </button>
+              <button type="button" class="help-tab" data-tab="technical">
+                <i class='bx bx-cog'></i>
+                Technical
+              </button>
+              <button type="button" class="help-tab" data-tab="faq">
+                <i class='bx bx-help-circle'></i>
+                FAQ
+              </button>
+              <button type="button" class="help-tab" data-tab="about">
+                <i class='bx bx-info-circle'></i>
+                About
+              </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="help-content">
+              <!-- Quick Start Tab -->
+              <div class="help-tab-content active" id="quick-start">
+                <h2><i class='bx bx-rocket'></i> Quick Start Guide</h2>
+                <p class="section-intro">Get started with the system in just a few minutes!</p>
+
+                <div class="help-section">
+                  <h3>What is this system?</h3>
+                  <p>The Exam Cheat Detection System is an AI-powered monitoring tool that helps proctors detect
+                    suspicious behavior during exams. It uses computer vision to analyze student behavior in
+                    real-time and alert proctors when something unusual is detected.</p>
+                </div>
+
+                <div class="help-section">
+                  <h3>Step 1: Login</h3>
+                  <p>Access the system using your provided credentials. Proctors and administrators have different
+                    access levels.</p>
+                  <div class="help-note">
+                    <i class='bx bx-info-circle'></i>
+                    <p>If you don't have login credentials, contact your system administrator.</p>
+                  </div>
+                </div>
+
+                <div class="help-section">
+                  <h3>Step 2: Start Monitoring</h3>
+                  <ol class="help-list">
+                    <li>Navigate to the <strong>Monitor</strong> page from the sidebar</li>
+                    <li>Enter an exam name (e.g., "Math Final 2025")</li>
+                    <li>Click <strong>Start Pipeline</strong></li>
+                    <li>Allow camera access when prompted</li>
+                  </ol>
+                </div>
+
+                <div class="help-section">
+                  <h3>Step 3: Review Alerts</h3>
+                  <p>When suspicious behavior is detected, an alert appears on the right side of the screen. Click
+                    <strong>Review</strong> to:
+                  </p>
+                  <ul class="help-list">
+                    <li>See evidence image with detected behavior</li>
+                    <li>Read the reason for the alert</li>
+                    <li>Confirm or decline the alert</li>
+                    <li>Enter student information</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Step 4: View History</h3>
+                  <p>After your session, go to the <strong>History</strong> page to see all recorded events, filter
+                    them, and export evidence.</p>
+                </div>
+
+                <div class="help-tip">
+                  <i class='bx bx-bulb'></i>
+                  <div>
+                    <strong>Pro Tip:</strong>
+                    <p>Adjust the detection sensitivity in Settings if you're getting too many or too few alerts.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- User Guide Tab -->
+              <div class="help-tab-content" id="user-guide">
+                <h2><i class='bx bx-user'></i> Proctor User Guide</h2>
+                <p class="section-intro">Complete guide for monitoring exams and managing alerts</p>
+
+                <div class="help-section">
+                  <h3>Understanding the Monitor Page</h3>
+                  <p>The Monitor page is your main workspace. It has two main areas:</p>
+                  <ul class="help-list">
+                    <li><strong>Left Panel:</strong> Live video feed showing what the camera sees</li>
+                    <li><strong>Right Panel:</strong> Alert queue showing pending suspicious behaviors</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Starting & Stopping Sessions</h3>
+                  <h4>To Start:</h4>
+                  <ol class="help-list">
+                    <li>Enter a descriptive exam name</li>
+                    <li>Click "Start Pipeline"</li>
+                    <li>Your webcam will activate and detection begins immediately</li>
+                    <li>Session timer starts automatically</li>
+                  </ol>
+
+                  <h4>To Stop:</h4>
+                  <ol class="help-list">
+                    <li>Click "Stop Pipeline"</li>
+                    <li>If there are pending alerts, you'll be warned</li>
+                    <li>You can review alerts even after stopping</li>
+                  </ol>
+
+                  <div class="help-warning">
+                    <i class='bx bx-error-circle'></i>
+                    <p><strong>Important:</strong> Always review all pending alerts before ending your session
+                      completely.</p>
+                  </div>
+                </div>
+
+                <div class="help-section">
+                  <h3>Understanding Alerts</h3>
+                  <p>Alerts are generated when the AI detects suspicious behavior. Each alert shows:</p>
+                  <ul class="help-list">
+                    <li><strong>Evidence Image:</strong> Screenshot of what triggered the alert</li>
+                    <li><strong>Suspicion Score:</strong> How confident the AI is (0-100)</li>
+                    <li><strong>Timestamp:</strong> When it was detected</li>
+                    <li><strong>Reasons:</strong> What specific behaviors were detected</li>
+                  </ul>
+
+                  <h4>Common Alert Reasons:</h4>
+                  <ul class="help-list">
+                    <li><strong>Looking Away:</strong> Student turned their head significantly away from the Normal Base
+                    </li>
+                    <li><strong>Phone Usage Detected:</strong> A phone was detected near the student's hands</li>
+                    <li><strong>Hand Near Face:</strong> Student's hand is covering or near their face for an extended
+                      time</li>
+                    <li><strong>Suspicious Object Detected:</strong> Books, notes, or other prohibited items detected
+                    </li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Reviewing Alerts</h3>
+                  <ol class="help-list">
+                    <li>Click the alert card to open review modal</li>
+                    <li>Examine the evidence image (click to zoom)</li>
+                    <li>Read the detected behaviors</li>
+                    <li>Decide: Confirm or Decline</li>
+                    <li>If confirming, enter student ID and name</li>
+                    <li>Optionally add notes for context</li>
+                    <li>Click "Confirm Cheating" or "Decline"</li>
+                  </ol>
+
+                  <div class="help-note">
+                    <i class='bx bx-info-circle'></i>
+                    <p>You can decline an alert without entering student information, but confirmation requires
+                      student details.</p>
+                  </div>
+                </div>
+
+                <div class="help-section">
+                  <h3>Using the History Page</h3>
+                  <p>The History page shows all past events. You can:</p>
+                  <ul class="help-list">
+                    <li>Search by student name or ID</li>
+                    <li>Filter by date range, event type, severity, or status</li>
+                    <li>Click any event card to see timeline and evidence</li>
+                    <li>Change status (confirm/decline pending events)</li>
+                    <li>Export evidence for reports</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Best Practices</h3>
+                  <ul>
+                    <li class="help-list"><i class='bx bx-check-circle'></i> <strong>Test before exams:</strong> Run a
+                      test session to ensure camera
+                      works properly</li>
+                    <li class="help-list"><i class='bx bx-check-circle'></i> <strong>Adjust lighting:</strong> Ensure
+                      room has good, even lighting</li>
+                    <li class="help-list"><i class='bx bx-check-circle'></i> <strong>Check camera angle:</strong>
+                      Position camera to clearly see students</li>
+                    <li class="help-list"><i class='bx bx-check-circle'></i> <strong>Review promptly:</strong> Address
+                      alerts during or right after the exam</li>
+                    <li class="help-list"><i class='bx bx-check-circle'></i> <strong>Document decisions:</strong> Use
+                      the notes field to explain your reasoning</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Admin Guide Tab -->
+              <div class="help-tab-content" id="admin-guide">
+                <h2><i class='bx bx-shield-quarter'></i> Administrator Guide</h2>
+                <p class="section-intro">Configuration and user management for administrators</p>
+
+                <div class="help-section">
+                  <h3>Accessing Settings</h3>
+                  <p>Only users with the <strong>Administrator</strong> role can access the Settings page. Click
+                    <strong>Settings</strong> in the sidebar to open configuration options.
+                  </p>
+                </div>
+
+                <div class="help-section">
+                  <h3>Detection Settings</h3>
+                  <p>Control how the AI detection works:</p>
+
+                  <h4>YOLO Model Size</h4>
+                  <ul class="help-list">
+                    <li><strong>Nano:</strong> Fastest, least accurate - use for low-powered devices</li>
+                    <li><strong>Small:</strong> Balanced speed and accuracy</li>
+                    <li><strong>Medium:</strong> Most accurate, slower - recommended for best results</li>
+                  </ul>
+
+                  <h4>Confidence Threshold</h4>
+                  <p>How confident the AI must be to detect objects (0.1 to 1.0). Lower = more detections but more
+                    false positives. Higher = fewer detections but might miss things.</p>
+
+                  <h4>Device Selection</h4>
+                  <ul class="help-list">
+                    <li><strong>CPU:</strong> Works on all computers, slower</li>
+                    <li><strong>GPU:</strong> Much faster, requires NVIDIA graphics card</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Behavior Thresholds</h3>
+                  <p>Fine-tune what behaviors trigger alerts:</p>
+
+                  <h4>Yaw & Pitch Thresholds (Head Orientation)</h4>
+                  <p>How many degrees a student's head can turn before triggering an alert. Lower values = more
+                    sensitive.</p>
+                  <ul class="help-list">
+                    <li><strong>Yaw:</strong> Left/right head turning</li>
+                    <li><strong>Pitch:</strong> Up/down head tilting</li>
+                  </ul>
+
+                  <h4>Suspicion Score Threshold</h4>
+                  <p>Overall score needed to create an alert (0-100). Recommended: 20-30 for most exams.</p>
+
+                  <h4>Hand-Face Distance</h4>
+                  <p>How close hands can be to the face before alert fires. Lower = more sensitive to phones near
+                    ears.</p>
+
+                  <h4>Hand-Object Distance</h4>
+                  <p>How close hands can be to suspicious objects. Lower = more sensitive to reaching for
+                    phones/books.</p>
+                </div>
+
+                <div class="help-section">
+                  <h3>Performance Settings</h3>
+                  <h4>Render FPS</h4>
+                  <p>How many frames per second to display (15/30/60). Higher = smoother video but uses more
+                    resources.</p>
+
+                  <h4>Frame Skipping</h4>
+                  <p>Skip processing some frames if system is slow. Helps maintain performance on slower computers.
+                  </p>
+                </div>
+
+                <div class="help-section">
+                  <h3>Camera Settings</h3>
+                  <ul class="help-list">
+                    <li><strong>Resolution:</strong> 480p (fastest), 720p (recommended), 1080p (highest quality)</li>
+                    <li><strong>FPS:</strong> Camera frame rate (usually 30 FPS)</li>
+                    <li><strong>Camera Label:</strong> Custom name to identify this camera</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Privacy Settings</h3>
+                  <h4>Retention Period</h4>
+                  <p>How many days to keep event data before automatic deletion. Adjust based on your institution's
+                    policy.</p>
+
+                  <h4>Suspicion Save Threshold</h4>
+                  <p>Only save events above this score. Higher values = less storage used.</p>
+                </div>
+
+                <div class="help-section">
+                  <h3>User Management (Admin Tab)</h3>
+                  <p>Add, edit, or remove user accounts:</p>
+
+                  <h4>Adding Users</h4>
+                  <ol class="help-list">
+                    <li>Click "Add New User"</li>
+                    <li>Enter username, email, and password</li>
+                    <li>Select role (Proctor or Administrator)</li>
+                    <li>Click "Create User"</li>
+                  </ol>
+
+                  <h4>Editing Users</h4>
+                  <p>Click the edit icon next to any user to update their information or change their password.</p>
+
+                  <h4>Deleting Users</h4>
+                  <p>Click the delete icon. This permanently removes the account.</p>
+
+                  <div class="help-warning">
+                    <i class='bx bx-error-circle'></i>
+                    <p><strong>Warning:</strong> Deleted users cannot be recovered. Make sure before deleting!</p>
+                  </div>
+                </div>
+
+                <div class="help-section">
+                  <h3>Saving Changes</h3>
+                  <p>Most settings are saved automatically when you change them. Look for the success confirmation
+                    message.</p>
+                </div>
+              </div>
+
+              <!-- Technical Details Tab -->
+              <div class="help-tab-content" id="technical">
+                <h2><i class='bx bx-cog'></i> Technical Details</h2>
+                <p class="section-intro">How the system works under the hood</p>
+
+                <div class="help-section">
+                  <h3>System Architecture</h3>
+                  <p>The system uses a client-server architecture:</p>
+                  <ul class="help-list">
+                    <li><strong>Frontend:</strong> Your web browser (HTML, CSS, JavaScript)</li>
+                    <li><strong>Backend:</strong> Flask server running AI models</li>
+                    <li><strong>Communication:</strong> Real-time WebSocket connection (Socket.IO)</li>
+                    <li><strong>Storage:</strong> Local JSON files for data persistence</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>AI Detection Pipeline</h3>
+                  <p>Each video frame goes through these steps:</p>
+
+                  <h4>1. Object Detection (YOLO)</h4>
+                  <p>YOLOv11 is a state-of-the-art computer vision model that detects:</p>
+                  <ul class="help-list">
+                    <li>People in the frame</li>
+                    <li>Phones and electronic devices</li>
+                    <li>Books and notebooks</li>
+                    <li>Other suspicious objects</li>
+                  </ul>
+
+                  <h4>2. Pose Estimation (MediaPipe)</h4>
+                  <p>Google MediaPipe extracts 33 body landmarks to understand:</p>
+                  <ul class="help-list">
+                    <li>Where the head is facing (orientation)</li>
+                    <li>Hand positions relative to face and objects</li>
+                    <li>Body posture</li>
+                  </ul>
+
+                  <h4>3. Behavior Analysis</h4>
+                  <p>The system combined all detections to calculate:</p>
+                  <ul class="help-list">
+                    <li><strong>Head Orientation Score:</strong> Is the person looking away?</li>
+                    <li><strong>Hand-Face Proximity:</strong> Are hands near the ears (phone use)?</li>
+                    <li><strong>Hand-Object Proximity:</strong> Are hands reaching for prohibited items?</li>
+                  </ul>
+
+                  <h4>4. Temporal Smoothing</h4>
+                  <p>Scores are averaged over multiple frames to reduce false alarms from quick movements.</p>
+
+                  <h4>5. Alert Generation</h4>
+                  <p>If the combined score exceeds the threshold, an alert is created with:</p>
+                  <ul class="help-list">
+                    <li>Screenshot evidence</li>
+                    <li>Specific reasons</li>
+                    <li>Confidence score</li>
+                    <li>Timestamp</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Technology Stack</h3>
+                  <ul class="help-list">
+                    <li><strong>Backend:</strong> Python, Flask, Flask-SocketIO</li>
+                    <li><strong>AI/ML:</strong> PyTorch, Ultralytics YOLO, MediaPipe</li>
+                    <li><strong>Computer Vision:</strong> OpenCV, NumPy</li>
+                    <li><strong>Frontend:</strong> HTML5, CSS3, Vanilla JavaScript</li>
+                    <li><strong>Real-time Communication:</strong> Socket.IO</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Data Flow</h3>
+                  <ol class="help-list">
+                    <li>Browser captures webcam frame</li>
+                    <li>Frame sent to server via WebSocket</li>
+                    <li>Server runs AI detection pipeline</li>
+                    <li>Results sent back to browser</li>
+                    <li>Browser displays annotated frame and alerts</li>
+                    <li>Entire cycle completes in ~100-200ms</li>
+                  </ol>
+                </div>
+
+                <div class="help-section">
+                  <h3>Privacy & Security</h3>
+                  <ul class="help-list">
+                    <li>Only flagged events are saved to disk</li>
+                    <li>Normal behavior frames are immediately discarded</li>
+                    <li>All data stored locally (no cloud uploads)</li>
+                    <li>Passwords are hashed using bcrypt</li>
+                    <li>Session-based authentication</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Performance Specs</h3>
+                  <ul class="help-list">
+                    <li><strong>Detection Latency:</strong> ~100-200ms per frame</li>
+                    <li><strong>Throughput:</strong> 5-10 FPS (depending on model and hardware)</li>
+                    <li><strong>RAM Usage:</strong> ~2-4 GB</li>
+                    <li><strong>GPU Required:</strong> recommended (NVIDIA CUDA)</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- FAQ Tab -->
+              <div class="help-tab-content" id="faq">
+                <h2><i class='bx bx-help-circle'></i> Frequently Asked Questions</h2>
+
+                <div class="help-faq">
+                  <h3>Why am I getting alerts for normal behavior?</h3>
+                  <p><strong>Answer:</strong> The detection sensitivity might be too high. Go to <strong>Settings →
+                      Detection → Suspicion Score Threshold</strong> and increase the value to 25-30. You can also
+                    adjust the head orientation thresholds if students are being flagged for small head movements.</p>
+                </div>
+
+                <div class="help-faq">
+                  <h3>How accurate is the detection?</h3>
+                  <p><strong>Answer:</strong> The AI achieves approximately 85-90% accuracy in detecting cheating
+                    behaviors under good conditions (proper lighting, clear camera view). Accuracy improves with the
+                    Medium YOLO model and decreases with Nano. Always verify alerts manually before confirming.</p>
+                </div>
+
+                <div class="help-faq">
+                  <h3>What camera should I use?</h3>
+                  <p><strong>Answer:</strong> Any modern webcam (720p or higher) works well. Requirements:</p>
+                  <ul class="help-list">
+                    <li>Minimum 720p resolution (1080p recommended)</li>
+                    <li>At least 15 FPS (30 FPS preferred)</li>
+                    <li>USB or built-in laptop camera or CCTV</li>
+                    <li>Clear view of students without obstructions</li>
+                  </ul>
+                </div>
+
+                <div class="help-faq">
+                  <h3>Can students see they're being monitored?</h3>
+                  <p><strong>Answer:</strong> Students cannot see the detection system or alerts. This is a
+                    proctor-side tool only. However, you should inform students that AI monitoring is being used for
+                    fairness and transparency.</p>
+                </div>
+
+                <div class="help-faq">
+                  <h3>How do I reduce false alerts?</h3>
+                  <p><strong>Answer:</strong> Try these steps:</p>
+                  <ol class="help-list">
+                    <li>Increase the <strong>Suspicion Score Threshold</strong> to 25-35</li>
+                    <li>Increase <strong>Yaw and Pitch Thresholds</strong> to allow more head movement</li>
+                    <li>Ensure good, even lighting in the exam room</li>
+                    <li>Position camera to clearly see students without glare or shadows</li>
+                    <li>Use the Medium YOLO model for better accuracy</li>
+                  </ol>
+                </div>
+
+                <div class="help-faq">
+                  <h3>Where is evidence stored?</h3>
+                  <p><strong>Answer:</strong> All evidence is stored locally on the server in the
+                    <code>output/history/cards/</code> directory. Each student event has a separate folder containing:
+                  </p>
+                  <ul class="help-list">
+                    <li>Full frame screenshots</li>
+                    <li>Cropped evidence images</li>
+                    <li>Event metadata (JSON file)</li>
+                  </ul>
+                </div>
+
+                <div class="help-faq">
+                  <h3>How long is data kept?</h3>
+                  <p><strong>Answer:</strong> By default, event data is retained for 7 days. Administrators can change
+                    this in <strong>Settings → Privacy → Retention Period</strong>. Data older than the retention
+                    period is automatically deleted.</p>
+                </div>
+
+                <div class="help-faq">
+                  <h3>The system is running slowly. What can I do?</h3>
+                  <p><strong>Answer:</strong> Try these optimizations:</p>
+                  <ul class="help-list">
+                    <li>Switch to the <strong>Nano</strong> or <strong>Small</strong> YOLO model</li>
+                    <li>Lower the camera resolution to 720p</li>
+                    <li>Enable <strong>Frame Skipping</strong> in Performance settings</li>
+                    <li>Close other applications to free up RAM</li>
+                    <li>Use GPU instead of CPU if available</li>
+                  </ul>
+                </div>
+
+                <div class="help-faq">
+                  <h3>Can I monitor multiple exam rooms?</h3>
+                  <p><strong>Answer:</strong> The current version supports one camera feed per instance. To monitor
+                    multiple rooms, you would need to run multiple instances of the system (one per computer/camera)
+                    or implement the multi-camera feature (future development).</p>
+                </div>
+
+                <div class="help-faq">
+                  <h3>What if I accidentally confirm the wrong alert?</h3>
+                  <p><strong>Answer:</strong> Go to the <strong>History</strong> page, find the event card, open it,
+                    and you can change the status from confirmed to declined. Add a note explaining the correction.
+                  </p>
+                </div>
+
+                <div class="help-faq">
+                  <h3>Does this work on Mac/Linux?</h3>
+                  <p><strong>Answer:</strong> Yes! The system is cross-platform and works on Windows, macOS, and
+                    Linux. All dependencies (Python, PyTorch, etc.) are available for all platforms.</p>
+                </div>
+
+                <div class="help-faq">
+                  <h3>I forgot my password. What do I do?</h3>
+                  <p><strong>Answer:</strong> Contact your system administrator. They can reset your password through
+                    the Admin panel in Settings.</p>
+                </div>
+              </div>
+
+              <!-- About Tab -->
+              <div class="help-tab-content" id="about">
+                <h2><i class='bx bx-info-circle'></i> About This System</h2>
+
+                <div class="help-section">
+                  <h3>System Information</h3>
+                  <table class="info-table">
+                    <tr>
+                      <td><strong>System Name:</strong></td>
+                      <td>Exam Cheat Detection System</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Version:</strong></td>
+                      <td>2.0</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Release Date:</strong></td>
+                      <td>December 2024</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Status:</strong></td>
+                      <td>Production Ready</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <div class="help-section">
+                  <h3>Development Team</h3>
+                  <div class="team-grid">
+                    <div class="team-member">
+                      <div class="team-photo">
+                        <img src="static/assets/aladdin.jpg" alt="Aladdin Ghribi">
+                      </div>
+                      <h4>Aladdin Ghribi</h4>
+                      <p>Lead Developer</p>
+                      <p class="team-role">Backend, AI Pipeline, Core Logic</p>
+                    </div>
+                    <div class="team-member">
+                      <div class="team-photo-placeholder">
+                        <i class='bx bxs-user-circle'></i>
+                      </div>
+                      <h4>Malak Khalaf</h4>
+                      <p>Lead Developer</p>
+                      <p class="team-role">Frontend, UI/UX, Documentation</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="help-section">
+                  <h3>Technology Credits</h3>
+                  <p>This system is built using open-source technologies:</p>
+
+                  <h4>AI & Machine Learning</h4>
+                  <ul class="help-list">
+                    <li><strong>YOLOv11</strong> by Ultralytics - Object detection</li>
+                    <li><strong>MediaPipe</strong> by Google - Pose estimation</li>
+                    <li><strong>PyTorch</strong> - Deep learning framework</li>
+                  </ul>
+
+                  <h4>Backend</h4>
+                  <ul class="help-list">
+                    <li><strong>Flask</strong> - Web framework</li>
+                    <li><strong>Flask-SocketIO</strong> - Real-time communication</li>
+                    <li><strong>OpenCV</strong> - Computer vision operations</li>
+                  </ul>
+
+                  <h4>Frontend</h4>
+                  <ul class="help-list">
+                    <li><strong>Socket.IO Client</strong> - WebSocket library</li>
+                    <li><strong>Boxicons</strong> - Icon library</li>
+                    <li><strong>Google Fonts</strong> - Manrope typography</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Project Purpose</h3>
+                  <p>This system was developed as an academic project to demonstrate the application of AI and
+                    computer vision in education technology. The goal is to assist proctors in maintaining exam
+                    integrity while respecting student privacy through selective data retention.</p>
+                </div>
+
+                <div class="help-section">
+                  <h3>Privacy & Data Protection</h3>
+                  <p>The system is designed with privacy-first principles:</p>
+                  <ul class="help-list">
+                    <li><i class='bx bx-check-double'></i> Only suspicious events are saved</li>
+                    <li><i class='bx bx-check-double'></i> Normal behavior is immediately discarded</li>
+                    <li><i class='bx bx-check-double'></i> All data stored locally (no cloud)</li>
+                    <li><i class='bx bx-check-double'></i> Automatic data deletion after retention period</li>
+                    <li><i class='bx bx-check-double'></i> Encrypted password storage</li>
+                    <li><i class='bx bx-check-double'></i> Role-based access control</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>License & Usage</h3>
+                  <p>This system is provided for educational and institutional use. All AI models used are open-source
+                    with permissive licenses (Apache 2.0, MIT).</p>
+                </div>
+
+                <div class="help-section">
+                  <h3>Acknowledgments</h3>
+                  <p>Special thanks to:</p>
+                  <ul class="help-list">
+                    <li>Ultralytics team for YOLOv11</li>
+                    <li>Google MediaPipe team</li>
+                    <li>Flask and Socket.IO communities</li>
+                    <li>All open-source contributors</li>
+                  </ul>
+                </div>
+
+                <div class="help-section">
+                  <h3>Contact & Support</h3>
+                  <p>For technical support or questions about this system, please contact your institution's IT
+                    department or system administrator.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
     </main>
+  </div>
+
+  <!-- Settings Custom Alert Modal -->
+  <div class="modal-overlay-alert hidden" id="settings-alert-modal">
+    <div class="settings-alert-modal" id="settings-alert-content">
+      <div class="alert-modal-header">
+        <div class="alert-icon-wrapper" id="settings-alert-icon-container">
+          <i class='bx' id="settings-alert-icon"></i>
+        </div>
+        <h3 id="settings-alert-title">Success</h3>
+        <button class="alert-modal-close" id="settings-alert-close-btn">
+          <i class='bx bx-x'></i>
+        </button>
+      </div>
+
+      <div class="alert-modal-body">
+        <p id="settings-alert-message">Action completed successfully.</p>
+      </div>
+
+      <div class="alert-modal-footer">
+        <button class="btn-alert-ok" id="settings-alert-ok-btn">OK</button>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->
@@ -1034,6 +1528,173 @@
   <script src="static/js/settings.js"></script>
   <script src="static/js/profile.js"></script>
   <script src="static/js/monitor.js"></script>
+  <script src="static/js/help.js"></script>
+  <!-- Global Modals Area -->
+
+  <!-- Alert Review Modal -->
+  <div class="alert-review-modal hidden" id="alert-review-modal">
+    <div class="modal-overlay-alert" id="modal-overlay-alert"></div>
+    <div class="modal-content-alert">
+      <div class="modal-header-alert">
+        <h3>Review Alert</h3>
+        <button class="modal-close-btn-alert" id="modal-close-alert-btn">
+          <i class='bx bx-x'></i>
+        </button>
+      </div>
+      <div class="modal-body-alert">
+        <div class="alert-evidence-section">
+          <div style="position: relative;">
+            <img src="" alt="Alert Evidence" class="alert-evidence-img" id="alert-evidence-image"
+              onclick="openImageZoom(this.src)">
+            <div
+              style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;"
+              onclick="openImageZoom(document.getElementById('alert-evidence-image').src)">
+              <i class='bx bx-zoom-in'></i> Zoom
+            </div>
+          </div>
+          <div class="alert-details-grid">
+            <div class="alert-detail-item">
+              <span class="alert-detail-label">Suspicion Score</span>
+              <span class="alert-detail-value" id="alert-suspicion-score">0%</span>
+            </div>
+            <div class="alert-detail-item">
+              <span class="alert-detail-label">Time</span>
+              <span class="alert-detail-value" id="alert-timestamp">00:00:00</span>
+            </div>
+            <div class="alert-detail-item full-width">
+              <span class="alert-detail-label">Reasons</span>
+              <span class="alert-detail-value" id="alert-reasons">Looking away</span>
+            </div>
+          </div>
+        </div>
+        <div class="student-info-form">
+          <h4>Information Review</h4>
+          <p class="form-instruction">Ask the student for their ID and name, then enter below:</p>
+          <div class="form-group-alert">
+            <label for="student-id-input">Student ID</label>
+            <input type="text" id="student-id-input" class="form-input-alert" placeholder="e.g., STU12345" required>
+          </div>
+          <div class="form-group-alert">
+            <label for="student-name-input">Student Name</label>
+            <input type="text" id="student-name-input" class="form-input-alert" placeholder="e.g., John Doe" required>
+          </div>
+          <div class="form-group-alert">
+            <label for="review-notes-input">Notes (Optional)</label>
+            <textarea id="review-notes-input" class="form-textarea-alert"
+              placeholder="Add any additional notes about this alert..." rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer-alert">
+        <button class="btn-decline-alert" id="btn-decline-alert">
+          <i class='bx bx-x-circle'></i> Decline
+        </button>
+        <button class="btn-confirm-alert" id="btn-confirm-alert">
+          <i class='bx bx-check-circle'></i> Confirm Cheating
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Detail Modal -->
+  <div class="event-detail-modal hidden" id="event-detail-modal">
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-student-info">
+          <img src="" alt="Student" class="modal-student-photo" id="modal-student-photo">
+          <div class="modal-student-details">
+            <h3 id="modal-student-name">Student Name</h3>
+            <p id="modal-student-id">ID: STU00000</p>
+            <span class="modal-exam-badge" id="modal-exam-name">Exam Name</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="modal-close-btn">
+          <i class='bx bx-x'></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section">
+          <h3 class="modal-section-title"><i class='bx bx-info-circle'></i> Event Summary</h3>
+          <div class="event-summary-grid">
+            <div class="summary-item"><span class="summary-label">Total Events</span><span class="summary-value"
+                id="modal-total-events">0</span></div>
+            <div class="summary-item"><span class="summary-label">Highest Severity</span><span class="summary-value"
+                id="modal-highest-severity">-</span></div>
+            <div class="summary-item"><span class="summary-label">Last Event</span><span class="summary-value"
+                id="modal-last-event">-</span></div>
+            <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"
+                id="modal-status">-</span></div>
+          </div>
+          <div class="modal-status-actions" id="modal-status-actions"></div>
+        </div>
+        <div class="modal-section">
+          <h3 class="modal-section-title"><i class='bx bx-note'></i> Proctor Notes</h3>
+          <div class="notes-container">
+            <textarea id="modal-notes" class="modal-notes-textarea"
+              placeholder="Add notes about this student's behavior..."></textarea>
+            <button id="save-notes-btn" class="btn-save-notes"><i class='bx bx-save'></i> Save Notes</button>
+          </div>
+        </div>
+        <div class="modal-section">
+          <h3 class="modal-section-title"><i class='bx bx-time'></i> Event Timeline</h3>
+          <div class="event-timeline" id="event-timeline"></div>
+        </div>
+        <div class="modal-section">
+          <h3 class="modal-section-title"><i class='bx bx-image-alt'></i> Evidence Gallery</h3>
+          <div class="evidence-gallery" id="evidence-gallery"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeEventDetailModal()">Close</button>
+        <button class="btn-primary"><i class='bx bx-download'></i> Export Evidence</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Zoom Lightbox -->
+  <div class="image-zoom-lightbox hidden" id="image-zoom-lightbox">
+    <div class="zoom-overlay" onclick="closeImageZoom()"></div>
+    <div class="zoom-content">
+      <button class="zoom-close-btn" onclick="closeImageZoom()"><i class='bx bx-x'></i></button>
+      <img src="" alt="Zoomed Evidence" id="zoomed-image">
+    </div>
+  </div>
+
+  <!-- Stop Pipeline Confirmation -->
+  <div class="modal-overlay-alert hidden" id="stop-modal-overlay">
+    <div class="stop-confirmation-modal" id="stop-confirmation-modal">
+      <div class="stop-modal-header">
+        <div class="warning-icon-large"><i class='bx bxs-error-circle'></i></div>
+        <h3>Stop Detection Pipeline?</h3>
+        <button class="stop-modal-close" id="stop-modal-close-btn"><i class='bx bx-x'></i></button>
+      </div>
+      <div class="stop-modal-body">
+        <p>You have <span id="pending-count" class="pending-count-badge">0</span> pending alerts.</p>
+        <p class="stop-modal-warning">The pipeline will stop, but alerts remain available for review.</p>
+      </div>
+      <div class="stop-modal-footer">
+        <button class="btn-cancel-stop" id="btn-cancel-stop"><i class='bx bx-arrow-back'></i> Cancel</button>
+        <button class="btn-confirm-stop" id="btn-confirm-stop"><i class='bx bx-stop-circle'></i> Stop Pipeline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Lightbox -->
+  <div class="evidence-lightbox hidden" id="evidence-lightbox">
+    <div class="lightbox-overlay" onclick="closeEvidenceLightbox()"></div>
+    <div class="lightbox-content">
+      <button class="lightbox-close-btn" onclick="closeEvidenceLightbox()"><i class='bx bx-x'></i></button>
+      <img src="" alt="Evidence" id="lightbox-image">
+      <div class="lightbox-caption" id="lightbox-caption"></div>
+    </div>
+  </div>
+
+  <!-- Sound Notification Toggle -->
+  <button class="sound-toggle-btn" id="sound-toggle-btn" title="Alert Sounds: OFF">
+    <i class='bx bx-volume-mute' id="sound-icon"></i>
+  </button>
 </body>
 
 </html>
+```
