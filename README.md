@@ -34,9 +34,9 @@ This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (
 | :--- | :--- | :--- |
 | **Detection** | YOLOv11 | Object detection (Phones, People) |
 | **Pose/Face** | MediaPipe | Head orientation, hand tracking |
-| **Backend** | Python & OpenCV | Core processing pipeline |
-| **Frontend** | Flask | Proctor Dashboard & Analytics |
-| **Log** | JSON/SQLite | Metadata storage |
+| **Backend** | Flask/Python & OpenCV | Core processing pipeline |
+| **Frontend** | JS/HTML/CSS | Proctor Dashboard & Analytics |
+| **Log** | JSON | Metadata storage |
 
 ---
 
@@ -87,7 +87,7 @@ python src/detection/yolo_smoke_test.py
 
 **2. Launch Dashboard**
 ```powershell
-python start_app.py
+streamlit run dashboard.py
 ```
 
 ---
@@ -99,7 +99,7 @@ python start_app.py
 | Team Member | Role | Key Contributions |
 | :--- | :--- | :--- |
 | **Aladdin Ghribi** | Dev A | Repo init, YOLO pipelines, Core logic |
-| **Malak Khalaf** | Dev B | Project Management, Frontend/UIUX, Documentation |
+| **Malak Khalaf** | Dev B | Project Managment, Frontend/UIUX, Documentation |
 
 ✅ **Current Milestone**: Week 1 - 11 Complete
 🔜 **Next Up (Week 13)**: Full alert integration & final polish.
