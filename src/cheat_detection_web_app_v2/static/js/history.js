@@ -174,6 +174,7 @@ function transformCardToEvent(card) {
     highestSeverity: highestSeverity,
     lastEventTime: events.length > 0 ? new Date(latestEvent.timestamp) : new Date(),
     status: card.status || 'pending',
+    notes: card.notes || '',
     sessionId: card.session_id
   };
 }
@@ -280,6 +281,13 @@ function renderEventCards() {
                             <span class="event-stat-value" style="font-size: 0.875rem;">${event.examName}</span>
                         </div>
                     </div>
+
+                    ${event.notes ? `
+                    <div class="event-notes-preview">
+                        <span class="notes-label"><i class='bx bx-note'></i> Proctor Note</span>
+                        <p>${event.notes}</p>
+                    </div>
+                    ` : ''}
                 </div>
 
                 <div class="event-card-footer">
@@ -464,6 +472,14 @@ function setupModalListeners() {
   // Close on button click
   closeBtn.addEventListener('click', closeEventDetailModal);
 
+  // Save notes button
+  document.getElementById('save-notes-btn').addEventListener('click', () => {
+    const modal = document.getElementById('event-detail-modal');
+    const cardId = modal.dataset.currentCardId;
+    const notes = document.getElementById('modal-notes').value;
+    updateCardOnBackend(cardId, null, notes);
+  });
+
   // Close on ESC key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
@@ -481,11 +497,8 @@ function openEventDetailModal(eventId) {
   // Store card ID for evidence gallery
   modal.dataset.currentCardId = event.id;
 
-  // Blur the top header when modal opens
-  const topHeader = document.querySelector('.top-header');
-  if (topHeader) {
-    topHeader.classList.add('blur-background');
-  }
+  // Store card ID for evidence gallery
+  modal.dataset.currentCardId = event.id;
 
   // Populate modal header
   document.getElementById('modal-student-photo').src = event.studentPhoto;
@@ -507,23 +520,22 @@ function openEventDetailModal(eventId) {
   };
   statusEl.innerHTML = `<span style="${statusColors[event.status] || ''}">${event.status.toUpperCase()}</span>`;
 
-  // Show action buttons only for pending events
+  // Populate notes
+  document.getElementById('modal-notes').value = event.notes || '';
+
+  // Show status action buttons
   const actionsRow = document.getElementById('modal-status-actions');
-  if (event.status === 'pending') {
-    actionsRow.innerHTML = `
-      <button class="btn-confirm-event" onclick="confirmEvent('${event.id}')">
-        <i class='bx bx-check-circle'></i>
-        Confirm Event
-      </button>
-      <button class="btn-decline-event" onclick="declineEvent('${event.id}')">
-        <i class='bx bx-x-circle'></i>
-        Decline Event
-      </button>
-    `;
-    actionsRow.style.display = 'flex';
-  } else {
-    actionsRow.style.display = 'none';
-  }
+  actionsRow.innerHTML = `
+    <button class="btn-confirm-event ${event.status === 'confirmed' ? 'active' : ''}" onclick="confirmEvent('${event.id}')">
+      <i class='bx bx-check-circle'></i>
+      ${event.status === 'confirmed' ? 'Confirmed Cheating' : 'Confirm Cheating'}
+    </button>
+    <button class="btn-decline-event ${event.status === 'declined' ? 'active' : ''}" onclick="declineEvent('${event.id}')">
+      <i class='bx bx-x-circle'></i>
+      ${event.status === 'declined' ? 'Declined (False Positive)' : 'Decline Event'}
+    </button>
+  `;
+  actionsRow.style.display = 'flex';
 
   // Populate event timeline
   renderEventTimeline(event.events);
@@ -540,12 +552,6 @@ function closeEventDetailModal() {
   const modal = document.getElementById('event-detail-modal');
   modal.classList.add('hidden');
   document.body.style.overflow = '';
-
-  // Remove blur from the top header when modal closes
-  const topHeader = document.querySelector('.top-header');
-  if (topHeader) {
-    topHeader.classList.remove('blur-background');
-  }
 }
 
 function renderEventTimeline(events) {
@@ -562,6 +568,7 @@ function renderEventTimeline(events) {
                     <span class="timeline-time">${formatTimestamp(event.timestamp)}</span>
                 </div>
                 <p class="timeline-description">${event.description}</p>
+                ${event.notes ? `<p class="timeline-notes"><strong>Note:</strong> ${event.notes}</p>` : ''}
                 <div class="timeline-metadata">
                     <span class="timeline-meta-item">
                         <i class='bx bx-bar-chart-alt-2'></i>
@@ -623,30 +630,68 @@ function renderEvidenceGallery(events) {
 }
 
 // Confirm event function
-function confirmEvent(eventId) {
-  const event = allEvents.find(e => e.id === eventId);
+async function confirmEvent(cardId) {
+  const event = allEvents.find(e => e.id === cardId);
   if (event) {
-    event.status = 'confirmed';
-    // Refresh the modal to update status
-    closeEventDetailModal();
-    setTimeout(() => openEventDetailModal(eventId), 100);
-
-    // TODO: Send to backend API when connected
-    console.log(`Event ${eventId} confirmed`);
+    const success = await updateCardOnBackend(cardId, 'confirmed', null);
+    if (success) {
+      event.status = 'confirmed';
+      // Refresh the modal to update status
+      openEventDetailModal(cardId);
+    }
   }
 }
 
 // Decline event function
-function declineEvent(eventId) {
-  const event = allEvents.find(e => e.id === eventId);
+async function declineEvent(cardId) {
+  const event = allEvents.find(e => e.id === cardId);
   if (event) {
-    event.status = 'declined';
-    // Refresh the modal to update status
-    closeEventDetailModal();
-    setTimeout(() => openEventDetailModal(eventId), 100);
+    const success = await updateCardOnBackend(cardId, 'declined', null);
+    if (success) {
+      event.status = 'declined';
+      // Refresh the modal to update status
+      openEventDetailModal(cardId);
+    }
+  }
+}
 
-    // TODO: Send to backend API when connected
-    console.log(`Event ${eventId} declined`);
+async function updateCardOnBackend(cardId, status, notes) {
+  try {
+    const payload = { card_id: cardId };
+    if (status) payload.status = status;
+    if (notes !== null) payload.notes = notes;
+
+    const response = await fetch('/api/history/update_card', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      // Update local data
+      const event = allEvents.find(e => e.id === cardId);
+      if (event) {
+        if (status) event.status = status;
+        if (notes !== null) event.notes = notes;
+      }
+
+      // Re-render cards to show updated status/notes
+      renderEventCards();
+
+      // Show success notification (if available)
+      console.log('Card updated successfully');
+      return true;
+    } else {
+      alert('Error updating card: ' + data.error);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error updating card:', error);
+    alert('Failed to connect to server');
+    return false;
   }
 }
 

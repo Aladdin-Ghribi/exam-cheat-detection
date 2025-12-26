@@ -1,63 +1,110 @@
-# Real-Time Cheating Detection System for Exams
+# 🕵️‍♂️ Exam Cheat Detection System
 
-A real-time computer vision system that detects cheating behaviors during exams using **YOLO**, **MediaPipe**, and **head orientation analysis** — with **no audio or biometric data**.
+![Project Status](https://img.shields.io/badge/Status-Week%2011%20Complete-success?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python&logoColor=white)
+![YOLO](https://img.shields.io/badge/YOLO-Ultralytics-orange?style=for-the-badge)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-Google-green?style=for-the-badge)
 
-## Objectives
-- Detect cheating behaviors in real-time using only visual input
-- Provide interpretable alerts with visual and textual explanations
-- Reduce manual supervision during exams by automating monitoring
-- Store flagged events with snapshots and metadata for instructor review
-- Minimize false positives using temporal smoothing and multi-signal fusion
-- Ensure privacy by retaining only flagged frames and deleting non-events
+> **A privacy-first, real-time computer vision system tailored for remote exam proctoring.**
 
-## Team
-- **Dev A:** Aladdin Ghribi  
-- **Dev B:** Malak Khalaf  
-
-## Week 1 Status — ✅ Complete
-- **Dev A:** Initialize repo, folder structure, config.py, YOLO smoke script  
-- **Dev B:** Create GitHub Project board, README, Streamlit placeholder, verify environment setup  
-
-## Project Board
-(https://github.com/users/Aladdin-Ghribi/projects/1)
+This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (phones, multiple people, looking away) without recording audio or processing biometric templates.
 
 ---
 
-## Setup Instructions
+##  Demo Preview
+
+<!-- PLACEHOLDER: Replace this image with a GIF of your system in action! -->
+<img width="508" height="243" alt="Screenshot 2025-12-14 192405" src="https://github.com/user-attachments/assets/0b822cbc-edf7-48ef-bedb-e2b9e01bbd53" />
+
+
+
+---
+
+##  Objectives
+*   **👁️ Visual-Only Monitoring**: No audio scraping or invasive biometrics.
+*   **⚡ Real-Time Alerts**: Instant feedback on suspicious activities.
+*   **🛡️ Privacy First**: Only flagged frames are stored; everything else is discarded.
+*   **📊 Instructor Dashboard**: Review timeline of events with evidence snapshots.
+
+---
+
+##  Tech Stack
+
+| Component | Technology | Use Case |
+| :--- | :--- | :--- |
+| **Detection** | YOLOv11 | Object detection (Phones, People) |
+| **Pose/Face** | MediaPipe | Head orientation, hand tracking |
+| **Backend** | Python & OpenCV | Core processing pipeline |
+| **Frontend** | Flask | Proctor Dashboard & Analytics |
+| **Log** | JSON/SQLite | Metadata storage |
+
+---
+
+##  How It Works
+
+```mermaid
+graph TD
+    A[Webcam Feed] --> B{Detection Engine}
+    B -->|YOLO| C["Detect Objects<br>(Phone, Person)"]
+    B -->|MediaPipe| D["Analyze Pose<br>(Head Angle, Hands)"]
+    C --> E[Fusion Logic]
+    D --> E
+    E -->|Safe| F[Discard Frame]
+    E -->|Suspicious| G[Trigger Alert]
+    G --> H[Save Snapshot]
+    G --> I[Notify Dashboard]
+```
+
+---
+
+##  Setup & Installation
 
 ### Prerequisites
-- Python 3.8+
-- Git
-- Webcam or video file for testing
+*   Python 3.8+
+*   Git
+*   Webcam
 
-### Installation
+### Quick Start
 ```powershell
+# 1. Clone the repository
 git clone https://github.com/Aladdin-Ghribi/exam-cheat-detection.git
 cd exam-cheat-detection
+
+# 2. Create Virtual Environment
 python -m venv venv
 venv\Scripts\Activate.ps1
+
+# 3. Install Dependencies
 pip install -r requirements.txt
 ```
 
-## Run Smoke Test
+###  Running the System
+
+**1. Smoke Test (Verify Detection)**
 ```powershell
 python src/detection/yolo_smoke_test.py
 ```
 
-## Run Dashboard
+**2. Launch Dashboard**
 ```powershell
-streamlit run dashboard.py
+python start_app.py
 ```
 
-## Expected Results(Week 13)
-- Live prototype with bounding boxes, keypoints, and head angles
-- Alerting system with visual and textual explanations
-- Searchable event logs with snapshots and metadata
-- Instructor dashboard with seat map and filtering
-- Labeled test dataset and evaluation report
-- Final delivery package with documentation and demo materials
+---
 
-## Resources
-- Software: Python, PyTorch, Ultralytics YOLO, MediaPipe, OpenCV, Streamlit
-- Hardware: Laptop with 16GB+ RAM, optional GPU, webcam or CCTV feed
-- Privacy: Save only flagged frames, auto-delete non-events, restrict access to evidence
+##  Project Status (Week 11)
+
+![Demo GIF](data/213760697-1dc03683-ba49-44f2-985e-95fd5ec22d3f.gif)
+
+| Team Member | Role | Key Contributions |
+| :--- | :--- | :--- |
+| **Aladdin Ghribi** | Dev A | Repo init, YOLO pipelines, Core logic |
+| **Malak Khalaf** | Dev B | Project Management, Frontend/UIUX, Documentation |
+
+✅ **Current Milestone**: Week 1 - 11 Complete
+🔜 **Next Up (Week 13)**: Full alert integration & final polish.
+
+---
+
+## 🔗 Project Board
+[View Progress on GitHub Projects](https://github.com/users/Aladdin-Ghribi/projects/1)

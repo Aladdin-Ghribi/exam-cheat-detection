@@ -1,6 +1,6 @@
 {
   "suspicion_threshold": 23,
-  "confidence_threshold": 0.4,
+  "confidence_threshold": 0.5,
   "yaw_threshold": 0,
   "pitch_threshold": 20,
   "roll_threshold": 0,
@@ -10,14 +10,14 @@
   "device": "gpu",
   "model_size": "medium",
   "yolo_model": "yolo11m.pt",
-  "img_processing_size": 800,
+  "img_processing_size": 1280,
   "enable_frame_skipping": true,
   "frame_skip_threshold_ms": 100,
   "max_frame_skip": 3,
   "process_fps": 10,
   "processing_interval_ms": 50,
   "camera_source": "medium",
-  "camera_resolution": "800",
+  "camera_resolution": "1080",
   "camera_fps": 30,
   "camera_label": "test2",
   "auto_reconnect": true,
@@ -33,5 +33,5 @@
   "hands_object_weight": 0.1,
   "smoothing_factor": 0.5,
   "history_length": 10,
-  "model_complexity": 0
+  "model_complexity": 1
 }
