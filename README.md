@@ -94,13 +94,6 @@ streamlit run dashboard.py
 
 ##  Project Status (Week 11)
 
-![Demo GIF](data/213760697-1dc03683-ba49-44f2-985e-95fd5ec22d3f.gif)
-
-| Team Member | Role | Key Contributions |
-| :--- | :--- | :--- |
-| **Aladdin Ghribi** | Dev A | Repo init, YOLO pipelines, Core logic |
-| **Malak Khalaf** | Dev B | Project Managment, Frontend/UIUX, Documentation |
-
 ✅ **Current Milestone**: Week 1 - 11 Complete
 🔜 **Next Up (Week 13)**: Full alert integration & final polish.
 
