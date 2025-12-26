@@ -25,6 +25,10 @@ CHEATING_RELATED_CLASSES = {
 
 PERSON_CLASS_ID = 0
 
+# Minimum confidence specifically for cheating objects (phones, books, etc.)
+# Higher than general CONFIDENCE_THRESHOLD to reduce false positives
+CHEATING_OBJECT_MIN_CONFIDENCE = 0.5
+
 
 class YOLODetector:
     def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=True, enable_pose=True, room_config=None, model_size="medium"):
@@ -134,6 +138,11 @@ class YOLODetector:
                 conf = float(conf_tensor)
                 x1, y1, x2, y2 = box.tolist()
                 if cls_id in self.target_class_ids:
+                    # Skip low-confidence cheating objects (phones, books, etc.)
+                    # to reduce false positives
+                    if cls_id != PERSON_CLASS_ID and conf < CHEATING_OBJECT_MIN_CONFIDENCE:
+                        continue
+
                     detection = {
                         'class_id': cls_id,
                         'confidence': conf,
@@ -149,6 +158,9 @@ class YOLODetector:
                             detection['pose'] = pose_result
 
                     detections.append(detection)
+
+        # Filter out duplicate/overlapping person detections (e.g., extended arms detected as persons)
+        detections = self._filter_overlapping_persons(detections)
 
         if self.enable_tracking:
             detections = self.tracker.update(detections)
@@ -318,6 +330,70 @@ class YOLODetector:
         if dx == 0.0 and dy == 0.0:
             return 0.0
         return math.hypot(dx, dy)
+
+    def _filter_overlapping_persons(self, detections, iou_threshold=0.5):
+        """
+        Filter out overlapping person detections to prevent duplicates
+        (e.g., extended arms being detected as separate persons).
+        Keeps the detection with higher confidence when two overlap.
+        """
+        person_detections = [
+            d for d in detections if d['class_id'] == PERSON_CLASS_ID]
+        other_detections = [
+            d for d in detections if d['class_id'] != PERSON_CLASS_ID]
+
+        if len(person_detections) <= 1:
+            return detections
+
+        # Sort by confidence (highest first)
+        person_detections.sort(key=lambda x: x.get(
+            'confidence', 0), reverse=True)
+
+        keep = []
+        suppressed = set()
+
+        for i, det_a in enumerate(person_detections):
+            if i in suppressed:
+                continue
+            keep.append(det_a)
+
+            box_a = det_a['bbox']
+            area_a = (box_a[2] - box_a[0]) * (box_a[3] - box_a[1])
+
+            for j in range(i + 1, len(person_detections)):
+                if j in suppressed:
+                    continue
+
+                box_b = person_detections[j]['bbox']
+                area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
+
+                # Compute IoU
+                x1 = max(box_a[0], box_b[0])
+                y1 = max(box_a[1], box_b[1])
+                x2 = min(box_a[2], box_b[2])
+                y2 = min(box_a[3], box_b[3])
+
+                if x2 > x1 and y2 > y1:
+                    intersection = (x2 - x1) * (y2 - y1)
+                    union = area_a + area_b - intersection
+                    iou = intersection / union if union > 0 else 0
+
+                    # Also check if one box is mostly inside the other
+                    min_area = min(area_a, area_b)
+                    overlap_ratio = intersection / min_area if min_area > 0 else 0
+
+                    # Check if the smaller box is significantly smaller (likely a false detection like an arm)
+                    # If both boxes are similar in size, they're likely two different people
+                    max_area = max(area_a, area_b)
+                    size_ratio = min_area / max_area if max_area > 0 else 1
+
+                    # Only suppress if:
+                    # 1. High IoU/overlap AND smaller box is much smaller than larger (size_ratio < 0.5)
+                    # 2. This prevents filtering out two overlapping people of similar size
+                    if (iou > iou_threshold or overlap_ratio > 0.7) and size_ratio < 0.5:
+                        suppressed.add(j)
+
+        return keep + other_detections
 
     def _class_label(self, class_id):
         names = self.model.names

@@ -973,29 +973,17 @@ function showNotification(title, message) {
 function openImageZoom(imageSrc) {
   const lightbox = document.getElementById('image-zoom-lightbox');
   const zoomedImage = document.getElementById('zoomed-image');
-  const topHeader = document.querySelector('.top-header');
-
   zoomedImage.src = imageSrc;
   lightbox.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-
-  if (topHeader) {
-    topHeader.classList.add('blur-background');
-  }
 }
 
 function closeImageZoom() {
   const lightbox = document.getElementById('image-zoom-lightbox');
   if (!lightbox) return;
 
-  const topHeader = document.querySelector('.top-header');
-
   lightbox.classList.add('hidden');
   document.body.style.overflow = '';
-
-  if (topHeader) {
-    topHeader.classList.remove('blur-background');
-  }
 }
 
 // ============================================

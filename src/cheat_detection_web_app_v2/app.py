@@ -96,10 +96,10 @@ if CONFIG_FILE.exists():
                 f"Loading image processing size from config: {config['img_processing_size']}")
             detector.img_size = config['img_processing_size']
 
-        if 'model_complexity' in config and hasattr(detector, 'model_complexity'):
+        if 'model_complexity' in config and hasattr(detector, 'set_model_complexity'):
             print(
                 f"Loading model complexity from config: {config['model_complexity']}")
-            detector.model_complexity = config['model_complexity']
+            detector.set_model_complexity(config['model_complexity'])
 
         if 'yaw_threshold' in config and hasattr(detector, 'yaw_threshold'):
             print(
@@ -1436,6 +1436,47 @@ def create_user():
 
     print(f"New user created: {username} ({role})")
     return jsonify({'success': True, 'message': f'User {username} created successfully', 'user': {'id': new_id, 'username': username, 'email': email, 'role': role}})
+
+
+@app.route('/api/history/update_card', methods=['POST'])
+def update_history_card():
+    """Update a history card status and notes"""
+    data = request.get_json()
+    card_id = data.get('card_id')
+    new_status = data.get('status')
+    new_notes = data.get('notes')
+
+    if not card_id:
+        return jsonify({'success': False, 'error': 'Card ID is required'}), 400
+
+    card_folder = HISTORY_DIR / card_id
+    card_file = card_folder / "card.json"
+
+    if not card_file.exists():
+        return jsonify({'success': False, 'error': f'Card {card_id} not found'}), 404
+
+    try:
+        with open(card_file, 'r') as f:
+            card = json.load(f)
+
+        if new_status:
+            card['status'] = new_status
+            # Also update all events in the card for consistency
+            for event in card.get('events', []):
+                event['status'] = new_status
+
+        if new_notes is not None:
+            card['notes'] = new_notes
+
+        card['updated_at'] = datetime.now().isoformat()
+
+        with open(card_file, 'w') as f:
+            json.dump(card, f, indent=2)
+
+        return jsonify({'success': True, 'message': 'Card updated successfully'})
+    except Exception as e:
+        print(f"Error updating card {card_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ============================================
