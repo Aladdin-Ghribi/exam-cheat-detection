@@ -480,6 +480,13 @@ function setupModalListeners() {
     updateCardOnBackend(cardId, null, notes);
   });
 
+  // Export evidence button
+  document.getElementById('export-evidence-btn').addEventListener('click', () => {
+    const modal = document.getElementById('event-detail-modal');
+    const cardId = modal.dataset.currentCardId;
+    exportEventToPDF(cardId);
+  });
+
   // Close on ESC key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
@@ -715,4 +722,475 @@ function closeEvidenceLightbox() {
   const lightbox = document.getElementById('evidence-lightbox');
   lightbox.classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+// ============================================
+// PDF EXPORT FUNCTIONALITY
+// ============================================
+
+// Helper function to load image as base64
+async function loadImageAsBase64(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+
+    img.onload = function () {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+      resolve(dataURL);
+    };
+
+    img.onerror = function () {
+      console.warn(`Failed to load image: ${url}`);
+      resolve(null);
+    };
+
+    img.src = url;
+  });
+}
+
+async function exportEventToPDF(cardId) {
+  const event = allEvents.find(e => e.id === cardId);
+  if (!event) {
+    alert('Event data not found');
+    return;
+  }
+
+  try {
+    // Show loading indicator
+    const exportBtn = document.getElementById('export-evidence-btn');
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Generating PDF...';
+    exportBtn.disabled = true;
+
+    // Initialize jsPDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+
+    // Color palette
+    const colors = {
+      primary: [13, 110, 253],
+      secondary: [108, 117, 125],
+      success: [76, 175, 80],
+      warning: [255, 165, 0],
+      danger: [255, 68, 68],
+      light: [248, 249, 250],
+      dark: [33, 37, 41],
+      border: [222, 226, 230]
+    };
+
+    // Helper function to add new page if needed
+    const checkPageBreak = (requiredSpace) => {
+      if (yPos + requiredSpace > pageHeight - margin - 15) {
+        addPageFooter();
+        doc.addPage();
+        yPos = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Add page footer
+    const addPageFooter = () => {
+      const pageNum = doc.internal.getCurrentPageInfo().pageNumber;
+      doc.setFontSize(8);
+      doc.setTextColor(...colors.secondary);
+      doc.text(
+        `Page ${pageNum}`,
+        pageWidth / 2,
+        pageHeight - 8,
+        { align: 'center' }
+      );
+      doc.text(
+        'ProctorAI - Exam Cheat Detection System',
+        margin,
+        pageHeight - 8
+      );
+      doc.text(
+        new Date().toLocaleDateString(),
+        pageWidth - margin,
+        pageHeight - 8,
+        { align: 'right' }
+      );
+    };
+
+    // Professional Header with gradient effect
+    doc.setFillColor(...colors.primary);
+    doc.rect(0, 0, pageWidth, 50, 'F');
+
+    // Add subtle pattern overlay
+    doc.setFillColor(255, 255, 255);
+    doc.setGState(new doc.GState({ opacity: 0.1 }));
+    for (let i = 0; i < pageWidth; i += 10) {
+      doc.circle(i, 10, 3, 'F');
+      doc.circle(i + 5, 30, 2, 'F');
+    }
+    doc.setGState(new doc.GState({ opacity: 1 }));
+
+    // Header text
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EXAM MONITORING REPORT', pageWidth / 2, 22, { align: 'center' });
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Automated Cheat Detection Analysis', pageWidth / 2, 32, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.text(`Report Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 42, { align: 'center' });
+
+    yPos = 60;
+
+    // === STUDENT INFORMATION SECTION ===
+    doc.setFillColor(...colors.light);
+    doc.rect(margin, yPos - 5, pageWidth - 2 * margin, 40, 'F');
+
+    doc.setTextColor(...colors.dark);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('STUDENT INFORMATION', margin + 5, yPos + 2);
+
+    // Divider line
+    doc.setDrawColor(...colors.primary);
+    doc.setLineWidth(0.5);
+    doc.line(margin + 5, yPos + 5, pageWidth - margin - 5, yPos + 5);
+
+    yPos += 12;
+
+    // Student details in two columns
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const col1X = margin + 8;
+    const col2X = pageWidth / 2 + 5;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Full Name:', col1X, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(event.studentName, col1X + 25, yPos);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Student ID:', col2X, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(event.studentId, col2X + 25, yPos);
+    yPos += 7;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Exam Name:', col1X, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(event.examName, col1X + 25, yPos);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Session ID:', col2X, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(event.sessionId || 'N/A', col2X + 25, yPos);
+    yPos += 7;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Report Date:', col1X, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formatTimestamp(event.lastEventTime), col1X + 25, yPos);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Status:', col2X, yPos);
+    doc.setFont('helvetica', 'normal');
+    const statusColor = event.status === 'confirmed' ? colors.danger :
+      event.status === 'declined' ? colors.success : colors.warning;
+    doc.setTextColor(...statusColor);
+    doc.text(event.status.toUpperCase(), col2X + 25, yPos);
+    doc.setTextColor(...colors.dark);
+
+    yPos += 18;
+
+    // === SUMMARY STATISTICS TABLE ===
+    checkPageBreak(50);
+
+    doc.setTextColor(...colors.dark);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETECTION SUMMARY', margin, yPos);
+    yPos += 8;
+
+    // Create statistics boxes
+    const boxWidth = (pageWidth - 2 * margin - 10) / 3;
+    const boxHeight = 25;
+    const boxY = yPos;
+
+    // Box 1: Total Events
+    doc.setFillColor(...colors.primary);
+    doc.roundedRect(margin, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text(event.totalEvents.toString(), margin + boxWidth / 2, boxY + 12, { align: 'center' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Total Events', margin + boxWidth / 2, boxY + 20, { align: 'center' });
+
+    // Box 2: Highest Severity
+    const severityColor = event.highestSeverity === 'high' ? colors.danger :
+      event.highestSeverity === 'medium' ? colors.warning : colors.success;
+    doc.setFillColor(...severityColor);
+    doc.roundedRect(margin + boxWidth + 5, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(event.highestSeverity.toUpperCase(), margin + boxWidth + 5 + boxWidth / 2, boxY + 12, { align: 'center' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Severity Level', margin + boxWidth + 5 + boxWidth / 2, boxY + 20, { align: 'center' });
+
+    // Box 3: Review Status
+    const statusBoxColor = event.status === 'confirmed' ? colors.danger :
+      event.status === 'declined' ? colors.success : colors.warning;
+    doc.setFillColor(...statusBoxColor);
+    doc.roundedRect(margin + 2 * boxWidth + 10, boxY, boxWidth, boxHeight, 2, 2, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(event.status.toUpperCase(), margin + 2 * boxWidth + 10 + boxWidth / 2, boxY + 12, { align: 'center' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Review Status', margin + 2 * boxWidth + 10 + boxWidth / 2, boxY + 20, { align: 'center' });
+
+    yPos += boxHeight + 15;
+
+    // === PROCTOR NOTES SECTION ===
+    if (event.notes && event.notes.trim()) {
+      checkPageBreak(40);
+
+      doc.setFillColor(255, 252, 230);
+      const notesHeight = 5 + Math.ceil(event.notes.length / 80) * 5;
+      doc.roundedRect(margin, yPos - 3, pageWidth - 2 * margin, notesHeight + 15, 2, 2, 'F');
+
+      doc.setTextColor(...colors.dark);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('📝 Proctor Notes', margin + 5, yPos + 3);
+
+      yPos += 10;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      const notesLines = doc.splitTextToSize(event.notes, pageWidth - 2 * margin - 10);
+      notesLines.forEach(line => {
+        doc.text(line, margin + 5, yPos);
+        yPos += 5;
+      });
+      yPos += 10;
+    }
+
+    // === EVENT TIMELINE SECTION ===
+    checkPageBreak(40);
+
+    doc.setTextColor(...colors.dark);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETAILED EVENT TIMELINE', margin, yPos);
+    yPos += 10;
+
+    // Sort events by timestamp
+    const sortedEvents = [...event.events].sort((a, b) => a.timestamp - b.timestamp);
+
+    for (let i = 0; i < sortedEvents.length; i++) {
+      const evt = sortedEvents[i];
+      checkPageBreak(60);
+
+      // Event card background
+      const cardHeight = 45;
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(margin, yPos - 3, pageWidth - 2 * margin, cardHeight, 2, 2, 'F');
+
+      // Event number badge
+      const badgeColor = evt.severity === 'high' ? colors.danger :
+        evt.severity === 'medium' ? colors.warning : colors.success;
+      doc.setFillColor(...badgeColor);
+      doc.circle(margin + 8, yPos + 3, 5, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text((i + 1).toString(), margin + 8, yPos + 4.5, { align: 'center' });
+
+      // Event header
+      doc.setTextColor(...colors.dark);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(evt.typeLabel, margin + 18, yPos + 4);
+
+      // Timestamp
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...colors.secondary);
+      doc.text(formatTimestamp(evt.timestamp), pageWidth - margin - 5, yPos + 4, { align: 'right' });
+
+      yPos += 10;
+
+      // Event details
+      doc.setFontSize(9);
+      doc.setTextColor(...colors.dark);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Confidence:', margin + 18, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${(evt.confidence * 100).toFixed(0)}%`, margin + 40, yPos);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Severity:', margin + 70, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...badgeColor);
+      doc.text(evt.severity.toUpperCase(), margin + 90, yPos);
+      doc.setTextColor(...colors.dark);
+
+      if (evt.suspicionScore !== undefined) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Score:', margin + 120, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(evt.suspicionScore.toString(), margin + 135, yPos);
+      }
+
+      yPos += 6;
+
+      // Reasons
+      if (evt.reasons && evt.reasons.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detection Reasons:', margin + 18, yPos);
+        yPos += 5;
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        const reasonsText = evt.reasons.join(', ');
+        const reasonsLines = doc.splitTextToSize(reasonsText, pageWidth - 2 * margin - 25);
+        reasonsLines.forEach(line => {
+          doc.text(line, margin + 18, yPos);
+          yPos += 4;
+        });
+        yPos += 2;
+      }
+
+      yPos += cardHeight - 25;
+    }
+
+    yPos += 5;
+
+    // === EVIDENCE GALLERY SECTION ===
+    checkPageBreak(40);
+
+    doc.setTextColor(...colors.dark);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EVIDENCE GALLERY', margin, yPos);
+    yPos += 10;
+
+    // Load and add actual images
+    const modal = document.getElementById('event-detail-modal');
+    const currentEventCardId = modal.dataset.currentCardId;
+
+    let imagesAdded = 0;
+    const imagesPerRow = 2;
+    const imageWidth = (pageWidth - 2 * margin - 10) / 2;
+    const imageHeight = imageWidth * 0.75;
+    let currentRow = 0;
+
+    for (let i = 0; i < sortedEvents.length && imagesAdded < 8; i++) {
+      const evt = sortedEvents[i];
+      const evidence = evt.evidence || {};
+
+      if (evidence.crop) {
+        checkPageBreak(imageHeight + 25);
+
+        const col = imagesAdded % imagesPerRow;
+        const xPos = margin + col * (imageWidth + 10);
+
+        if (col === 0 && imagesAdded > 0) {
+          yPos += 10;
+        }
+
+        try {
+          const imgUrl = `/api/evidence/${currentEventCardId}/${evidence.crop}`;
+          const base64Image = await loadImageAsBase64(imgUrl);
+
+          if (base64Image) {
+            // Add border
+            doc.setDrawColor(...colors.border);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(xPos, yPos, imageWidth, imageHeight, 2, 2, 'S');
+
+            // Add image
+            doc.addImage(base64Image, 'JPEG', xPos + 1, yPos + 1, imageWidth - 2, imageHeight - 2);
+
+            // Add caption
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(...colors.secondary);
+            const caption = `Event ${i + 1}: ${evt.typeLabel}`;
+            doc.text(caption, xPos + imageWidth / 2, yPos + imageHeight + 5, { align: 'center' });
+
+            imagesAdded++;
+
+            if (col === imagesPerRow - 1) {
+              yPos += imageHeight + 15;
+            }
+          }
+        } catch (err) {
+          console.warn('Could not load evidence image:', err);
+        }
+      }
+    }
+
+    // If odd number of images, advance position
+    if (imagesAdded % imagesPerRow !== 0) {
+      yPos += imageHeight + 15;
+    }
+
+    // Add footer to last page
+    addPageFooter();
+
+    // === FINAL PAGE NUMBERING ===
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(...colors.secondary);
+      const pageText = doc.getTextDimensions(`Page ${i}`);
+      doc.text(
+        ` of ${totalPages}`,
+        pageWidth / 2 + pageText.w / 2,
+        pageHeight - 8
+      );
+    }
+
+    // Save the PDF with proper extension
+    const fileName = `Exam_Report_${event.studentId}_${event.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    // Use blob method for better browser compatibility
+    const pdfBlob = doc.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Restore button
+    exportBtn.innerHTML = originalText;
+    exportBtn.disabled = false;
+
+    console.log('PDF exported successfully:', fileName);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    alert('Error generating PDF report. Please try again.');
+
+    // Restore button
+    const exportBtn = document.getElementById('export-evidence-btn');
+    exportBtn.innerHTML = '<i class="bx bx-download"></i> Export Evidence';
+    exportBtn.disabled = false;
+  }
 }

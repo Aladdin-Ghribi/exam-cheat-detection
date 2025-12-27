@@ -25,6 +25,9 @@
 
   <!-- Socket.IO -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
 <body>
@@ -352,12 +355,6 @@
                 <div class="history-title-section">
                   <h2 class="history-page-title">Event History</h2>
                   <span class="results-count" id="results-count">0 events found</span>
-                </div>
-                <div class="history-actions">
-                  <button class="btn-secondary">
-                    <i class='bx bx-download'></i>
-                    Export
-                  </button>
                 </div>
               </div>
 
@@ -1465,7 +1462,8 @@
                 <div class="help-section">
                   <h3>Contact & Support</h3>
                   <p>For technical support or questions about this system, please contact:
-                    <strong>Alla@alrefak.edu.ly</strong></p>
+                    <strong>Alla@alrefak.edu.ly</strong>
+                  </p>
                 </div>
               </div>
             </div>
@@ -1625,7 +1623,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" onclick="closeEventDetailModal()">Close</button>
-        <button class="btn-primary"><i class='bx bx-download'></i> Export Evidence</button>
+        <button class="btn-primary" id="export-evidence-btn"><i class='bx bx-download'></i> Export Evidence</button>
       </div>
     </div>
   </div>
