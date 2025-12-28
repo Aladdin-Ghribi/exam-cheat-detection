@@ -666,9 +666,12 @@
                 <span class="slider-value" id="suspicion-save-value">70</span>
               </div>
               <div class="form-group">
-                <label>Retention Period:</label>
-                <input type="number" class="form-control" id="retention-period-input" min="1" max="30" value="7">
-                <span class="slider-value">days</span>
+                <label>Retention Period (GDPR Mandated):</label>
+                <input type="number" class="form-control" id="retention-period-input" min="1" max="30" value="7" readonly style="background-color: #2a2a2a; cursor: not-allowed; opacity: 0.7;">
+                <span class="slider-value">days (fixed)</span>
+                <small style="display: block; margin-top: 0.5rem; color: #888; font-size: 0.85rem;">
+                  <i class='bx bx-info-circle'></i> This value is fixed at 7 days per GDPR storage limitation requirements
+                </small>
               </div>
               <div class="form-group">
                 <label>Save Crops:</label>
