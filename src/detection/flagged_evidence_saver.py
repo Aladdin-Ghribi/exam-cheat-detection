@@ -1,5 +1,6 @@
 import os
 import json
+import secrets
 import cv2
 import time
 from datetime import datetime
@@ -10,7 +11,12 @@ from .suspicion_config import SUSPICION_THRESHOLD
 class FlaggedEvidenceSaver:
     """
     Handles automatic saving of flagged frames, cropped regions, and metadata
-    when suspicion scores exceed threshold. Implements retention policy for privacy.
+    when suspicion scores exceed threshold. 
+    
+    GDPR COMPLIANCE NOTICE:
+    Photos of cheating incidents are deleted within 7 days after review to comply 
+    with storage limitation principles. This class implements a secure deletion 
+    mechanism that overwrites data before removing files.
     """
 
     def __init__(self, output_dir="output/flagged_evidence", suspicion_threshold=None,
@@ -298,10 +304,10 @@ class FlaggedEvidenceSaver:
                         # If can't parse, keep it (maybe manual saves)
                         pass
 
-        # Remove old directories
+        # Remove old directories securely
         for dir_path in dirs_to_remove:
-            shutil.rmtree(dir_path)
-            print(f"Auto-deleted old evidence: {os.path.basename(dir_path)}")
+            self._secure_delete_recursive(dir_path)
+            print(f"Auto-deleted old evidence (securely): {os.path.basename(dir_path)}")
 
         # If still too many, remove oldest (though deque should limit)
         all_dirs = [os.path.join(self.output_dir, d) for d in os.listdir(self.output_dir)
@@ -363,3 +369,55 @@ class FlaggedEvidenceSaver:
             metadata['manual_reason'] = reason
             with open(metadata_path, 'w') as f:
                 json.dump(metadata, f, indent=2)
+
+    def _secure_delete_recursive(self, dir_path):
+        """
+        Recursively secure delete a directory and its contents.
+        """
+        if not os.path.exists(dir_path):
+            return
+
+        for root, dirs, files in os.walk(dir_path, topdown=False):
+            for name in files:
+                file_path = os.path.join(root, name)
+                self._secure_delete_file(file_path)
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        
+        if os.path.exists(dir_path):
+            os.rmdir(dir_path)
+
+    def _secure_delete_file(self, file_path):
+        """
+        Securely delete a file by overwriting it before removal.
+        Note: On SSDs/Flash storage, physical overwrite isn't guaranteed due to wear leveling,
+        but this provides best-effort software-level compliance.
+        """
+        try:
+            if os.path.exists(file_path):
+                # Get file size
+                stats = os.stat(file_path)
+                length = stats.st_size
+
+                # Pass 1: Overwrite with random data
+                with open(file_path, "wb") as f:
+                    f.write(secrets.token_bytes(length))
+                    f.flush()
+                    os.fsync(f.fileno())
+                
+                # Pass 2: Overwrite with zeros
+                with open(file_path, "wb") as f:
+                    f.write(b'\\x00' * length)
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                # Final removal
+                os.remove(file_path)
+        except Exception as e:
+            print(f"Error secure deleting {file_path}: {e}")
+            # Fallback to standard delete if secure delete fails
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
