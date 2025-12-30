@@ -558,6 +558,68 @@
   gap: 0.375rem;
   font-size: 0.75rem;
   color: var(--text-secondary);
+  transition: all 0.3s ease;
+}
+
+/* Retention countdown urgency colors */
+.event-timestamp.retention-safe {
+  color: #5FD068;
+}
+
+.event-timestamp.retention-safe i {
+  color: #5FD068;
+}
+
+.event-timestamp.retention-warning {
+  color: #FFB84D;
+}
+
+.event-timestamp.retention-warning i {
+  color: #FFB84D;
+  animation: pulse-warning 2s ease-in-out infinite;
+}
+
+.event-timestamp.retention-urgent {
+  color: #FF6B6B;
+  font-weight: 600;
+}
+
+.event-timestamp.retention-urgent i {
+  color: #FF6B6B;
+  animation: pulse-urgent 1s ease-in-out infinite;
+}
+
+.event-timestamp.retention-expired {
+  color: #FF4444;
+  font-weight: 700;
+}
+
+.event-timestamp.retention-expired i {
+  color: #FF4444;
+  animation: pulse-urgent 0.5s ease-in-out infinite;
+}
+
+/* Pulse animations */
+@keyframes pulse-warning {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes pulse-urgent {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
 }
 
 .event-stats {
