@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login</title>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | ProctorAI</title>
+
   <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
-  
+  <!-- Local Assets (Offline Support) -->
+  <link rel="stylesheet" href="static/vendor/fonts/manrope.css">
+  <link rel="stylesheet" href="static/vendor/boxicons/css/boxicons.min.css">
+
   <!-- Styles -->
   <link rel="stylesheet" href="static/css/variables.css">
   <link rel="stylesheet" href="static/css/reset.css">
@@ -17,46 +18,123 @@
 </head>
 
 <body>
+  <div class="top-branding">
+    <img src="static/logo.svg" alt="ProctorAI Logo" class="corner-logo" />
+    <span class="brand-name">ProctorAI</span>
+  </div>
+
   <div class="container">
     <div class="login-section">
-      <h2>LOGIN</h2>
-      <input type="text" placeholder="Enter email or username" id="usernameInput" />
+      <div class="login-header">
+        <div class="header-icon">
+          <i class='bx bxs-user-circle'></i>
+        </div>
+        <h2>LOGIN</h2>
+      </div>
+      <input type="text" placeholder="Enter email or username" id="usernameInput" spellcheck="false" />
       <div class="password-wrapper">
         <input type="password" placeholder="Password" id="passwordInput" />
-        <svg id="eyeIcon" width="100" height="77" viewBox="0 0 100 77" fill="none" xmlns="http://www.w3.org/2000/svg" onclick="togglePassword()">
-          <path d="M67.4375 67.7911L57.35 58.0728C53.449 59.4156 49.2322 59.6643 45.1901 58.7899C41.1481 57.9155 37.447 55.954 34.5176 53.1335C31.5882 50.3131 29.5509 46.7497 28.6427 42.858C27.7345 38.9663 27.9928 34.9063 29.3875 31.1504L16.5125 18.7544C5.8625 27.8709 0 38.2331 0 38.2331C0 38.2331 18.75 71.3294 50 71.3294C56.0025 71.3093 61.9371 70.1051 67.4375 67.7911ZM32.5625 8.67502C38.0628 6.36083 43.9975 5.15662 50 5.13672C81.25 5.13672 100 38.2331 100 38.2331C100 38.2331 94.1312 48.5892 83.4938 57.7178L70.6062 45.3097C72.001 41.5538 72.2593 37.4938 71.3511 33.6021C70.4429 29.7104 68.4055 26.147 65.4761 23.3266C62.5467 20.5061 58.8457 18.5446 54.8036 17.6702C50.7616 16.7958 46.5447 17.0445 42.6437 18.3873L32.5625 8.67502Z" fill="#1B3C55"/>
-          <path d="M34.5367 36.1051C34.1929 38.4177 34.4132 40.7756 35.1802 42.992C35.9472 45.2083 37.2398 47.2223 38.9555 48.8742C40.6713 50.5261 42.763 51.7706 45.065 52.5091C47.367 53.2475 49.816 53.4597 52.218 53.1286L34.5367 36.1051ZM65.4742 40.3655L47.793 23.3359C50.1949 23.0049 52.6439 23.217 54.9459 23.9555C57.2479 24.694 59.3397 25.9385 61.0554 27.5904C62.7711 29.2423 64.0637 31.2562 64.8307 33.4726C65.5977 35.689 65.818 38.0469 65.4742 40.3595V40.3655ZM85.293 76.4706L10.293 4.2604L14.718 0L89.718 72.2102L85.293 76.4706Z" fill="#1B3C55"/>
-        </svg>
+        <i class='bx bx-show' id="eyeIcon" onclick="togglePassword()"></i>
       </div>
-      <div id="errorMessage" style="color: red; margin: 10px 0; display: none;"></div>
-      <button onclick="handleLogin()">Login</button>
+      <div id="errorMessage" style="color: #FF4444; margin: 10px 0; font-size: 14px; display: none;"></div>
+      <button id="loginBtn" onclick="handleLogin()">Login</button>
     </div>
+
     <div class="illustration-section">
-      <img src="static/assets/camera.png" alt="Security Camera" />
-      <svg width="288" height="20" viewBox="0 0 288 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M6 30C6 13.4315 19.4315 0 36 0C52.5685 0 66 13.4315 66 30C66 46.5685 52.5685 60 36 60C19.4315 60 6 46.5685 6 30Z" fill="#0A5FC9"/>
-<rect x="78" width="60" height="60" rx="30" fill="#D9D9D9"/>
-<rect x="150" width="60" height="60" rx="30" fill="#D9D9D9"/>
-<rect x="222" width="60" height="60" rx="30" fill="#D9D9D9"/>
-</svg>
-<br>
-      <p>Always monitoring your day<br/>On the shot, you see the main page with all <br> the rooms available, and users can view each camera <br> with the help of remote control</p>
+      <div class="slider-container">
+        <div class="slider-wrapper" id="sliderWrapper">
+          <!-- Slide 1 -->
+          <div class="slide">
+            <img src="static/assets/image.png" alt="Security Camera" />
+            <div class="slide-content">
+              <h3>Live Surveillance</h3>
+              <p>Keep a watchful eye on every corner. Our real-time monitoring system provides crystal-clear visibility
+                for total exam control.</p>
+            </div>
+          </div>
+          <!-- Slide 2 -->
+          <div class="slide">
+            <img src="static/assets/undraw_alert_w756.svg" alt="Alert System" />
+            <div class="slide-content">
+              <h3>AI Detection</h3>
+              <p>Intelligent algorithms instantly flag suspicious behaviors—looking away, phone usage, or unrecognized
+                objects in the scene.</p>
+            </div>
+          </div>
+          <!-- Slide 3 -->
+          <div class="slide">
+            <img src="static/assets/undraw_authentication_1evl.svg" alt="Secure Access" />
+            <div class="slide-content">
+              <h3>Identity Verified</h3>
+              <p>Ensuring authorized access only. Our secure login protects the integrity of your proctoring
+                environment.</p>
+            </div>
+          </div>
+          <!-- Slide 4 -->
+          <div class="slide">
+            <img src="static/assets/undraw_analytics_6mru.svg" alt="Statistics & Reports" />
+            <div class="slide-content">
+              <h3>Detailed Analytics</h3>
+              <p>Access comprehensive reports after every session. Review evidence, confirm incidents, and maintain
+                academic standards.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="slider-dots" id="sliderDots">
+          <span class="dot active" onclick="goToSlide(0)"></span>
+          <span class="dot" onclick="goToSlide(1)"></span>
+          <span class="dot" onclick="goToSlide(2)"></span>
+          <span class="dot" onclick="goToSlide(3)"></span>
+        </div>
+      </div>
     </div>
   </div>
-  
+
   <script>
+    // Slider Logic
+    let currentSlide = 0;
+    const totalSlides = 4;
+    const wrapper = document.getElementById('sliderWrapper');
+    const dots = document.querySelectorAll('.dot');
+    let slideInterval;
+
+    function updateSlider() {
+      wrapper.style.transform = `translateX(-${currentSlide * (100 / totalSlides)}%)`;
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === currentSlide);
+      });
+    }
+
+    function nextSlide() {
+      currentSlide = (currentSlide + 1) % totalSlides;
+      updateSlider();
+    }
+
+    function goToSlide(idx) {
+      currentSlide = idx;
+      updateSlider();
+      resetInterval();
+    }
+
+    function resetInterval() {
+      clearInterval(slideInterval);
+      slideInterval = setInterval(nextSlide, 5000);
+    }
+
+    resetInterval();
+
+    // Original Login Logic
     function togglePassword() {
       const passwordInput = document.getElementById('passwordInput');
       const eyeIcon = document.getElementById('eyeIcon');
-      
+
       if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        eyeIcon.innerHTML = '<path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12" stroke="#1B3C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 12C1 12 5 20 12 20C19 20 23 12 23 12" stroke="#1B3C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="#1B3C55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
-        eyeIcon.setAttribute('viewBox', '0 0 24 24');
+        eyeIcon.className = 'bx bx-hide';
       } else {
         passwordInput.type = 'password';
-        eyeIcon.innerHTML = '<path d="M67.4375 67.7911L57.35 58.0728C53.449 59.4156 49.2322 59.6643 45.1901 58.7899C41.1481 57.9155 37.447 55.954 34.5176 53.1335C31.5882 50.3131 29.5509 46.7497 28.6427 42.858C27.7345 38.9663 27.9928 34.9063 29.3875 31.1504L16.5125 18.7544C5.8625 27.8709 0 38.2331 0 38.2331C0 38.2331 18.75 71.3294 50 71.3294C56.0025 71.3093 61.9371 70.1051 67.4375 67.7911ZM32.5625 8.67502C38.0628 6.36083 43.9975 5.15662 50 5.13672C81.25 5.13672 100 38.2331 100 38.2331C100 38.2331 94.1312 48.5892 83.4938 57.7178L70.6062 45.3097C72.001 41.5538 72.2593 37.4938 71.3511 33.6021C70.4429 29.7104 68.4055 26.147 65.4761 23.3266C62.5467 20.5061 58.8457 18.5446 54.8036 17.6702C50.7616 16.7958 46.5447 17.0445 42.6437 18.3873L32.5625 8.67502Z" fill="#1B3C55"/><path d="M34.5367 36.1051C34.1929 38.4177 34.4132 40.7756 35.1802 42.992C35.9472 45.2083 37.2398 47.2223 38.9555 48.8742C40.6713 50.5261 42.763 51.7706 45.065 52.5091C47.367 53.2475 49.816 53.4597 52.218 53.1286L34.5367 36.1051ZM65.4742 40.3655L47.793 23.3359C50.1949 23.0049 52.6439 23.217 54.9459 23.9555C57.2479 24.694 59.3397 25.9385 61.0554 27.5904C62.7711 29.2423 64.0637 31.2562 64.8307 33.4726C65.5977 35.689 65.818 38.0469 65.4742 40.3595V40.3655ZM85.293 76.4706L10.293 4.2604L14.718 0L89.718 72.2102L85.293 76.4706Z" fill="#1B3C55"/>';
-        eyeIcon.setAttribute('viewBox', '0 0 100 77');
+        eyeIcon.className = 'bx bx-show';
       }
     }
 
@@ -64,22 +142,27 @@
       const username = document.getElementById('usernameInput').value.trim();
       const password = document.getElementById('passwordInput').value.trim();
       const errorMessage = document.getElementById('errorMessage');
-      
+      const loginBtn = document.getElementById('loginBtn');
+
       if (!username || !password) {
         errorMessage.textContent = 'Please enter both username and password';
         errorMessage.style.display = 'block';
         return;
       }
-      
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Logging in...';
+      errorMessage.style.display = 'none';
+
       try {
         const response = await fetch('/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
           localStorage.setItem('user', JSON.stringify(data.user));
           localStorage.setItem('loginTime', Date.now().toString());
@@ -87,19 +170,24 @@
         } else {
           errorMessage.textContent = data.error || 'Login failed';
           errorMessage.style.display = 'block';
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Login';
         }
       } catch (error) {
         errorMessage.textContent = 'Connection error. Please try again.';
         errorMessage.style.display = 'block';
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
       }
     }
 
-    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+    document.getElementById('passwordInput').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') handleLogin();
     });
-    document.getElementById('usernameInput').addEventListener('keypress', function(e) {
+    document.getElementById('usernameInput').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') handleLogin();
     });
   </script>
 </body>
+
 </html>
