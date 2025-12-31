@@ -175,7 +175,11 @@ function transformCardToEvent(card) {
     lastEventTime: events.length > 0 ? new Date(latestEvent.timestamp) : new Date(),
     status: card.status || 'pending',
     notes: card.notes || '',
-    sessionId: card.session_id
+    sessionId: card.session_id,
+    // GDPR retention data
+    createdAt: card.created_at ? new Date(card.created_at) : new Date(),
+    deletionDate: card.deletion_date ? new Date(card.deletion_date) : null,
+    retentionPeriod: card.retention_period || 7
   };
 }
 
@@ -237,7 +241,10 @@ function renderEventCards() {
 
   grid.innerHTML = filteredEvents.map((event, index) => {
     const latestEvent = event.events[0];
-    const timeAgo = getTimeAgo(latestEvent.timestamp);
+
+    // Get retention countdown and icon
+    const retentionCountdown = getRetentionCountdown(event.deletionDate);
+    const retentionIconData = getRetentionIcon(event.deletionDate);
 
     // Use first event's crop image as thumbnail
     const firstEvidence = latestEvent.evidence || {};
@@ -266,9 +273,9 @@ function renderEventCards() {
                         </span>
                     </div>
 
-                    <div class="event-timestamp">
-                        <i class='bx bx-time-five'></i>
-                        ${timeAgo}
+                    <div class="event-timestamp ${retentionIconData.class}">
+                        <i class='bx ${retentionIconData.icon}'></i>
+                        ${retentionCountdown}
                     </div>
 
                     <div class="event-stats">
@@ -434,7 +441,57 @@ function updateResultsCount() {
   count.textContent = `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} found`;
 }
 
-// Time ago helper
+// Retention countdown helper
+function getRetentionCountdown(deletionDate) {
+  if (!deletionDate) return 'No deletion date';
+
+  const now = new Date();
+  const timeRemaining = deletionDate - now; // milliseconds
+
+  // If already expired
+  if (timeRemaining <= 0) {
+    return 'Expired - pending deletion';
+  }
+
+  const seconds = Math.floor(timeRemaining / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  // Format based on time remaining
+  if (days >= 2) {
+    return `${days} days left`;
+  } else if (days === 1) {
+    return `1 day left`;
+  } else if (hours >= 1) {
+    return `${hours} hours left`;
+  } else if (minutes >= 1) {
+    return `${minutes} minutes left`;
+  } else {
+    return '< 1 minute left';
+  }
+}
+
+// Get retention icon based on urgency
+function getRetentionIcon(deletionDate) {
+  if (!deletionDate) return { icon: 'bx-time-five', class: 'retention-safe' };
+
+  const now = new Date();
+  const timeRemaining = deletionDate - now;
+  const daysRemaining = timeRemaining / (1000 * 60 * 60 * 24);
+
+  if (daysRemaining < 0) {
+    return { icon: 'bx-alarm-exclamation', class: 'retention-expired' };
+  } else if (daysRemaining < 1) {
+    return { icon: 'bx-alarm', class: 'retention-urgent' };
+  } else if (daysRemaining < 3) {
+    return { icon: 'bx-stopwatch', class: 'retention-warning' };
+  } else {
+    return { icon: 'bx-time-five', class: 'retention-safe' };
+  }
+}
+
+// Time ago helper (kept for modal/other uses)
 function getTimeAgo(date) {
   const seconds = Math.floor((new Date() - date) / 1000);
 

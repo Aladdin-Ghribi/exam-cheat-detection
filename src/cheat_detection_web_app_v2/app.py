@@ -251,6 +251,69 @@ if CONFIG_FILE.exists():
 print("=" * 50)
 
 # ============================================
+# SECURE DELETION SCHEDULER
+# ============================================
+from src.utils.secure_eraser import SecureEraser
+import threading
+import time
+
+def run_retention_cleanup():
+    """Context-aware background task to clean up expired evidence"""
+    print("🧹 Starting retention cleanup scheduler...")
+    print("🧹 Starting retention cleanup scheduler...")
+    # Initial small delay to let app startup finish
+    time.sleep(10)
+    
+    while True:
+        try:
+            print("Running scheduled secure cleanup...")
+            
+            # Get retention period from config
+            retention_period = 7
+            if CONFIG_FILE.exists():
+                try:
+                    with open(CONFIG_FILE, 'r') as f:
+                        config = json.load(f)
+                        retention_period = config.get('retention_period', 7)
+                except:
+                    pass
+            
+            print(f"DEBUG: Checking {HISTORY_DIR} for expired cards...")
+            
+            # check HISTORY_DIR (cards)
+            if HISTORY_DIR.exists():
+                count = 0
+                for card_folder in HISTORY_DIR.iterdir():
+                    if card_folder.is_dir():
+                        is_expired = SecureEraser.is_expired(card_folder.name, retention_period)
+                        # print(f"DEBUG: Checking {card_folder.name} -> Expired? {is_expired}")
+                        
+                        if is_expired:
+                            print(f"Time to securely delete expired card: {card_folder.name}")
+                            SecureEraser.secure_delete_tree(card_folder)
+                            count += 1
+                if count > 0:
+                    print(f"Securely deleted {count} expired cards")
+                else:
+                    print("DEBUG: No expired cards found.")
+            
+            # Also trigger detector's EvidenceSaver cleanup (which we'll update to use SecureEraser too)
+            # if hasattr(detector, 'evidence_saver'):
+            #    detector.evidence_saver._cleanup_old_evidence()
+                
+        except Exception as e:
+            print(f"Error in retention cleanup loop: {e}")
+            # Wait a bit before retrying to avoid tight loops on error
+            time.sleep(60)
+            
+        # Sleep for 1 hour before next run
+        time.sleep(3600)
+
+# Start background thread
+cleanup_thread = threading.Thread(target=run_retention_cleanup, daemon=True)
+cleanup_thread.start()
+
+# ============================================
 # SESSION MANAGEMENT
 # ============================================
 
@@ -407,6 +470,16 @@ def get_all_cards():
 
     if not HISTORY_DIR.exists():
         return cards
+    
+    # Get retention period from config
+    retention_period = 7  # Default
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+                retention_period = config.get('retention_period', 7)
+        except Exception as e:
+            print("Error loading retention period from config: " + str(e))
 
     for card_folder in HISTORY_DIR.iterdir():
         if card_folder.is_dir():
@@ -415,6 +488,18 @@ def get_all_cards():
                 try:
                     with open(card_file, 'r') as f:
                         card = json.load(f)
+                        
+                        # Add deletion_date calculation
+                        if 'created_at' in card:
+                            try:
+                                created_at = datetime.fromisoformat(card['created_at'])
+                                from datetime import timedelta
+                                deletion_date = created_at + timedelta(days=retention_period)
+                                card['deletion_date'] = deletion_date.isoformat()
+                                card['retention_period'] = retention_period
+                            except Exception as e:
+                                print(f"Error calculating deletion date for card {card.get('card_id', 'unknown')}: {e}")
+                        
                         cards.append(card)
                 except Exception as e:
                     print("Error loading card: " + str(e))
