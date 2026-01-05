@@ -12,5 +12,12 @@
     "email": "proctor@gmail.com",
     "password": "proctor",
     "role": "proctor"
+  },
+  {
+    "id": "3",
+    "username": "a",
+    "email": "a",
+    "password": "a",
+    "role": "proctor"
   }
 ]

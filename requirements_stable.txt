@@ -1,0 +1,44 @@
+# Core Dependencies - Python 3.11 Compatible
+# Tested stable versions
+
+# Deep Learning Stack
+tensorflow==2.16.1
+tf-keras==2.16.0
+protobuf==4.25.3
+ml-dtypes==0.3.2
+tensorboard==2.16.2
+keras==3.0.5
+
+# Computer Vision
+opencv-python==4.10.0.84
+mediapipe==0.10.14
+
+# Face Recognition
+deepface==0.0.93
+
+# YOLO & Detection
+ultralytics==8.3.24
+
+# PyTorch with CUDA (install separately with):
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# For CPU-only: pip install torch torchvision
+
+# Web Framework
+flask==3.0.3
+flask-cors==4.0.1
+flask-socketio==5.6.0
+python-socketio>=5.12.0
+
+# Data Processing
+numpy==1.26.4
+pandas==2.2.2
+pillow==10.4.0
+
+# Utilities
+python-dateutil==2.9.0
+pytz==2024.1
+requests==2.32.3
+tqdm==4.66.5
+
+# Additional
+python-dotenv==1.0.1

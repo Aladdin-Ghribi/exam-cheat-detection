@@ -2,25 +2,26 @@ import numpy as np
 import cv2
 from collections import defaultdict, deque
 
+
 class ObjectTracker:
-    def __init__(self, max_disappeared=30, max_distance=50):
+    def __init__(self, max_disappeared=90, max_distance=100):
         """
         Initialize the multi-object tracker with reappearance handling.
 
         Args:
-            max_disappeared: Frames before deregistering object
-            max_distance: Max distance for centroid association
+            max_disappeared: Frames before deregistering object (90 = ~3 sec at 30fps)
+            max_distance: Max distance for centroid association (increased for stability)
         """
         self.next_object_id = 0
         self.objects = {}
         self.disappeared = {}
         self.bboxes = {}
-        self.tracks = defaultdict(lambda: deque(maxlen=30))
+        self.tracks = defaultdict(lambda: deque(maxlen=60))  # Longer history
         self.reappearance_buffer = {}  # Store recently disappeared objects
 
         self.max_disappeared = max_disappeared
         self.max_distance = max_distance
-        self.reappearance_threshold = max_disappeared // 2
+        self.reappearance_threshold = max_disappeared  # Full window for reappearance
 
     def register(self, centroid, bbox):
         """Register a new object with the next available ID."""
@@ -50,16 +51,16 @@ class ObjectTracker:
 
         for obj_id, buffer_data in list(self.reappearance_buffer.items()):
             buffer_data['frames_since_disappeared'] += 1
-            
+
             # Remove if too old
             if buffer_data['frames_since_disappeared'] > self.reappearance_threshold:
                 del self.reappearance_buffer[obj_id]
                 continue
-            
+
             # Check distance
-            dist = np.sqrt((centroid[0] - buffer_data['centroid'][0])**2 + 
-                          (centroid[1] - buffer_data['centroid'][1])**2)
-            
+            dist = np.sqrt((centroid[0] - buffer_data['centroid'][0])**2 +
+                           (centroid[1] - buffer_data['centroid'][1])**2)
+
             if dist < min_distance and dist < self.max_distance * 1.5:
                 min_distance = dist
                 best_match_id = obj_id
@@ -89,7 +90,8 @@ class ObjectTracker:
         if len(self.objects) == 0:
             for i in range(len(input_centroids)):
                 # Check for reappearance first
-                reappeared_id = self.check_reappearance(input_centroids[i], person_detections[i]['bbox'])
+                reappeared_id = self.check_reappearance(
+                    input_centroids[i], person_detections[i]['bbox'])
                 if reappeared_id is not None:
                     self.objects[reappeared_id] = input_centroids[i]
                     self.bboxes[reappeared_id] = person_detections[i]['bbox']
@@ -97,12 +99,14 @@ class ObjectTracker:
                     self.tracks[reappeared_id].append(input_centroids[i])
                     del self.reappearance_buffer[reappeared_id]
                 else:
-                    self.register(input_centroids[i], person_detections[i]['bbox'])
+                    self.register(
+                        input_centroids[i], person_detections[i]['bbox'])
         else:
             object_ids = list(self.objects.keys())
             object_centroids = list(self.objects.values())
 
-            D = np.linalg.norm(np.array(object_centroids)[:, np.newaxis] - input_centroids, axis=2)
+            D = np.linalg.norm(np.array(object_centroids)[
+                               :, np.newaxis] - input_centroids, axis=2)
 
             rows = D.min(axis=1).argsort()
             cols = D.argmin(axis=1)[rows]
@@ -114,7 +118,15 @@ class ObjectTracker:
                 if row in used_row_idxs or col in used_col_idxs:
                     continue
 
-                if D[row, col] > self.max_distance:
+                # Adaptive threshold: use larger of fixed max_distance or 50% of bbox size
+                # This handles both close and far subjects
+                bbox = person_detections[col]['bbox']
+                bbox_diagonal = np.sqrt(
+                    (bbox[2]-bbox[0])**2 + (bbox[3]-bbox[1])**2)
+                adaptive_threshold = max(
+                    self.max_distance, bbox_diagonal * 0.5)
+
+                if D[row, col] > adaptive_threshold:
                     continue
 
                 object_id = object_ids[row]
@@ -126,8 +138,10 @@ class ObjectTracker:
                 used_row_idxs.add(row)
                 used_col_idxs.add(col)
 
-            unused_row_idxs = set(range(0, D.shape[0])).difference(used_row_idxs)
-            unused_col_idxs = set(range(0, D.shape[1])).difference(used_col_idxs)
+            unused_row_idxs = set(
+                range(0, D.shape[0])).difference(used_row_idxs)
+            unused_col_idxs = set(
+                range(0, D.shape[1])).difference(used_col_idxs)
 
             if D.shape[0] >= D.shape[1]:
                 for row in unused_row_idxs:
@@ -138,7 +152,8 @@ class ObjectTracker:
                         self.deregister(object_id)
             else:
                 for col in unused_col_idxs:
-                    reappeared_id = self.check_reappearance(input_centroids[col], person_detections[col]['bbox'])
+                    reappeared_id = self.check_reappearance(
+                        input_centroids[col], person_detections[col]['bbox'])
                     if reappeared_id is not None:
                         self.objects[reappeared_id] = input_centroids[col]
                         self.bboxes[reappeared_id] = person_detections[col]['bbox']
@@ -146,7 +161,8 @@ class ObjectTracker:
                         self.tracks[reappeared_id].append(input_centroids[col])
                         del self.reappearance_buffer[reappeared_id]
                     else:
-                        self.register(input_centroids[col], person_detections[col]['bbox'])
+                        self.register(
+                            input_centroids[col], person_detections[col]['bbox'])
 
         updated_detections = []
         for detection in detections:

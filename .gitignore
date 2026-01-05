@@ -26,6 +26,7 @@ wheels/
 
 # Virtual environments
 venv/
+venv311/
 env/
 ENV/
 
@@ -44,6 +45,7 @@ output/
 
 # Potentially large sample data (if you add more later)
 data/samples/
+data/student_faces/
 assets/
 output/
 # Logs

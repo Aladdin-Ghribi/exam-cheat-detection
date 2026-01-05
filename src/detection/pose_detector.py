@@ -94,7 +94,6 @@ class PoseDetector:
             'head': None,
             'shoulders': None,
             'hands': None,
-            'image': image.copy(),
             'head_orientation': None,
             'hand_metrics': None,
             'face_region': None
@@ -299,7 +298,7 @@ class PoseDetector:
         Convert rotation matrix to Euler angles (pitch, yaw, roll) in degrees
         OpenCV coordinate system:
         X: right, Y: down, Z: forward (out of camera)
-        
+
         Returns:
             [pitch, yaw, roll] in degrees where:
             pitch: rotation around X-axis (negative = up, positive = down)
@@ -323,7 +322,8 @@ class PoseDetector:
         roll_deg = np.degrees(roll)
 
         # Apply realistic head movement limits
-        pitch_deg = np.clip(pitch_deg, -45, 45)   # Can't look completely up/down
+        # Can't look completely up/down
+        pitch_deg = np.clip(pitch_deg, -45, 45)
         # Can't turn head completely around
         yaw_deg = np.clip(yaw_deg, -90, 90)
         roll_deg = np.clip(roll_deg, -45, 45)     # Limited head tilt
@@ -483,4 +483,3 @@ class PoseDetector:
     def close(self):
         """Close resources."""
         self.pose.close()
-

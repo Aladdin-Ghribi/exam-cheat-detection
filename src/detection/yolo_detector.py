@@ -3,6 +3,7 @@ from .flagged_evidence_saver import FlaggedEvidenceSaver
 from .pose_detector import PoseDetector
 from .exam_seat_manager import ExamSeatManager
 from .object_tracker import ObjectTracker
+from .face_recognizer import FaceRecognizer
 from config import YOLO_MODEL, YOLO_MODEL_OPTIONS, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU, IMG_SIZE_NANO, ENABLE_FRAME_SKIPPING, FRAME_SKIP_THRESHOLD_MS, MAX_FRAME_SKIP
 from ultralytics import YOLO
 import cv2
@@ -79,6 +80,9 @@ class YOLODetector:
         self.show_bbox = True
         self.show_pose = True  # Default to showing pose skeleton
         self.show_confidence = True  # Default to showing confidence scores
+
+        # Initialize Face Recognizer
+        self.face_recognizer = FaceRecognizer()
 
     def _get_img_size(self):
         """Get appropriate image size based on model size and device."""
@@ -164,6 +168,28 @@ class YOLODetector:
 
         if self.enable_tracking:
             detections = self.tracker.update(detections)
+
+            # 🎯 FACE RECOGNITION INTEGRATION
+            # After tracking is updated, attempt to identify each person
+            for det in detections:
+                if det.get('class_id') == PERSON_CLASS_ID:
+                    track_id = det.get('track_id')
+                    if track_id is not None:
+                        # Get identity (SID or falling back to track_id)
+                        id_type, primary_id, confidence = self.face_recognizer.get_primary_id(
+                            track_id, frame, det['bbox']
+                        )
+
+                        det['id_type'] = id_type          # 'SID' or 'TRACK'
+                        # e.g., 'S12345' or 'TRACK_7'
+                        det['primary_id'] = primary_id
+                        det['id_confidence'] = confidence
+
+                        # If recognized as a student, add student info
+                        if id_type == 'SID':
+                            det['student_id'] = primary_id
+                            det['student_name'] = self.face_recognizer.student_names.get(
+                                primary_id, '')
 
         seat_assignments = None
         if self.enable_seat_mapping:

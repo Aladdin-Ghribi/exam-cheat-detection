@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="static/css/profile.css">
   <link rel="stylesheet" href="static/css/monitor.css">
   <link rel="stylesheet" href="static/css/help.css">
+  <link rel="stylesheet" href="static/css/students.css">
 
   <!-- Socket.IO -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -69,6 +70,10 @@
         <a href="#" class="nav-item" data-page="history">
           <i class='bx bxs-time-five'></i>
           <span>History</span>
+        </a>
+        <a href="#" class="nav-item" data-page="students">
+          <i class='bx bxs-user-detail'></i>
+          <span>Students</span>
         </a>
         <a href="#" class="nav-item" data-page="settings" id="settings-nav-item">
           <i class='bx bxs-cog'></i>
@@ -284,7 +289,7 @@
                 <div class="video-overlay">
                   <div class="video-time" id="video-time">00:00:00</div>
                   <div class="video-overlay-right">
-                    <span class="pipeline-speed" id="pipeline-speed" style="display: none;">0ms</span>
+
                     <div id="video-camera-label" class="video-camera-label">Camera 01</div>
                   </div>
                 </div>
@@ -475,6 +480,31 @@
                 </button>
               </div>
             </aside>
+          </div>
+
+        </div>
+
+        <!-- Student Registration View -->
+        <div id="view-students" class="page-view hidden">
+          <div class="students-container">
+            <div class="students-header">
+              <div class="header-text">
+                <h2>Student Database</h2>
+                <p>Manage registered students and their face identifiers</p>
+              </div>
+              <button class="btn-primary" id="btn-add-student">
+                <i class='bx bx-user-plus'></i>
+                Register Student
+              </button>
+            </div>
+
+            <div class="students-grid" id="students-grid">
+              <!-- Student cards will be loaded here -->
+              <div class="loading-placeholder">
+                <i class='bx bx-loader-alt bx-spin'></i>
+                <p>Loading student database...</p>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -1671,6 +1701,118 @@
   <button class="sound-toggle-btn" id="sound-toggle-btn" title="Alert Sounds: OFF">
     <i class='bx bx-volume-mute' id="sound-icon"></i>
   </button>
+  <!-- Student Management Modals (Body Level for proper Blur) -->
+  <!-- Registration Modal -->
+  <div class="modal hidden" id="registration-modal">
+    <div class="modal-overlay" id="registration-modal-overlay"></div>
+    <div class="modal-content registration-modal-content">
+      <div class="modal-header">
+        <h3>Student Registration</h3>
+        <button class="close-modal" id="close-registration-modal"><i class='bx bx-x'></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="registration-steps">
+          <div class="registration-form">
+            <div class="form-group" id="group-reg-sid">
+              <label for="reg-student-id">Student ID (SID)</label>
+              <input type="text" id="reg-student-id" placeholder="e.g. S123456" class="form-control">
+              <span class="error-hint">ID must be at least 3 characters.</span>
+            </div>
+            <div class="form-group" id="group-reg-name">
+              <label for="reg-student-name">Full Name</label>
+              <input type="text" id="reg-student-name" placeholder="John Doe" class="form-control">
+              <span class="error-hint">Name must be at least 3 characters.</span>
+            </div>
+
+            <div class="camera-capture-section">
+              <label>Face Photo</label>
+              <div class="camera-preview-box">
+                <video id="registration-video" autoplay playsinline></video>
+                <canvas id="registration-canvas" class="hidden"></canvas>
+                <img id="registration-photo-preview" class="hidden" alt="Captured Photo">
+                <div class="camera-controls">
+                  <button class="btn-capture" id="btn-capture-photo">
+                    <i class='bx bx-camera'></i>
+                    Capture Photo
+                  </button>
+                  <button class="btn-retake hidden" id="btn-retake-photo">
+                    <i class='bx bx-redo'></i>
+                    Retake
+                  </button>
+                </div>
+              </div>
+              <p class="camera-hint">Ensure the face is clearly centered and well-lit.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-cancel-registration">Cancel</button>
+        <button class="btn-primary" id="btn-submit-registration">
+          <i class='bx bx-check-double'></i>
+          Complete Registration
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal hidden" id="delete-confirm-modal">
+    <div class="modal-overlay" id="delete-confirm-overlay"></div>
+    <div class="modal-content delete-confirm-content">
+      <div class="delete-confirm-icon">
+        <i class='bx bx-trash'></i>
+      </div>
+      <h3>Delete Student Record?</h3>
+      <p id="delete-confirm-message">Are you sure you want to delete this student's record? This action cannot
+        be undone.</p>
+      <div class="delete-confirm-buttons">
+        <button class="btn-cancel-delete" id="btn-cancel-delete">Cancel</button>
+        <button class="btn-confirm-delete" id="btn-confirm-delete">
+          <i class='bx bx-trash'></i>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registration Success Modal -->
+  <div class="modal hidden" id="success-modal">
+    <div class="modal-overlay" id="success-modal-overlay"></div>
+    <div class="modal-content success-modal-content">
+      <div class="success-icon">
+        <i class='bx bx-check-circle'></i>
+      </div>
+      <h3>Registration Successful!</h3>
+      <p id="success-modal-message">Student has been successfully registered.</p>
+      <button class="btn-success-ok" id="btn-success-ok">
+        <i class='bx bx-check'></i>
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- Generic Alert Modal (Replaces Browser alert()) -->
+  <div class="modal-overlay-alert hidden" id="generic-alert-overlay">
+    <div class="settings-alert-modal">
+      <div class="alert-modal-header">
+        <div class="alert-icon-wrapper warning" id="generic-alert-icon-wrapper">
+          <i class='bx bx-error-circle' id="generic-alert-icon"></i>
+        </div>
+        <h3 id="generic-alert-title">Attention</h3>
+        <button class="alert-modal-close" id="btn-close-generic-alert"><i class='bx bx-x'></i></button>
+      </div>
+      <div class="alert-modal-body">
+        <p id="generic-alert-message">Alert message goes here.</p>
+      </div>
+      <div class="alert-modal-footer">
+        <button class="btn-alert-ok" id="btn-ok-generic-alert">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="static/js/help.js"></script>
+  <script src="static/js/students.js"></script>
 </body>
 
 </html>
