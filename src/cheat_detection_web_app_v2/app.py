@@ -62,6 +62,7 @@ CONFIG_FILE = DATA_DIR / 'config.json'
 # Ensure directories exist
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+(DATA_DIR / 'student_faces').mkdir(parents=True, exist_ok=True)
 
 # ============================================
 # DETECTION PIPELINE INITIALIZATION
