@@ -60,6 +60,13 @@ function initSocket() {
     renderAlerts();
   });
 
+  socket.on('alert_removed', (data) => {
+    // Remove cleaned-up duplicate alert from UI
+    console.log('Alert removed:', data.alert_id);
+    pendingAlerts = pendingAlerts.filter(a => a.event_id !== data.alert_id && a.alert_id !== data.alert_id);
+    renderAlerts();
+  });
+
   // Listen for config updates (when settings change)
   socket.on('config_updated', (config) => {
     if (config.show_bbox !== undefined) {
@@ -89,6 +96,8 @@ let webcamStream = null;
 let videoElement = null;
 let canvasElement = null;
 let canvasContext = null;
+let overlayCanvas = null;
+let overlayContext = null;
 let pipelineInterval = null;
 let displayInterval = null;
 let isPipelineRunning = false;
@@ -124,17 +133,32 @@ fetch('/api/config')
   });
 
 function initWebcam() {
-  // Create hidden video element for webcam
+  // Create video element for webcam (will be shown directly for smooth preview)
   videoElement = document.createElement('video');
   videoElement.setAttribute('autoplay', '');
   videoElement.setAttribute('playsinline', '');
+  videoElement.setAttribute('muted', '');
+  videoElement.className = 'video-frame-native';
+  videoElement.style.width = '100%';
+  videoElement.style.height = '100%';
+  videoElement.style.objectFit = 'contain';
   videoElement.style.display = 'none';
-  document.body.appendChild(videoElement);
 
-  // Create canvas for frame capture
+  // Create overlay canvas for smooth UI-side drawing
+  overlayCanvas = document.createElement('canvas');
+  overlayCanvas.className = 'video-canvas-overlay';
+  overlayCanvas.style.position = 'absolute';
+  overlayCanvas.style.top = '0';
+  overlayCanvas.style.left = '0';
+  overlayCanvas.style.width = '100%';
+  overlayCanvas.style.height = '100%';
+  overlayCanvas.style.pointerEvents = 'none';
+  overlayCanvas.style.zIndex = '5';
+  overlayContext = overlayCanvas.getContext('2d');
+
+  // Create hidden canvas for frame capture (sends data to server)
   canvasElement = document.createElement('canvas');
   canvasElement.style.display = 'none';
-  document.body.appendChild(canvasElement);
   canvasContext = canvasElement.getContext('2d');
 
   // Auto-start webcam when page loads
@@ -145,8 +169,8 @@ async function startWebcamPreview() {
   try {
     webcamStream = await navigator.mediaDevices.getUserMedia({
       video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
         frameRate: { ideal: 30 }
       },
       audio: false
@@ -155,14 +179,18 @@ async function startWebcamPreview() {
     videoElement.srcObject = webcamStream;
     await videoElement.play();
 
-    // Set canvas size to match video
-    canvasElement.width = videoElement.videoWidth || 1280;
-    canvasElement.height = videoElement.videoHeight || 720;
+    // Set canvas sizes to match video
+    const vw = videoElement.videoWidth || 1280;
+    const vh = videoElement.videoHeight || 720;
+    canvasElement.width = vw;
+    canvasElement.height = vh;
+    overlayCanvas.width = vw;
+    overlayCanvas.height = vh;
 
-    console.log('Webcam started:', canvasElement.width, 'x', canvasElement.height);
+    console.log('Webcam started:', vw, 'x', vh);
 
-    // Start local display loop (always running)
-    startLocalDisplayLoop();
+    // Show native video directly for smooth preview
+    showNativeVideoPreview();
 
     return true;
   } catch (error) {
@@ -171,56 +199,70 @@ async function startWebcamPreview() {
   }
 }
 
-function startLocalDisplayLoop(customIntervalMs) {
-  // Use custom interval if provided, otherwise default to 30fps (33ms)
-  const intervalMs = customIntervalMs || 33;
+// Show native video element for smooth preview (no pipeline)
+function showNativeVideoPreview() {
+  const videoFeed = document.getElementById('video-feed');
+  if (!videoFeed || !videoElement) return;
 
-  // Display webcam feed at specified fps continuously with detection boxes
+  const placeholder = videoFeed.querySelector('.video-placeholder');
+  if (placeholder) placeholder.style.display = 'none';
+
+  // Hide any canvas-based image
+  const imgElement = videoFeed.querySelector('.video-frame-img');
+  if (imgElement) imgElement.style.display = 'none';
+
+  // Show native video element
+  videoElement.style.display = 'block';
+  if (!videoFeed.contains(videoElement)) {
+    videoFeed.appendChild(videoElement);
+  }
+
+  // Ensure overlay canvas is also present
+  if (!videoFeed.contains(overlayCanvas)) {
+    videoFeed.appendChild(overlayCanvas);
+  }
+  overlayCanvas.classList.remove('hidden');
+}
+
+// Switch to canvas mode for detection overlays
+function switchToCanvasMode() {
+  // In the new layered approach, we don't hide the video.
+  // We just ensure the overlay canvas is visible.
+  if (overlayCanvas) overlayCanvas.classList.remove('hidden');
+}
+
+function startLocalDisplayLoop(customIntervalMs) {
+  // Use custom interval if provided, otherwise default to 60fps (16ms) for smooth overlays
+  const intervalMs = customIntervalMs || 16;
+
+  // Ensure layered view is active
+  showNativeVideoPreview();
+
+  // Draw overlays on the transparent overlay canvas
   displayInterval = setInterval(() => {
-    if (videoElement && canvasContext) {
-      canvasContext.drawImage(videoElement, 0, 0);
+    if (overlayContext && overlayCanvas) {
+      // Clear previous drawings
+      overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
       // Draw bounding boxes if enabled and we have detections
       if (showDebugBoxes && lastDetections.length > 0) {
-        drawBoundingBoxes(canvasContext, lastDetections, canvasElement.width, canvasElement.height);
+        drawBoundingBoxes(overlayContext, lastDetections, overlayCanvas.width, overlayCanvas.height);
       }
 
       // Draw pose skeleton if enabled and we have detections with pose data
       if (showPoseSkeleton && lastDetections.length > 0) {
         lastDetections.forEach(det => {
           if (det.pose_landmarks) {
-            drawPoseSkeleton(canvasContext, det.pose_landmarks, canvasElement.width, canvasElement.height);
+            drawPoseSkeleton(overlayContext, det.pose_landmarks, overlayCanvas.width, overlayCanvas.height);
           }
         });
       }
-
-      // Display the frame
-      const frameData = canvasElement.toDataURL('image/jpeg', 0.8);
-      displayLocalFrame(frameData);
     }
-  }, intervalMs); // Use the custom interval
+  }, intervalMs);
 }
 
 function displayLocalFrame(dataUrl) {
-  const videoFeed = document.getElementById('video-feed');
-  if (!videoFeed) return;
-
-  const placeholder = videoFeed.querySelector('.video-placeholder');
-  if (placeholder) {
-    placeholder.style.display = 'none';
-  }
-
-  let imgElement = videoFeed.querySelector('.video-frame-img');
-  if (!imgElement) {
-    imgElement = document.createElement('img');
-    imgElement.className = 'video-frame-img';
-    imgElement.style.width = '100%';
-    imgElement.style.height = '100%';
-    imgElement.style.objectFit = 'contain';
-    videoFeed.appendChild(imgElement);
-  }
-
-  imgElement.src = dataUrl;
+  // No-op in new layered approach
 }
 
 function stopWebcam() {
@@ -241,6 +283,9 @@ function stopWebcam() {
 
 function startPipelineProcessing() {
   isPipelineRunning = true;
+  // Start the canvas display loop for detection overlays
+  startLocalDisplayLoop();
+  // Start sending frames to server
   pipelineInterval = setInterval(captureAndSendFrame, 100);
 }
 
@@ -250,8 +295,16 @@ function stopPipelineProcessing() {
     clearInterval(pipelineInterval);
     pipelineInterval = null;
   }
+  // Stop the canvas display loop
+  if (displayInterval) {
+    clearInterval(displayInterval);
+    displayInterval = null;
+  }
   // Clear cached detections and speed display
   lastDetections = [];
+  if (overlayContext && overlayCanvas) {
+    overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  }
   updatePipelineSpeed(0);
 }
 
@@ -278,45 +331,20 @@ function captureAndSendFrame() {
   }
 }
 
-function displayFrame(base64Image, pipelineMs) {
-  const videoFeed = document.getElementById('video-feed');
-  if (!videoFeed) return;
 
-  const placeholder = videoFeed.querySelector('.video-placeholder');
-  if (placeholder) {
-    placeholder.style.display = 'none';
-  }
-
-  let imgElement = videoFeed.querySelector('.video-frame-img');
-  if (!imgElement) {
-    imgElement = document.createElement('img');
-    imgElement.className = 'video-frame-img';
-    imgElement.style.width = '100%';
-    imgElement.style.height = '100%';
-    imgElement.style.objectFit = 'contain';
-    videoFeed.appendChild(imgElement);
-  }
-
-  imgElement.src = 'data:image/jpeg;base64,' + base64Image;
-
-  // Update pipeline speed display
-  if (pipelineMs) {
-    updatePipelineSpeed(pipelineMs);
-  }
-}
 
 function updatePipelineSpeed(ms) {
   const speedElement = document.getElementById('pipeline-speed');
   const speedText = document.getElementById('pipeline-speed-text');
 
-  if (speedElement && speedText) {
-    if (ms > 0) {
-      const fps = Math.round(1000 / ms);
-      speedText.textContent = ms + 'ms (' + fps + ' FPS)';
-      speedElement.style.display = 'flex';
-    } else {
-      speedElement.style.display = 'none';
-    }
+  if (ms > 0) {
+    const fps = Math.round(1000 / ms);
+    const displayText = ms + 'ms (' + fps + ' FPS)';
+
+    if (speedText) speedText.textContent = displayText;
+    if (speedElement) speedElement.style.display = 'flex';
+  } else {
+    if (speedElement) speedElement.style.display = 'none';
   }
 }
 
@@ -340,42 +368,62 @@ function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
       label = 'OK';
     }
 
-    // Draw bounding box
+    // Draw bounding box with rounded corners and subtle glow
+    ctx.save();
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = color;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    ctx.lineWidth = 2.5;
+
+    // Function for rounded rect
+    const roundedRect = (ctx, x, y, width, height, radius) => {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    };
+
+    roundedRect(ctx, x1, y1, x2 - x1, y2 - y1, 8);
+    ctx.stroke();
 
     // Build label text
     const trackId = det.track_id || '?';
     const className = det.class_id === 0 ? 'Person' : `Class ${det.class_id}`;
-
-    // Build label text with or without track ID based on setting
     const trackText = showTrackIds ? `#${trackId} | ` : '';
     const labelText = `${className} ${trackText}${Math.round(score)}% ${label}`;
 
-    // Draw label background
-    ctx.font = '12px Arial';
+    // Draw label background (glassmorphism style)
+    ctx.font = 'bold 13px Manrope, sans-serif';
     const metrics = ctx.measureText(labelText);
-    const textHeight = 16;
+    const textHeight = 18;
 
+    ctx.shadowBlur = 0;
     ctx.fillStyle = color;
-    ctx.fillRect(x1, y1 - textHeight - 4, metrics.width + 8, textHeight + 4);
+    ctx.globalAlpha = 0.85;
+
+    // Draw label tab
+    const tabHeight = textHeight + 6;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 + metrics.width + 12, y1);
+    ctx.lineTo(x1 + metrics.width + 12, y1 - tabHeight);
+    ctx.lineTo(x1 + 4, y1 - tabHeight);
+    ctx.quadraticCurveTo(x1, y1 - tabHeight, x1, y1 - tabHeight + 4);
+    ctx.closePath();
+    ctx.fill();
 
     // Draw label text
+    ctx.globalAlpha = 1.0;
     ctx.fillStyle = 'white';
-    ctx.fillText(labelText, x1 + 4, y1 - 6);
-
-    // Draw confidence score if enabled
-    if (showConfidenceScores && det.unified_score !== undefined) {
-      // Draw confidence score above the bounding box
-
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // Semi-transparent white background
-      ctx.fillRect(x1, y2 - 25, 60, 20);
-
-      ctx.fillStyle = 'black';
-      ctx.font = '12px Arial';
-      ctx.fillText(`${Math.round(det.unified_score)}%`, x1 + 5, y2 - 10);
-    }
+    ctx.fillText(labelText, x1 + 6, y1 - 8);
+    ctx.restore();
   });
 }
 
@@ -390,46 +438,112 @@ function drawPoseSkeleton(ctx, landmarks, canvasWidth, canvasHeight) {
     visibility: lm.visibility
   }));
 
-  // Define pose connections (MediaPipe pose landmarks)
+  // Define pose connections (MediaPipe pose landmarks 0-32)
   const connections = [
-    [0, 1], [1, 2], [2, 3], [3, 7], // Face
-    [0, 4], [4, 5], [5, 6], [6, 8], // Face
-    [9, 10], [11, 12], [11, 13], [11, 23], [12, 24], [12, 25], // Arms
-    [13, 15], [14, 16], [15, 17], [16, 18], [17, 19], [18, 20], // Arms
-    [19, 21], [20, 22], // Arms
-    [11, 23], [23, 24], [24, 25], // Torso
-    [23, 25], [25, 26], [26, 27], [27, 28], [28, 29], [29, 30], [30, 31], // Legs
-    [27, 29], [29, 31], [28, 30], [30, 32] // Legs
+    // Torso & Shoulders
+    { points: [11, 12], label: 'shoulders', color: '#00ffff' },
+    { points: [23, 24], label: 'hips', color: '#00ffff' },
+    { points: [11, 23], label: 'left_torso', color: '#ff3333' },
+    { points: [12, 24], label: 'right_torso', color: '#3333ff' },
+
+    // Left Arm
+    { points: [11, 13], label: 'left_upper_arm', color: '#ff3333' },
+    { points: [13, 15], label: 'left_lower_arm', color: '#ff3333' },
+    { points: [15, 17], label: 'left_hand', color: '#ff3333' },
+    { points: [15, 19], label: 'left_hand', color: '#ff3333' },
+    { points: [15, 21], label: 'left_hand', color: '#ff3333' },
+
+    // Right Arm
+    { points: [12, 14], label: 'right_upper_arm', color: '#3333ff' },
+    { points: [14, 16], label: 'right_lower_arm', color: '#3333ff' },
+    { points: [16, 18], label: 'right_hand', color: '#3333ff' },
+    { points: [16, 20], label: 'right_hand', color: '#3333ff' },
+    { points: [16, 22], label: 'right_hand', color: '#3333ff' },
+
+    // Left Leg
+    { points: [23, 25], label: 'left_thigh', color: '#ff3333' },
+    { points: [25, 27], label: 'left_calf', color: '#ff3333' },
+    { points: [27, 29], label: 'left_foot', color: '#ff3333' },
+    { points: [29, 31], label: 'left_foot', color: '#ff3333' },
+    { points: [27, 31], label: 'left_foot', color: '#ff3333' },
+
+    // Right Leg
+    { points: [24, 26], label: 'right_thigh', color: '#3333ff' },
+    { points: [26, 28], label: 'right_calf', color: '#3333ff' },
+    { points: [28, 30], label: 'right_foot', color: '#3333ff' },
+    { points: [30, 32], label: 'right_foot', color: '#3333ff' },
+    { points: [28, 32], label: 'right_foot', color: '#3333ff' },
+
+    // Face (Simplified for clarity)
+    { points: [0, 1], label: 'face', color: '#ffffff' },
+    { points: [0, 4], label: 'face', color: '#ffffff' },
+    { points: [1, 2], label: 'face', color: '#ffffff' },
+    { points: [2, 3], label: 'face', color: '#ffffff' },
+    { points: [4, 5], label: 'face', color: '#ffffff' },
+    { points: [5, 6], label: 'face', color: '#ffffff' },
+    { points: [3, 7], label: 'face', color: '#ffffff' },
+    { points: [6, 8], label: 'face', color: '#ffffff' },
+    { points: [9, 10], label: 'face', color: '#ffffff' }
   ];
 
-  // Draw connections
-  ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)'; // Green with transparency
-  ctx.lineWidth = 2;
+  // Connection Drawing with Glow effect
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
-  connections.forEach(([startIdx, endIdx]) => {
+  connections.forEach(conn => {
+    const [startIdx, endIdx] = conn.points;
     if (startIdx >= points.length || endIdx >= points.length) return;
 
     const startPoint = points[startIdx];
     const endPoint = points[endIdx];
 
-    // Only draw if both points are visible enough
-    if (startPoint.visibility > 0.3 && endPoint.visibility > 0.3) {
+    if (startPoint.visibility > 0.5 && endPoint.visibility > 0.5) {
+      // Glow/Neon effect
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = conn.color;
+      ctx.strokeStyle = conn.color;
+      ctx.lineWidth = 3;
+
       ctx.beginPath();
       ctx.moveTo(startPoint.x, startPoint.y);
       ctx.lineTo(endPoint.x, endPoint.y);
       ctx.stroke();
+
+      // Outer thin line for sharpness
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
   });
 
-  // Draw landmarks
-  ctx.fillStyle = 'rgba(0, 255, 0, 0.9)'; // Bright green
-  points.forEach(point => {
-    if (point.visibility > 0.3) {
+  // Draw landmarks as glowing joints
+  points.forEach((point, idx) => {
+    if (point.visibility > 0.5) {
+      // Different colors for specific joints
+      let jointColor = '#00ff00'; // Default green
+      if (idx <= 10) jointColor = '#ffffff'; // Face
+      else if ([11, 13, 15, 23, 25, 27].includes(idx)) jointColor = '#ff3333'; // Left joints
+      else if ([12, 14, 16, 24, 26, 28].includes(idx)) jointColor = '#3333ff'; // Right joints
+
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = jointColor;
+      ctx.fillStyle = jointColor;
+
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+      ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // White core
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 1.5, 0, 2 * Math.PI);
       ctx.fill();
     }
   });
+  ctx.restore();
 }
 
 // ============================================
@@ -760,6 +874,10 @@ function handleNewAlert(alert) {
     event_id: alert.alert_id,
     alert_id: alert.alert_id,
     track_id: alert.track_id,
+    primary_id: alert.primary_id,
+    id_type: alert.id_type,
+    student_id: alert.student_id,
+    student_name: alert.student_name,
     timestamp: alert.timestamp,
     suspicion_score: alert.suspicion_score,
     reasons: alert.reasons,
@@ -799,12 +917,17 @@ function renderAlerts() {
 
   const alertCardsHTML = pendingAlerts.map(alert => {
     const timeAgo = getTimeAgo(new Date(alert.timestamp));
+    const identityText = alert.id_type === 'SID' ? `Student: ${alert.student_id}` : `ID: ${alert.primary_id}`;
+    const identityClass = alert.id_type === 'SID' ? 'identity-recognized' : 'identity-unknown';
 
     return '<div class="alert-card" data-alert-id="' + alert.event_id + '">' +
       '<div class="alert-card-header">' +
       '<img src="' + alert.evidence_thumbnail + '" alt="Alert Evidence" class="alert-thumbnail">' +
       '<div class="alert-card-info">' +
+      '<div class="alert-top-info">' +
       '<span class="alert-severity-badge alert-severity-' + alert.severity + '">' + alert.severity + '</span>' +
+      '<span class="' + identityClass + '">' + identityText + '</span>' +
+      '</div>' +
       '<span class="alert-reason">' + alert.reasons.join(', ') + '</span>' +
       '</div>' +
       '</div>' +
@@ -844,10 +967,24 @@ function openAlertReviewModal(eventId) {
   document.getElementById('alert-timestamp').textContent = formatTimestamp(new Date(alert.timestamp));
   document.getElementById('alert-reasons').textContent = alert.reasons.join(', ');
 
-  document.getElementById('student-id-input').value = '';
-  document.getElementById('student-name-input').value = '';
-  document.getElementById('review-notes-input').value = '';
+  // Auto-fill student data if identified
+  const sidInput = document.getElementById('student-id-input');
+  const nameInput = document.getElementById('student-name-input');
+  const noteInput = document.getElementById('review-notes-input');
 
+  if (alert.id_type === 'SID') {
+    sidInput.value = alert.student_id || '';
+    nameInput.value = alert.student_name || '';
+    sidInput.classList.add('auto-filled');
+    nameInput.classList.add('auto-filled');
+  } else {
+    sidInput.value = '';
+    nameInput.value = '';
+    sidInput.classList.remove('auto-filled');
+    nameInput.classList.remove('auto-filled');
+  }
+
+  noteInput.value = '';
   modal.dataset.alertId = alert.alert_id || alert.event_id;
 
   modal.classList.remove('hidden');

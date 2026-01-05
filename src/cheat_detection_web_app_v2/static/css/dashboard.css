@@ -681,6 +681,26 @@ main.sidebar-collapsed {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.modal-overlay-alert {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 11000;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.modal-overlay-alert.hidden {
+  display: none !important;
+}
+
 .modal-overlay-alert:not(.hidden) .settings-alert-modal {
   transform: scale(1) translateY(0);
 }

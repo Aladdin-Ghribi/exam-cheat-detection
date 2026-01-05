@@ -4,6 +4,9 @@ Exam Cheat Detection Web Application v2
 Flask-SocketIO backend with session management and event card logic
 """
 
+import time
+import threading
+from src.utils.secure_eraser import SecureEraser
 from datetime import datetime
 import uuid
 import base64
@@ -59,6 +62,7 @@ CONFIG_FILE = DATA_DIR / 'config.json'
 # Ensure directories exist
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+(DATA_DIR / 'student_faces').mkdir(parents=True, exist_ok=True)
 
 # ============================================
 # DETECTION PIPELINE INITIALIZATION
@@ -253,9 +257,7 @@ print("=" * 50)
 # ============================================
 # SECURE DELETION SCHEDULER
 # ============================================
-from src.utils.secure_eraser import SecureEraser
-import threading
-import time
+
 
 def run_retention_cleanup():
     """Context-aware background task to clean up expired evidence"""
@@ -263,11 +265,11 @@ def run_retention_cleanup():
     print("🧹 Starting retention cleanup scheduler...")
     # Initial small delay to let app startup finish
     time.sleep(10)
-    
+
     while True:
         try:
             print("Running scheduled secure cleanup...")
-            
+
             # Get retention period from config
             retention_period = 7
             if CONFIG_FILE.exists():
@@ -277,37 +279,40 @@ def run_retention_cleanup():
                         retention_period = config.get('retention_period', 7)
                 except:
                     pass
-            
+
             print(f"DEBUG: Checking {HISTORY_DIR} for expired cards...")
-            
+
             # check HISTORY_DIR (cards)
             if HISTORY_DIR.exists():
                 count = 0
                 for card_folder in HISTORY_DIR.iterdir():
                     if card_folder.is_dir():
-                        is_expired = SecureEraser.is_expired(card_folder.name, retention_period)
+                        is_expired = SecureEraser.is_expired(
+                            card_folder.name, retention_period)
                         # print(f"DEBUG: Checking {card_folder.name} -> Expired? {is_expired}")
-                        
+
                         if is_expired:
-                            print(f"Time to securely delete expired card: {card_folder.name}")
+                            print(
+                                f"Time to securely delete expired card: {card_folder.name}")
                             SecureEraser.secure_delete_tree(card_folder)
                             count += 1
                 if count > 0:
                     print(f"Securely deleted {count} expired cards")
                 else:
                     print("DEBUG: No expired cards found.")
-            
+
             # Also trigger detector's EvidenceSaver cleanup (which we'll update to use SecureEraser too)
             # if hasattr(detector, 'evidence_saver'):
             #    detector.evidence_saver._cleanup_old_evidence()
-                
+
         except Exception as e:
             print(f"Error in retention cleanup loop: {e}")
             # Wait a bit before retrying to avoid tight loops on error
             time.sleep(60)
-            
+
         # Sleep for 1 hour before next run
         time.sleep(3600)
+
 
 # Start background thread
 cleanup_thread = threading.Thread(target=run_retention_cleanup, daemon=True)
@@ -470,7 +475,7 @@ def get_all_cards():
 
     if not HISTORY_DIR.exists():
         return cards
-    
+
     # Get retention period from config
     retention_period = 7  # Default
     if CONFIG_FILE.exists():
@@ -488,18 +493,21 @@ def get_all_cards():
                 try:
                     with open(card_file, 'r') as f:
                         card = json.load(f)
-                        
+
                         # Add deletion_date calculation
                         if 'created_at' in card:
                             try:
-                                created_at = datetime.fromisoformat(card['created_at'])
+                                created_at = datetime.fromisoformat(
+                                    card['created_at'])
                                 from datetime import timedelta
-                                deletion_date = created_at + timedelta(days=retention_period)
+                                deletion_date = created_at + \
+                                    timedelta(days=retention_period)
                                 card['deletion_date'] = deletion_date.isoformat()
                                 card['retention_period'] = retention_period
                             except Exception as e:
-                                print(f"Error calculating deletion date for card {card.get('card_id', 'unknown')}: {e}")
-                        
+                                print(
+                                    f"Error calculating deletion date for card {card.get('card_id', 'unknown')}: {e}")
+
                         cards.append(card)
                 except Exception as e:
                     print("Error loading card: " + str(e))
@@ -512,89 +520,27 @@ def get_all_cards():
 # FRAME ANNOTATION
 # ============================================
 
-def draw_detection_boxes(frame, detections):
-    """Draw bounding boxes on frame with color based on suspicion level"""
-    annotated = frame.copy()
-
-    for det in detections:
-        class_id = det.get('class_id', 0)
-        bbox = det.get('bbox', [0, 0, 0, 0])
-        x1, y1, x2, y2 = [int(v) for v in bbox]
-
-        # Get suspicion score
-        behavior = det.get('behavior', {})
-        suspicion = behavior.get('suspicion', {})
-        score = suspicion.get('smoothed', 0) * 100
-
-        # Color based on suspicion level (BGR format)
-        if score >= 50:
-            color = (0, 0, 255)  # Red - high suspicion
-            label = "HIGH"
-        elif score >= 20:
-            color = (0, 165, 255)  # Orange - medium suspicion
-            label = "MED"
-        else:
-            # Dark green - low/normal (better text visibility)
-            color = (0, 140, 0)
-            label = "OK"
-
-        # Draw bounding box
-        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-
-        # Build label text
-        track_id = det.get('track_id', '?')
-        class_name = "Person" if class_id == 0 else str(class_id)
-        label_text = str(class_name) + " #" + str(track_id) + \
-            " | " + str(int(score)) + "% " + label
-
-        # Draw label background
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.5
-        thickness = 1
-        (text_w, text_h), baseline = cv2.getTextSize(
-            label_text, font, font_scale, thickness)
-
-        cv2.rectangle(annotated, (x1, y1 - text_h - 10),
-                      (x1 + text_w + 6, y1), color, -1)
-        cv2.putText(annotated, label_text, (x1 + 3, y1 - 5),
-                    font, font_scale, (255, 255, 255), thickness)
-
-        # Draw head orientation indicator if available
-        head_orientation = behavior.get('head_orientation', {})
-        if head_orientation:
-            yaw = head_orientation.get('yaw', 0)
-            pitch = head_orientation.get('pitch', 0)
-
-            # Draw yaw/pitch info
-            orient_text = "Yaw:" + str(int(yaw)) + " Pitch:" + str(int(pitch))
-            cv2.putText(annotated, orient_text,
-                        (x1, y2 + 15), font, 0.4, color, 1)
-
-    return annotated
-
 
 # ============================================
 # ALERT GENERATION
 # ============================================
 
-def generate_alert_from_detection(detection, frame):
+def get_alert_metadata(detection):
     """
-    Check if detection warrants an alert and generate alert data.
-    Returns alert dict if suspicion >= threshold, else None.
+    Check if detection warrants an alert and determine metadata (reasons, type).
+    Returns (reasons, type) if suspicion >= threshold, else (None, None).
     """
     if detection.get('class_id') != 0:
-        return None
+        return None, None
 
     behavior = detection.get('behavior', {})
     suspicion = behavior.get('suspicion', {})
     suspicion_score = suspicion.get('smoothed', 0) * 100
 
-    track_id = detection.get('track_id', '?')
-
     threshold = runtime_suspicion_threshold
 
     if suspicion_score < threshold:
-        return None
+        return None, None
 
     reasons = []
     components = suspicion.get('components', {})
@@ -636,6 +582,25 @@ def generate_alert_from_detection(detection, frame):
     if not reasons:
         reasons = ["Suspicious behavior detected"]
 
+    alert_type = reasons[0].split()[0].lower() if reasons else "unknown"
+    return reasons, alert_type
+
+
+def generate_alert_from_detection(detection, frame, reasons=None, alert_type=None):
+    """
+    Generate full alert data with images.
+    If reasons/type are not provided, they will be calculated.
+    """
+    if reasons is None or alert_type is None:
+        reasons, alert_type = get_alert_metadata(detection)
+
+    if not reasons:
+        return None
+
+    behavior = detection.get('behavior', {})
+    suspicion = behavior.get('suspicion', {})
+    suspicion_score = suspicion.get('smoothed', 0) * 100
+
     # Get detection crop
     bbox = detection.get('bbox', [0, 0, 0, 0])
     x1, y1, x2, y2 = [int(v) for v in bbox]
@@ -663,10 +628,14 @@ def generate_alert_from_detection(detection, frame):
     alert = {
         "alert_id": alert_id,
         "track_id": detection.get('track_id'),
+        "id_type": detection.get('id_type', 'TRACK'),
+        "primary_id": detection.get('primary_id', detection.get('track_id', '?')),
+        "student_id": detection.get('student_id', ''),
+        "student_name": detection.get('student_name', ''),
         "timestamp": datetime.now().isoformat(),
         "suspicion_score": int(suspicion_score),
         "reasons": reasons,
-        "type": reasons[0].split()[0].lower() if reasons else "unknown",
+        "type": alert_type,
         "frame_base64": frame_b64,
         "crop_base64": crop_b64,
         "bbox": bbox
@@ -752,76 +721,79 @@ def handle_video_frame(data):
         new_alerts = []
 
         for det in detections:
+            # Prepare sanitized data for frontend
             sanitized = {
-                'class_id': int(det.get('class_id', 0)),
-                'confidence': float(det.get('confidence', 0)),
-                'bbox': [float(x) for x in det.get('bbox', [0, 0, 0, 0])]
+                'class_id': det['class_id'],
+                'confidence': det['confidence'],
+                'bbox': det['bbox'],
+                'track_id': det.get('track_id'),
+                'id_type': det.get('id_type'),
+                'primary_id': det.get('primary_id'),
+                'student_id': det.get('student_id'),
+                'student_name': det.get('student_name'),
+                'behavior': {}
             }
-
-            if 'track_id' in det:
-                sanitized['track_id'] = int(det['track_id'])
 
             if 'behavior' in det:
                 behavior = det['behavior']
-                sanitized['behavior'] = {}
-
-                # Include pose landmarks for skeleton drawing (from behavior dict)
-                if 'pose_landmarks' in behavior:
+                if detector.show_pose and 'pose_landmarks' in behavior:
                     sanitized['pose_landmarks'] = behavior['pose_landmarks']
-
                 if 'head_orientation' in behavior:
                     sanitized['behavior']['head_orientation'] = behavior['head_orientation']
-
                 if 'hands' in behavior:
                     sanitized['behavior']['hands'] = behavior['hands']
-
                 if 'suspicion' in behavior:
                     sanitized['behavior']['suspicion'] = behavior['suspicion']
 
-                suspicion_result = detector.suspicion_scorer.score_detection(
-                    det)
-                sanitized['unified_score'] = round(
-                    suspicion_result['smoothed'] * 100)
+                # Use existing suspicion result from detection
+                suspicion_result = behavior.get('suspicion', {})
+                unified_score = round(
+                    suspicion_result.get('smoothed', 0) * 100)
+                sanitized['unified_score'] = unified_score
 
-                if active_session and active_session['status'] == 'active':
-                    alert = generate_alert_from_detection(det, frame)
-                    if alert:
-                        track_id = det.get('track_id')
+                # Logic for generating alerts
+                if active_session and active_session['status'] == 'active' and unified_score >= runtime_suspicion_threshold:
+                    # 1. Get lightweight metadata first for dedup check
+                    reasons, event_type = get_alert_metadata(det)
+
+                    if reasons:
+                        dedup_id = det.get('student_id') or det.get(
+                            'primary_id') or det.get('track_id')
+
+                        # 2. Precise dedup check: only skip if THIS person already has THIS type of alert
                         should_alert = True
-
-                        for existing_alert in pending_alerts.values():
-                            if existing_alert.get('track_id') == track_id:
+                        for existing in pending_alerts.values():
+                            existing_dedup_id = existing.get('student_id') or existing.get(
+                                'primary_id', existing.get('track_id'))
+                            if existing_dedup_id == dedup_id and existing.get('type') == event_type:
                                 should_alert = False
                                 break
 
                         if should_alert:
-                            pending_alerts[alert['alert_id']] = alert
-                            new_alerts.append(alert)
+                            # 3. Only now do the heavy encoding/image processing
+                            alert = generate_alert_from_detection(
+                                det, frame, reasons, event_type)
+                            if alert:
+                                pending_alerts[alert['alert_id']] = alert
+                                new_alerts.append(alert)
 
             processed_detections.append(sanitized)
-
-        # Draw detection boxes on frame if show_bbox is enabled
-        if hasattr(detector, 'show_bbox') and detector.show_bbox:
-            output_frame = draw_detection_boxes(frame, detections)
-        else:
-            output_frame = frame
-
-        _, buffer = cv2.imencode('.jpg', output_frame, [
-                                 cv2.IMWRITE_JPEG_QUALITY, 85])
-        frame_b64 = base64.b64encode(buffer).decode('utf-8')
 
         perf_stats = detector.get_performance_stats()
 
         emit('processed_frame', {
-            'annotated_frame': frame_b64,
             'detections': processed_detections,
             'performance_stats': perf_stats
-        })
+        }, broadcast=False)
 
         for alert in new_alerts:
             alert_notification = {
                 'alert_id': alert['alert_id'],
                 'track_id': alert['track_id'],
+                'id_type': alert.get('id_type', 'TRACK'),
+                'primary_id': alert.get('primary_id', alert['track_id']),
+                'student_id': alert.get('student_id', ''),
+                'student_name': alert.get('student_name', ''),
                 'timestamp': alert['timestamp'],
                 'suspicion_score': alert['suspicion_score'],
                 'reasons': alert['reasons'],
@@ -1413,6 +1385,52 @@ def update_user():
         json.dump(users, f, indent=2)
 
     return jsonify({'success': True, 'message': 'Profile updated successfully'})
+
+
+# --- STUDENT REGISTRATION API ---
+
+@app.route('/api/students/list', methods=['GET'])
+def get_students():
+    """Get list of all registered students with face data."""
+    students = detector.face_recognizer.get_all_students()
+    return jsonify({'success': True, 'students': students})
+
+
+@app.route('/api/students/register', methods=['POST'])
+def register_student():
+    """Register a new student with face photo."""
+    data = request.get_json()
+    student_id = data.get('student_id')
+    student_name = data.get('student_name')
+    image_data = data.get('image')  # base64 string
+
+    if not all([student_id, student_name, image_data]):
+        return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+
+    success = detector.face_recognizer.register_student(
+        student_id, student_name, image_data
+    )
+
+    if success:
+        return jsonify({'success': True, 'message': f'Student {student_name} registered successfully'})
+    else:
+        return jsonify({'success': False, 'error': 'Face registration failed. Ensure face is clearly visible.'}), 500
+
+
+@app.route('/api/students/delete', methods=['POST'])
+def delete_student():
+    """Delete a student from the face database."""
+    data = request.get_json()
+    student_id = data.get('student_id')
+
+    if not student_id:
+        return jsonify({'success': False, 'error': 'Student ID required'}), 400
+
+    success = detector.face_recognizer.delete_student(student_id)
+    if success:
+        return jsonify({'success': True, 'message': 'Student record deleted'})
+    else:
+        return jsonify({'success': False, 'error': 'Failed to delete student record'}), 404
 
 
 @app.route('/api/user/delete', methods=['POST'])
