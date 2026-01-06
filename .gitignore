@@ -50,6 +50,24 @@ assets/
 output/
 # Logs
 *.log
+logs/
+
+# Security - NEVER COMMIT THESE!
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+secrets/
+
+# User data
+data/users.json
+data/users.json.backup
+data/config.json
+
+# Session data
+data/student_faces/*.pkl
 
 .amazonq/
 amazonq/
