@@ -75,19 +75,13 @@ python -m venv venv
 venv\Scripts\Activate.ps1
 
 # 3. Install Dependencies
-pip install -r requirements.txt
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements_stable.txt
 ```
 
-###  Running the System
-
-**1. Smoke Test (Verify Detection)**
-```powershell
-python src/detection/yolo_smoke_test.py
+**4. Launch Dashboard**
 ```
-
-**2. Launch Dashboard**
-```powershell
-streamlit run dashboard.py
+python .\start_app.py
 ```
 
 ---
