@@ -2,7 +2,7 @@
   {
     "id": "1",
     "username": "admin",
-    "password": "admin123",
+    "password": "$2b$12$p2rn0obSpayzbhMFYK29ouliZhsWlFFL0V9p34S7EEsr0Z5cbDBJq",
     "email": "admin@proctor.com",
     "role": "administrator"
   },
@@ -10,14 +10,14 @@
     "id": "2",
     "username": "proctor",
     "email": "proctor@gmail.com",
-    "password": "proctor",
+    "password": "$2b$12$VpABrt63.qUNP0YgDkeyTuiJFUC5fIwJvJwscXeiR8UGplakEXnFa",
     "role": "proctor"
   },
   {
     "id": "3",
     "username": "a",
     "email": "a",
-    "password": "a",
+    "password": "$2b$12$nFDgeM8Y9OyEJSUxEydayOZC6IZ93q3q2RHAx.ne1ku6zfDSr1hiK",
     "role": "proctor"
   }
 ]
