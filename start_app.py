@@ -35,7 +35,7 @@ def main():
             print(f"✅ Directory found: {dir_path}")
 
     # Check if YOLO model exists
-    model_files = ['yolo11m.pt', 'yolo11n.pt', 'yolo11s.pt']
+    model_files = ['yolo11l.pt', 'yolo11m.pt', 'yolo11n.pt', 'yolo11s.pt']
     model_found = False
     for model_file in model_files:
         if os.path.exists(os.path.join(current_dir, model_file)):

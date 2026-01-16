@@ -262,7 +262,17 @@
               <!-- Session Controls -->
               <div class="session-controls">
                 <div class="session-info">
-                  <input type="text" id="exam-name-input" class="exam-name-input" placeholder="Enter Exam Name..." />
+                  <div class="custom-dropdown-container">
+                    <select id="department-select" class="premium-dropdown" style="min-width: 200px;">
+                      <option value="" disabled selected>Select Department</option>
+                    </select>
+                  </div>
+                  <div class="custom-dropdown-container">
+                    <select id="subject-select" class="premium-dropdown" style="min-width: 200px;" disabled>
+                      <option value="" disabled selected>Select Subject</option>
+                    </select>
+                  </div>
+                  <input type="hidden" id="exam-name-input" value="">
                   <span class="session-status" id="session-status">No Active Session</span>
                 </div>
                 <div class="session-buttons">
@@ -1628,6 +1638,10 @@
                 id="modal-total-events">0</span></div>
             <div class="summary-item"><span class="summary-label">Highest Severity</span><span class="summary-value"
                 id="modal-highest-severity">-</span></div>
+            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"
+                id="modal-department">-</span></div>
+            <div class="summary-item"><span class="summary-label">Exam Name</span><span class="summary-value"
+                id="modal-exam-full-name">-</span></div>
             <div class="summary-item"><span class="summary-label">Last Event</span><span class="summary-value"
                 id="modal-last-event">-</span></div>
             <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"

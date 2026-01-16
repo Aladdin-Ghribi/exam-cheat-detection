@@ -32,15 +32,16 @@ class PoseDetector:
 
         self.pose = self.mp_pose.Pose(
             static_image_mode=static_image_mode,
-            model_complexity=model_complexity,  # Reduced complexity for speed
-            enable_segmentation=enable_segmentation,
+            # 0=Lite (Fastest for real-time), 1=Full, 2=Heavy
+            model_complexity=0,
+            enable_segmentation=False,
             min_detection_confidence=min_detection_confidence,
             min_tracking_confidence=min_tracking_confidence
         )
 
-        # Enhanced smoothing for stability
-        self.smoothing_factor = max(0.1, min(0.6, smoothing_factor))
-        self.history_length = max(5, history_length)
+        # High-speed smoothing
+        self.smoothing_factor = smoothing_factor
+        self.history_length = 5
         self.landmark_history = {}
         self.orientation_history = {}
 

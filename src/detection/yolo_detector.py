@@ -12,6 +12,8 @@ import sys
 import math
 import time
 import torch
+import numpy as np
+import gc  # For explicit garbage collection
 sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 
@@ -33,8 +35,17 @@ CHEATING_OBJECT_MIN_CONFIDENCE = 0.5
 
 class YOLODetector:
     def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=True, enable_pose=True, room_config=None, model_size="medium"):
+        # 🔧 Configure PyTorch BEFORE loading model
+        if torch.cuda.is_available():
+            # Use correct environment variable name
+            os.environ['PYTORCH_ALLOC_CONF'] = 'max_split_size_mb:512,expandable_segments:True'
+            torch.cuda.empty_cache()
+
         self.model = YOLO(model_path)
+        self.model.overrides['verbose'] = False  # Disable all verbose output
+
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
         self.model_size = model_size
         self.img_size = self._get_img_size()
         self.target_class_ids = [PERSON_CLASS_ID] + \
@@ -83,6 +94,52 @@ class YOLODetector:
 
         # Initialize Face Recognizer
         self.face_recognizer = FaceRecognizer()
+        self.face_id_cache = {}  # track_id -> {id_type, primary_id, confidence, ...}
+        self.face_id_last_check = {}  # track_id -> frame_count when last checked
+        # Run face recognition every 15 frames (~once per half second at 30fps)
+        self.face_check_interval = 15
+
+        # 🔥 Warm up the pipeline to avoid initial latency spikes
+        self.warmup()
+
+    def warmup(self):
+        """Pre-initialize models by running a dummy frame through the pipeline."""
+        print("\n🔥 Warming up AI Pipeline (pre-allocating GPU memory)...")
+        start = time.time()
+
+        # Create a dummy black frame (standard 1080p or consistent with config)
+        dummy_frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        try:
+            # 1. Warm up YOLO
+            _ = self.model.predict(
+                source=dummy_frame,
+                imgsz=self.img_size,
+                device=self.device,
+                verbose=False
+            )
+            print("✅ YOLO Engine Warm")
+
+            # 2. Warm up Pose Detector
+            if self.enable_pose:
+                # Use a small crop for pose warmup
+                dummy_crop = dummy_frame[0:200, 0:200]
+                _ = self.pose_detector.detect(dummy_crop)
+                print("✅ Pose Estimation Warm")
+
+            # 3. Face Recognizer is already partially warmed in its __init__,
+            # but we can trigger a represent call to be sure kernels are ready
+            # (Note: recognize_face returns quickly if no faces, but library is loaded)
+
+            # 4. Clear cache after warmup to start clean
+            if self.device == 'cuda':
+                torch.cuda.empty_cache()
+
+            duration = time.time() - start
+            print(f"✨ Pipeline Ready (Warmup took {duration:.2f}s)\n")
+
+        except Exception as e:
+            print(f"⚠️ Warmup warning: {e}")
 
     def _get_img_size(self):
         """Get appropriate image size based on model size and device."""
@@ -171,25 +228,52 @@ class YOLODetector:
 
             # 🎯 FACE RECOGNITION INTEGRATION
             # After tracking is updated, attempt to identify each person
+            # 🏁 STAGGERED RECOGNITION: Only process ONE face per frame to avoid CPU spikes
+            face_processed_this_frame = False
+
             for det in detections:
                 if det.get('class_id') == PERSON_CLASS_ID:
                     track_id = det.get('track_id')
-                    if track_id is not None:
-                        # Get identity (SID or falling back to track_id)
-                        id_type, primary_id, confidence = self.face_recognizer.get_primary_id(
-                            track_id, frame, det['bbox']
+                    if track_id is not None and self.face_recognizer is not None:
+                        last_check = self.face_id_last_check.get(track_id, 0)
+
+                        # Only run recognition if:
+                        # 1. We haven't recognized anyone yet THIS frame
+                        # 2. It's time to check THIS person OR they are new
+                        can_check = not face_processed_this_frame and (
+                            self.frame_count - last_check >= self.face_check_interval or
+                            track_id not in self.face_id_cache
                         )
 
-                        det['id_type'] = id_type          # 'SID' or 'TRACK'
-                        # e.g., 'S12345' or 'TRACK_7'
-                        det['primary_id'] = primary_id
-                        det['id_confidence'] = confidence
+                        if can_check:
+                            id_type, primary_id, confidence = self.face_recognizer.get_primary_id(
+                                track_id, frame, det['bbox']
+                            )
+                            # Update Cache
+                            self.face_id_cache[track_id] = {
+                                'id_type': id_type,
+                                'primary_id': primary_id,
+                                'id_confidence': confidence
+                            }
+                            self.face_id_last_check[track_id] = self.frame_count
+                            face_processed_this_frame = True  # Lock for this frame
 
-                        # If recognized as a student, add student info
-                        if id_type == 'SID':
-                            det['student_id'] = primary_id
-                            det['student_name'] = self.face_recognizer.student_names.get(
-                                primary_id, '')
+                        # Retrieve identity (Always from cache if available)
+                        if track_id in self.face_id_cache:
+                            cached = self.face_id_cache[track_id]
+                            det['id_type'] = cached['id_type']
+                            det['primary_id'] = cached['primary_id']
+                            det['id_confidence'] = cached['id_confidence']
+
+                            if det['id_type'] == 'SID':
+                                det['student_id'] = det['primary_id']
+                                det['student_name'] = self.face_recognizer.student_names.get(
+                                    det['student_id'], '')
+                        else:
+                            # Not identified yet - use track ID
+                            det['id_type'] = 'TRACK'
+                            det['primary_id'] = f'TRACK_{track_id}'
+                            det['id_confidence'] = 1.0
 
         seat_assignments = None
         if self.enable_seat_mapping:
@@ -216,6 +300,10 @@ class YOLODetector:
         if self.enable_frame_skipping and process_time > self.frame_skip_threshold:
             self.skip_frames = min(self.max_frame_skip, int(
                 process_time / self.frame_skip_threshold))
+
+        # Remove aggressive cleanup that causes the "stutter" every 30 frames
+        # Only clear cache if we see an actual memory warning in app.py
+        pass
 
         return result
 
