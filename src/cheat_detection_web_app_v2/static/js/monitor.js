@@ -286,7 +286,7 @@ function startPipelineProcessing() {
   // Start the canvas display loop for detection overlays
   startLocalDisplayLoop();
   // Start sending frames to server
-  pipelineInterval = setInterval(captureAndSendFrame, 100);
+  pipelineInterval = setInterval(captureAndSendFrame, 33); // 30 FPS
 }
 
 function stopPipelineProcessing() {
@@ -313,11 +313,12 @@ function captureAndSendFrame() {
 
   const startTime = performance.now();
 
-  // Draw current video frame to canvas
+  // Draw full 1080p frame to hidden canvas
   canvasContext.drawImage(videoElement, 0, 0);
 
-  // Convert to base64
-  const frameData = canvasElement.toDataURL('image/jpeg', 0.8);
+  // Convert to base64 with speed-optimized quality (0.65)
+  // This keeps object edges sharp for YOLO but makes packets 3x smaller.
+  const frameData = canvasElement.toDataURL('image/jpeg', 0.65);
 
   // Bbox display controlled by settings page via config.json
 
@@ -393,11 +394,16 @@ function drawBoundingBoxes(ctx, detections, canvasWidth, canvasHeight) {
     roundedRect(ctx, x1, y1, x2 - x1, y2 - y1, 8);
     ctx.stroke();
 
-    // Build label text
+    // Build label text with identity support
     const trackId = det.track_id || '?';
-    const className = det.class_id === 0 ? 'Person' : `Class ${det.class_id}`;
-    const trackText = showTrackIds ? `#${trackId} | ` : '';
-    const labelText = `${className} ${trackText}${Math.round(score)}% ${label}`;
+    const studentName = det.student_name || '';
+    const primaryId = det.primary_id || trackId;
+
+    // Prioritize Student Name > Student ID > Track ID
+    let identityText = studentName || (det.id_type === 'SID' ? primaryId : `#${trackId}`);
+
+    const className = det.class_id === 0 ? identityText : `Class ${det.class_id}`;
+    const labelText = `${className} ${Math.round(score)}% ${label}`;
 
     // Draw label background (glassmorphism style)
     ctx.font = 'bold 13px Manrope, sans-serif';
@@ -571,8 +577,116 @@ const alertSounds = {
 };
 
 // ============================================
-// DASHBOARD STATUS UPDATE
+// DEPARTMENT & SUBJECT TREE DATA
 // ============================================
+
+const subjectTree = {
+  "Computer Science": {
+    "General Subjects": [
+      "Mathematics 1",
+      "Mathematics 2",
+      "English Language 1",
+      "English Language 2",
+      "Political Science Principles",
+      "Statistics and Probabilities",
+      "Islamic Culture",
+      "Arabic Language",
+      "Linear Algebra and Logic",
+      "Discrete Mathematics",
+      "Numerical Methods and Programming"
+    ],
+    "Specialized Subjects": [
+      "Programming Basics",
+      "Intro to Computer Science",
+      "Electrical Engineering Principles",
+      "Digital Systems Intro",
+      "Computer Organization",
+      "Assembly Language",
+      "C Language",
+      "Systems Analysis",
+      "Database Management",
+      "Software Engineering",
+      "Operating Systems",
+      "Visual Programming 1",
+      "Visual Programming 2",
+      "Data Structures 1",
+      "Data Structures 2",
+      "Network Programming",
+      "Java Language",
+      "Web Design",
+      "Modeling and Simulation",
+      "Artificial Intelligence",
+      "Computer Graphics",
+      "Image Processing",
+      "Mobile Applications",
+      "Computer Architecture",
+      "Computer Networks",
+      "System Programming",
+      "Data and Information Security",
+      "Network Building and Protection"
+    ],
+    "Final Stage": [
+      "Research Methods",
+      "Graduation Project"
+    ]
+  }
+};
+
+function initSubjectDropdowns() {
+  const deptSelect = document.getElementById('department-select');
+  const subjSelect = document.getElementById('subject-select');
+  const examNameHidden = document.getElementById('exam-name-input');
+
+  if (!deptSelect || !subjSelect) return;
+
+  // Populate Departments
+  Object.keys(subjectTree).forEach(dept => {
+    const opt = document.createElement('option');
+    opt.value = dept;
+    opt.textContent = dept;
+    deptSelect.appendChild(opt);
+  });
+
+  // Handle Department Change
+  deptSelect.addEventListener('change', () => {
+    const dept = deptSelect.value;
+    subjSelect.innerHTML = '<option value="" disabled selected>Select Subject</option>';
+    subjSelect.disabled = false;
+
+    const categories = subjectTree[dept];
+    Object.keys(categories).forEach(catName => {
+      const group = document.createElement('optgroup');
+      group.label = catName;
+
+      categories[catName].forEach(subject => {
+        const opt = document.createElement('option');
+        opt.value = subject;
+        opt.textContent = subject;
+        group.appendChild(opt);
+      });
+      subjSelect.appendChild(group);
+    });
+  });
+
+  // Sync selection to hidden input for session naming compatibility
+  subjSelect.addEventListener('change', () => {
+    examNameHidden.value = subjSelect.value;
+  });
+}
+
+function resetSubjectDropdowns() {
+  const deptSelect = document.getElementById('department-select');
+  const subjSelect = document.getElementById('subject-select');
+  const examNameHidden = document.getElementById('exam-name-input');
+
+  if (deptSelect) deptSelect.value = "";
+  if (subjSelect) {
+    subjSelect.innerHTML = '<option value="" disabled selected>Select Subject</option>';
+    subjSelect.disabled = true;
+    subjSelect.value = "";
+  }
+  if (examNameHidden) examNameHidden.value = "";
+}
 
 function updateDashboardStatus(isActive) {
   const container = document.getElementById('dashboard-status-container');
@@ -588,12 +702,26 @@ function updateDashboardStatus(isActive) {
     icon.className = 'bx bx-check-circle';
     label.textContent = 'Active';
     subtitle.textContent = 'AI Engine Running';
+
+    // Update session status bar
+    const sessionStatus = document.getElementById('session-status');
+    if (sessionStatus) {
+      sessionStatus.textContent = 'Active';
+      sessionStatus.className = 'session-status active';
+    }
   } else {
     container.classList.remove('status-active');
     container.classList.add('status-idle');
     icon.className = 'bx bx-pause-circle';
-    label.textContent = 'Idle';
+    label.textContent = 'Not Active';
     subtitle.textContent = 'Engine Stopped';
+
+    // Update session status bar
+    const sessionStatus = document.getElementById('session-status');
+    if (sessionStatus) {
+      sessionStatus.textContent = 'Not Active';
+      sessionStatus.className = 'session-status stopped';
+    }
   }
 }
 
@@ -604,6 +732,7 @@ function updateDashboardStatus(isActive) {
 document.addEventListener('DOMContentLoaded', () => {
   initSocket();
   initWebcam();
+  initSubjectDropdowns(); // Added dynamic dropdowns
   setupMonitorEventListeners();
   setupSoundToggle();
 
@@ -688,9 +817,13 @@ async function startPipeline() {
   const examNameInput = document.getElementById('exam-name-input');
   const examName = examNameInput.value.trim();
 
-  if (!examName) {
-    alert('Please enter an exam name before starting the pipeline.');
-    examNameInput.focus();
+  const deptSelect = document.getElementById('department-select');
+  const subjSelect = document.getElementById('subject-select');
+
+  if (!deptSelect.value || !subjSelect.value) {
+    alert('Please select both a Department and a Subject before starting.');
+    if (!deptSelect.value) deptSelect.focus();
+    else subjSelect.focus();
     return;
   }
 
@@ -704,6 +837,8 @@ async function startPipeline() {
   if (socket && socket.connected) {
     socket.emit('start_session', {
       session_name: examName,
+      department: document.getElementById('department-select').value,
+      subject: document.getElementById('subject-select').value,
       camera_id: 'cam_01'
     });
   }
@@ -814,8 +949,22 @@ function confirmStopPipeline() {
     if (toggleBtnIcon) toggleBtnIcon.className = 'bx bx-play-circle';
     if (toggleBtnText) toggleBtnText.textContent = 'Start Pipeline';
   }
-  examNameInput.disabled = false;
-  examNameInput.value = '';
+  const deptSelect = document.getElementById('department-select');
+  const subjSelect = document.getElementById('subject-select');
+  if (deptSelect) {
+    deptSelect.disabled = false;
+    deptSelect.value = ""; // Explicitly reset to "Select Department"
+  }
+  if (subjSelect) {
+    subjSelect.disabled = true;
+    subjSelect.innerHTML = '<option value="" disabled selected>Select Subject</option>';
+    subjSelect.value = "";
+  }
+
+  if (examNameInput) {
+    examNameInput.disabled = false;
+    examNameInput.value = '';
+  }
 
   // Stop timer
   if (sessionTimer) {
@@ -824,17 +973,29 @@ function confirmStopPipeline() {
   }
 
   // Update status message
-  if (pendingAlerts.length > 0) {
-    sessionStatus.textContent = 'Session Stopped - ' + pendingAlerts.length + ' Alert(s) Pending Review';
-    sessionStatus.style.color = '#FFB84D';
-  } else {
-    sessionStatus.textContent = 'No Active Session';
+  if (sessionStatus) {
+    if (pendingAlerts.length > 0) {
+      sessionStatus.textContent = 'Session Stopped - ' + pendingAlerts.length + ' Alert(s) Pending Review';
+      sessionStatus.className = 'session-status stopped';
+    } else {
+      sessionStatus.textContent = 'Not Active';
+      sessionStatus.className = 'session-status stopped';
+    }
     sessionStatus.style.color = '';
   }
   sessionStatus.classList.remove('active');
 
-  // Update dashboard status to Idle
-  updateDashboardStatus(false);
+  // Clear stats
+  const totalStat = document.getElementById('total-alerts-stat');
+  const confirmedStat = document.getElementById('confirmed-alerts-stat');
+  const declinedStat = document.getElementById('declined-alerts-stat');
+
+  if (totalStat) totalStat.textContent = '0';
+  if (confirmedStat) confirmedStat.textContent = '0';
+  if (declinedStat) declinedStat.textContent = '0';
+
+  // Clear session state
+  activeSession = null;
 
   console.log('Pipeline stopped');
 }

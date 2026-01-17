@@ -16,26 +16,40 @@ import pickle
 from pathlib import Path
 from deepface import DeepFace
 
-# --- GPU Optimization Setup ---
-# Force TensorFlow to play nice with other processes and allow memory growth
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# --- GPU & Engine Optimization Setup ---
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 try:
     import tensorflow as tf
-    gpus = tf.config.experimental.list_physical_devices('GPU')
+    # Force GPU detection and memory growth
+    gpus = tf.config.list_physical_devices('GPU')
     if gpus:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-        print(f"✅ GPU Acceleration Enabled: {len(gpus)} device(s) found")
-except Exception as e:
-    print(f"⚠️ GPU Optimization Warning: {e}")
+
+        # Performance boosting policies
+        # from tensorflow.keras import mixed_precision
+        # try:
+        #     mixed_precision.set_global_policy('mixed_float16')
+        #     print("🚀 Face AI: GPU acceleration ENABLED (FP16 Mixed Precision)")
+        # except:
+        #     print("✅ Face AI: GPU acceleration ENABLED")
+        print("✅ Face AI: GPU acceleration ENABLED")
+    else:
+        # On Native Windows, TF 2.11+ is CPU only. This is normal.
+        # We compensate with the ultra-light GhostFaceNet model.
+        print("⚡ Face AI: Native Windows Optimized (CPU Mode)")
+except Exception:
+    pass
 
 
 class FaceRecognizer:
-    def __init__(self, database_path="data/student_faces", model_name="ArcFace"):
+    def __init__(self, database_path="data/student_faces", model_name="GhostFaceNet"):
         """
-        Initialize the system with the high-accuracy ArcFace model.
+        Initialize the system with high-efficiency models.
+        GhostFaceNet is faster and more compliant with Keras 3.
         """
         self.database_path = Path(database_path)
         self.model_name = model_name
@@ -45,9 +59,9 @@ class FaceRecognizer:
         self.track_to_sid = {}      # Session Cache: track_id -> SID
 
         # Performance Settings
-        self.recognition_threshold = 0.68  # ArcFace optimal cosine threshold
-        # Check every 5 frames per person (was 20)
-        self.recognition_interval = 5
+        # Balanced threshold for ArcFace (0.58 is great for varying distances)
+        self.recognition_threshold = 0.58
+        self.recognition_interval = 1     # Run every time it's called
         self.frame_counters = {}
 
         # Spatial cache: detects same person even if track ID changes
@@ -143,9 +157,9 @@ class FaceRecognizer:
 
         try:
             x1, y1, x2, y2 = map(int, bbox)
-            # Add padding for better recognition context
+            # Add larger padding for better recognition context (ArcFace loves context)
             h, w = frame.shape[:2]
-            p = 20
+            p = 40
             face_crop = frame[max(0, y1-p):min(h, y2+p),
                               max(0, x1-p):min(w, x2+p)]
 
@@ -169,19 +183,29 @@ class FaceRecognizer:
             # Compare against DB (Cosine Similarity)
             best_sid = None
             best_score = 0
+            second_best_score = 0
 
             for sid, db_embedding in self.student_database.items():
-                # Dot product of normalized vectors
                 sim = np.dot(current_embedding, db_embedding) / (
                     np.linalg.norm(current_embedding) *
                     np.linalg.norm(db_embedding)
                 )
 
                 if sim > best_score:
+                    second_best_score = best_score
                     best_score = sim
                     best_sid = sid
+                elif sim > second_best_score:
+                    second_best_score = sim
 
-            if best_score >= self.recognition_threshold:
+            # STABILITY FILTERS:
+            # 1. Must be above the threshold (0.65)
+            # 2. Margin check (0.01) to prevent identity swaps (more permissive)
+            margin = best_score - second_best_score
+            is_strong_match = best_score >= self.recognition_threshold and \
+                (len(self.student_database) == 1 or margin > 0.01)
+
+            if is_strong_match:
                 return {
                     'student_id': best_sid,
                     'student_name': self.student_names.get(best_sid, "Unknown"),

@@ -5,7 +5,7 @@
 ![YOLO](https://img.shields.io/badge/YOLO-Ultralytics-orange?style=for-the-badge)
 ![MediaPipe](https://img.shields.io/badge/MediaPipe-Google-green?style=for-the-badge)
 
-> **A privacy-first, real-time computer vision system tailored for remote exam proctoring.**
+> **A privacy-first, real-time computer vision system tailored for in-hall exam monitoring.**
 
 This project uses **YOLOv11** and **MediaPipe** to detect suspicious behaviors (phones, multiple people, looking away) without recording audio or processing biometric templates.
 
