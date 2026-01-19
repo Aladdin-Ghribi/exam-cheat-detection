@@ -2,22 +2,15 @@
   {
     "id": "1",
     "username": "admin",
-    "password": "$2b$12$p2rn0obSpayzbhMFYK29ouliZhsWlFFL0V9p34S7EEsr0Z5cbDBJq",
+    "password": "$2b$12$ftcG59nNz3IVv7ecp78zMO4qsYYXrsUCosgaACJMannG9WeIgt8MG",
     "email": "admin@proctor.com",
     "role": "administrator"
   },
   {
     "id": "2",
-    "username": "proctor",
-    "email": "proctor@gmail.com",
-    "password": "$2b$12$VpABrt63.qUNP0YgDkeyTuiJFUC5fIwJvJwscXeiR8UGplakEXnFa",
-    "role": "proctor"
-  },
-  {
-    "id": "3",
-    "username": "a",
-    "email": "a",
-    "password": "$2b$12$nFDgeM8Y9OyEJSUxEydayOZC6IZ93q3q2RHAx.ne1ku6zfDSr1hiK",
+    "username": "aladdin",
+    "email": "test@gmail.com",
+    "password": "$2b$12$Bm81v8RmCmTaxmLAe9rQ5eig5ymbf70eh2rn7e.Q/al/vk10Ldl52",
     "role": "proctor"
   }
 ]

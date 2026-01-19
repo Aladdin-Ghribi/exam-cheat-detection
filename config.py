@@ -8,18 +8,19 @@ SAMPLES_DIR = os.path.join(DATA_DIR, "samples")
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output")
 
 # Model Selection
-YOLO_MODEL = "yolo11m.pt"
+YOLO_MODEL = "yolo11l.pt"  # Upgrade to Large for distance
 YOLO_MODEL_OPTIONS = {
     "nano": "yolo11n.pt",
     "small": "yolo11s.pt",
-    "medium": "yolo11m.pt"
+    "medium": "yolo11m.pt",
+    "large": "yolo11l.pt"
 }
 
 # Inference
 CONFIDENCE_THRESHOLD = 0.5
-IMG_SIZE_GPU = 1024
-IMG_SIZE_CPU = 1024
-IMG_SIZE_NANO = 640
+IMG_SIZE_GPU = 1024    # Optimal for RTX 3070 stability at 1080p
+IMG_SIZE_CPU = 640
+IMG_SIZE_NANO = 320
 USE_HALF_PRECISION = False
 
 # Performance Optimization

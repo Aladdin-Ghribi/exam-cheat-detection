@@ -25,6 +25,9 @@
 
   <!-- jsPDF for PDF export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -201,22 +204,43 @@
               </div>
             </div>
             <div class="stat-card">
-              <div class="stat-icon success">
-                <i class='bx bxs-user-check'></i>
+              <div class="stat-icon danger">
+                <i class='bx bxs-mobile'></i>
               </div>
               <div class="stat-info">
-                <h3>Active Cameras</h3>
-                <p class="stat-value">3</p>
+                <h3>Phone Detected</h3>
+                <p class="stat-value" id="phone-detected-count">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon warning">
+                <i class='bx bxs-low-vision'></i>
+              </div>
+              <div class="stat-info">
+                <h3>Looking Away</h3>
+                <p class="stat-value" id="looking-away-count">0</p>
               </div>
             </div>
             <div class="stat-card">
               <div class="stat-icon info">
-                <i class='bx bxs-camera'></i>
+                <i class='bx bxs-book-bookmark'></i>
               </div>
               <div class="stat-info">
-                <h3>Cameras Connected</h3>
-                <p class="stat-value">5</p>
+                <h3>Suspicious Objects</h3>
+                <p class="stat-value" id="suspicious-objects-count">0</p>
               </div>
+            </div>
+
+          </div>
+
+          <!-- Weekly Trends Chart -->
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Weekly Detection Trends</h3>
+              <span class="chart-subtitle">Last 7 days</span>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="weekly-trends-chart"></canvas>
             </div>
           </div>
 
@@ -244,11 +268,7 @@
                 </div>
               </div>
 
-              <!-- Add Camera Placeholder -->
-              <div class="camera-card-placeholder">
-                <i class='bx bxs-camera-plus'></i>
-                <p>Add Camera</p>
-              </div>
+
             </div>
           </div>
         </div>
@@ -262,7 +282,17 @@
               <!-- Session Controls -->
               <div class="session-controls">
                 <div class="session-info">
-                  <input type="text" id="exam-name-input" class="exam-name-input" placeholder="Enter Exam Name..." />
+                  <div class="custom-dropdown-container">
+                    <select id="department-select" class="premium-dropdown" style="min-width: 200px;">
+                      <option value="" disabled selected>Select Department</option>
+                    </select>
+                  </div>
+                  <div class="custom-dropdown-container">
+                    <select id="subject-select" class="premium-dropdown" style="min-width: 200px;" disabled>
+                      <option value="" disabled selected>Select Subject</option>
+                    </select>
+                  </div>
+                  <input type="hidden" id="exam-name-input" value="">
                   <span class="session-status" id="session-status">No Active Session</span>
                 </div>
                 <div class="session-buttons">
@@ -1628,6 +1658,10 @@
                 id="modal-total-events">0</span></div>
             <div class="summary-item"><span class="summary-label">Highest Severity</span><span class="summary-value"
                 id="modal-highest-severity">-</span></div>
+            <div class="summary-item"><span class="summary-label">Department</span><span class="summary-value"
+                id="modal-department">-</span></div>
+            <div class="summary-item"><span class="summary-label">Exam Name</span><span class="summary-value"
+                id="modal-exam-full-name">-</span></div>
             <div class="summary-item"><span class="summary-label">Last Event</span><span class="summary-value"
                 id="modal-last-event">-</span></div>
             <div class="summary-item"><span class="summary-label">Status</span><span class="summary-value"
@@ -1813,7 +1847,10 @@
 
   <script src="static/js/help.js"></script>
   <script src="static/js/students.js"></script>
+  <script src="static/js/dashboard-stats.js"></script>
+  <script src="static/js/weekly-chart.js"></script>
 </body>
+
 
 </html>
 ```

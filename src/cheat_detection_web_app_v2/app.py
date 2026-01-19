@@ -39,7 +39,16 @@ app = Flask(__name__,
             static_folder=str(Path(__file__).parent / 'static'))
 app.config['SECRET_KEY'] = 'exam-cheat-detection-v2-secret-key'
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode='threading',
+    ping_timeout=60,
+    ping_interval=25,
+    max_http_buffer_size=10000000,  # 10MB
+    engineio_logger=False,
+    logger=False
+)
 
 # Add cache-control headers to prevent back button access
 
@@ -261,15 +270,14 @@ print("=" * 50)
 
 def run_retention_cleanup():
     """Context-aware background task to clean up expired evidence"""
-    print("🧹 Starting retention cleanup scheduler...")
-    print("🧹 Starting retention cleanup scheduler...")
-    # Initial small delay to let app startup finish
-    time.sleep(10)
+    # Delay to let app startup finish
+    time.sleep(8)
+    print("\n" + "=" * 40)
+    print("SECURITY GUARD: ACTIVE & MONITORING DATA")
+    print("=" * 40)
 
     while True:
         try:
-            print("Running scheduled secure cleanup...")
-
             # Get retention period from config
             retention_period = 7
             if CONFIG_FILE.exists():
@@ -280,7 +288,11 @@ def run_retention_cleanup():
                 except:
                     pass
 
-            print(f"DEBUG: Checking {HISTORY_DIR} for expired cards...")
+            print(
+                f"🔍 Security Check: Scanning history (Retention: {retention_period} days)...")
+
+            # check HISTORY_DIR (cards)
+            print(f"  └─ Target: {HISTORY_DIR}")
 
             # check HISTORY_DIR (cards)
             if HISTORY_DIR.exists():
@@ -314,9 +326,16 @@ def run_retention_cleanup():
         time.sleep(3600)
 
 
-# Start background thread
-cleanup_thread = threading.Thread(target=run_retention_cleanup, daemon=True)
-cleanup_thread.start()
+# Start background thread (Only if not in reloader process)
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    cleanup_thread = threading.Thread(
+        target=run_retention_cleanup, daemon=True)
+    cleanup_thread.start()
+elif not app.debug:
+    # If debug is off, start normally
+    cleanup_thread = threading.Thread(
+        target=run_retention_cleanup, daemon=True)
+    cleanup_thread.start()
 
 # ============================================
 # SESSION MANAGEMENT
@@ -324,17 +343,18 @@ cleanup_thread.start()
 
 # Active session state (in-memory, one session at a time)
 active_session = None
+pending_alerts = {}
+is_processing_frame = False  # The "Drop-if-Busy" Lock
 
-# Pending alerts awaiting proctor review (in-memory)
-pending_alerts = {}  # alert_id -> alert_data
 
-
-def create_session(session_name, camera_id="cam_01"):
+def create_session(session_name, camera_id="cam_01", department=None, subject=None):
     """Create a new monitoring session"""
     session_id = "sess_" + datetime.now().strftime('%Y%m%d_%H%M%S')
     session = {
         "session_id": session_id,
         "session_name": session_name,
+        "department": department,
+        "subject": subject,
         "camera_id": camera_id,
         "started_at": datetime.now().isoformat(),
         "ended_at": None,
@@ -374,7 +394,8 @@ def get_card(session_id, student_id):
 
 
 def create_or_update_card(session_id, session_name, student_id,
-                          student_name, event_data, status):
+                          student_name, event_data, status,
+                          department=None, subject=None):
     """
     Create a new card or add event to existing card.
 
@@ -438,6 +459,8 @@ def create_or_update_card(session_id, session_name, student_id,
             "card_id": session_id + "_" + student_id,
             "session_id": session_id,
             "session_name": session_name,
+            "department": department,
+            "exam_name": subject,
             "student_id": student_id,
             "student_name": student_name,
             "status": status,
@@ -614,12 +637,13 @@ def generate_alert_from_detection(detection, frame, reasons=None, alert_type=Non
 
     crop = frame[y1:y2, x1:x2]
 
-    # Encode images
+    # Encode images with balanced quality (Speed + Detail)
     _, frame_buffer = cv2.imencode(
-        '.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        '.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
     frame_b64 = base64.b64encode(frame_buffer).decode('utf-8')
 
-    _, crop_buffer = cv2.imencode('.jpg', crop, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    _, crop_buffer = cv2.imencode(
+        '.jpg', crop, [cv2.IMWRITE_JPEG_QUALITY, 65])
     crop_b64 = base64.b64encode(crop_buffer).decode('utf-8')
 
     # Create alert
@@ -666,15 +690,18 @@ def handle_start_session(data):
 
     session_name = data.get('session_name', 'Unnamed Exam')
     camera_id = data.get('camera_id', 'cam_01')
+    department = data.get('department')
+    subject = data.get('subject')
 
     if active_session and active_session['status'] == 'active':
         end_session()
 
     pending_alerts = {}
-    active_session = create_session(session_name, camera_id)
+    active_session = create_session(
+        session_name, camera_id, department, subject)
 
-    print("Session started: " +
-          active_session['session_id'] + " - " + session_name)
+    print(
+        f"Session started: {active_session['session_id']} - {session_name} ({department}/{subject})")
     emit('session_started', active_session)
 
 
@@ -684,8 +711,10 @@ def handle_stop_session(data=None):
     global active_session
 
     if active_session:
+        session_id = active_session.get('session_id', 'unknown')
         ended_session = end_session()
-        print("Session ended: " + ended_session['session_id'])
+        active_session = None  # CRITICAL: Clear global session state
+        print(f"Session ended: {session_id}")
         emit('session_stopped', ended_session)
     else:
         emit('session_stopped', {'error': 'No active session'})
@@ -694,9 +723,14 @@ def handle_stop_session(data=None):
 @socketio.on('video_frame')
 def handle_video_frame(data):
     """Process a video frame from the frontend"""
-    global pending_alerts
+    global pending_alerts, active_session, is_processing_frame
+
+    # 🛑 STABILITY LOCK: If server is busy, DROP the frame to keep MS low
+    if is_processing_frame:
+        return
 
     try:
+        is_processing_frame = True
         if isinstance(data, str):
             header, encoded = data.split(',', 1)
             debug_boxes = True
@@ -714,7 +748,28 @@ def handle_video_frame(data):
         if frame is None:
             return
 
+        # 🔧 Check GPU memory before processing
+        if detector.device == 'cuda':
+            try:
+                mem_allocated = torch.cuda.memory_allocated() / 1024**3  # GB
+                mem_reserved = torch.cuda.memory_reserved() / 1024**3     # GB
+
+                # If memory usage is too high, force cleanup
+                if mem_reserved > 7.0:  # More than 7GB on 8GB card
+                    print(
+                        f"⚠️ High GPU memory usage: {mem_reserved:.2f}GB - forcing cleanup")
+                    torch.cuda.empty_cache()
+                    import gc
+                    gc.collect()
+            except Exception as mem_err:
+                print(f"Memory check error: {mem_err}")
+
         detection_result = detector.detect_frame(frame)
+
+        if detection_result is None:
+            print("⚠️ Detection returned None - skipping frame")
+            return
+
         detections = detection_result.get('detections', [])
 
         processed_detections = []
@@ -806,6 +861,8 @@ def handle_video_frame(data):
         print("Error processing frame: " + str(e))
         import traceback
         traceback.print_exc()
+    finally:
+        is_processing_frame = False  # Release lock so next frame can enter
 
 
 @socketio.on('review_alert')
@@ -869,16 +926,15 @@ def handle_review_alert(data):
             session_id=session_id,
             session_name=session_name,
             student_id=student_id,
+            # Fallback if name was cleared
             student_name=student_name or ("Student " + student_id),
             event_data=event_data,
-            status=status
+            status=status,
+            department=active_session.get('department'),
+            subject=active_session.get('subject')
         )
 
         print(f"Card created/updated: {card['card_id']}")
-
-        track_id = alert.get('track_id', '?')
-        del pending_alerts[alert_id]
-        print(f"✅ Alert reviewed and removed from pending (Track #{track_id})")
 
         emit('review_result', {
             'success': True,
@@ -892,7 +948,14 @@ def handle_review_alert(data):
         import traceback
         traceback.print_exc()
         emit('review_result', {'success': False,
-             'error': f'Error saving: {str(e)}'})
+             'error': 'Error saving card: ' + str(e)})
+    finally:
+        # CRITICAL: Always remove from pending, otherwise new alerts for this person will be blocked
+        if alert_id in pending_alerts:
+            track_id = pending_alerts[alert_id].get('track_id', '?')
+            del pending_alerts[alert_id]
+            print(
+                f"✅ Alert processed and removed from pending (Track #{track_id})")
 
 
 @socketio.on('get_pending_alerts')

@@ -135,7 +135,14 @@ function transformCardToEvent(card) {
     studentId: card.student_id,
     studentName: card.student_name,
     studentPhoto: `https://ui-avatars.com/api/?name=${encodeURIComponent(card.student_name)}&background=random&size=200`,
-    examName: card.session_name || 'Unknown Session',
+    examName: (function () {
+      let name = card.exam_name || card.session_name || 'Unknown Session';
+      if (!card.exam_name && typeof name === 'string' && name.includes(' - ')) {
+        return name.split(' - ')[1];
+      }
+      return name;
+    })(),
+    department: card.department || 'N/A',
     events: events.map(e => {
       const reasons = e.reasons || [];
       const firstReason = reasons[0] || '';
@@ -176,6 +183,8 @@ function transformCardToEvent(card) {
     status: card.status || 'pending',
     notes: card.notes || '',
     sessionId: card.session_id,
+    department: card.department || 'N/A',
+    examFullName: card.exam_name || card.session_name || 'N/A',
     // GDPR retention data
     createdAt: card.created_at ? new Date(card.created_at) : new Date(),
     deletionDate: card.deletion_date ? new Date(card.deletion_date) : null,
@@ -219,8 +228,8 @@ function getUniqueEventTypeBadges(events) {
 
   // Generate badges HTML
   return Array.from(uniqueTypes.values()).map(type => `
-    <span class="event-type-badge" style="font-size: 0.7rem; padding: 0.25rem 0.5rem; width: fit-content;">
-      <i class='bx ${type.icon}' style="font-size: 0.75rem;"></i>
+    <span class="event-type-badge">
+      <i class='bx ${type.icon}'></i>
       ${type.label}
     </span>
   `).join('');
@@ -265,7 +274,10 @@ function renderEventCards() {
 
                 <div class="event-card-body">
                     <div class="event-meta-row">
-                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1;">
+                        <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; flex: 1; align-items: center;">
+                            <span class="dept-badge">
+                                <i class='bx bx-buildings'></i> ${event.department}
+                            </span>
                             ${getUniqueEventTypeBadges(event.events)}
                         </div>
                         <span class="severity-badge severity-${event.highestSeverity}">
@@ -280,11 +292,11 @@ function renderEventCards() {
 
                     <div class="event-stats">
                         <div class="event-stat">
-                            <span class="event-stat-label">Events</span>
-                            <span class="event-stat-value">${event.totalEvents}</span>
+                            <span class="event-stat-label">Department</span>
+                            <span class="event-stat-value" style="font-size: 0.8rem; color: #70E1FF;">${event.department}</span>
                         </div>
                         <div class="event-stat">
-                            <span class="event-stat-label">Exam</span>
+                            <span class="event-stat-label">Exam Name</span>
                             <span class="event-stat-value" style="font-size: 0.875rem;">${event.examName}</span>
                         </div>
                     </div>
@@ -573,6 +585,12 @@ function openEventDetailModal(eventId) {
   // Populate event summary
   document.getElementById('modal-total-events').textContent = event.totalEvents;
   document.getElementById('modal-highest-severity').innerHTML = `<span class="severity-badge severity-${event.highestSeverity}">${event.highestSeverity}</span>`;
+
+  const deptEl = document.getElementById('modal-department');
+  const examFullEl = document.getElementById('modal-exam-full-name');
+  if (deptEl) deptEl.textContent = event.department || 'N/A';
+  if (examFullEl) examFullEl.textContent = event.examFullName || 'N/A';
+
   document.getElementById('modal-last-event').textContent = formatTimestamp(event.lastEventTime);
 
   // Status with color coding
