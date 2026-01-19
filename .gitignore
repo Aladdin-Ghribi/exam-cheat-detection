@@ -72,3 +72,5 @@ data/student_faces/*.pkl
 .amazonq/
 amazonq/
 docs/
+
+*.md
