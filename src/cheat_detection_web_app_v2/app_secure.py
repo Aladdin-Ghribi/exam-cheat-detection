@@ -371,6 +371,132 @@ def get_users():
         return jsonify({'users': [{k: v for k, v in u.items() if k != 'password'} for u in users]})
     return jsonify({'users': []})
 
+@app.route('/api/dashboard-stats', methods=['GET'])
+@require_auth
+def get_dashboard_stats():
+    """Get dashboard statistics for cheating detection events"""
+    try:
+        stats = {
+            'phone_detected': 0,
+            'looking_away': 0,
+            'suspicious_objects': 0,
+            'total_alerts': 0
+        }
+        
+        # Count events from history directory
+        if HISTORY_DIR.exists():
+            for json_file in HISTORY_DIR.glob('*.json'):
+                try:
+                    with open(json_file, 'r') as f:
+                        event = json.load(f)
+                        event_type = event.get('event_type', '')
+                        
+                        if event_type == 'phone':
+                            stats['phone_detected'] += 1
+                        elif event_type == 'looking_away':
+                            stats['looking_away'] += 1
+                        elif event_type == 'suspicious_object':
+                            stats['suspicious_objects'] += 1
+                        
+                        stats['total_alerts'] += 1
+                except:
+                    continue
+        
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        logger.error(f"Dashboard stats error: {str(e)}")
+        return jsonify({'success': False, 'error': 'Failed to fetch statistics'}), 500
+
+
+@app.route('/api/weekly-trends', methods=['GET'])
+@require_auth
+def get_weekly_trends():
+    """Get cheating detection trends for the last 7 days"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # Initialize data structure for last 7 days
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=6)  # Last 7 days including today
+        
+        # Create date labels (e.g., "Mon 13", "Tue 14", etc.)
+        date_labels = []
+        current = start_date
+        for i in range(7):
+            date_labels.append(current.strftime('%a %d'))
+            current += timedelta(days=1)
+        
+        # Initialize counts for each day and type
+        daily_data = {
+            'phone': [0] * 7,
+            'looking_away': [0] * 7,
+            'suspicious_object': [0] * 7
+        }
+        
+        # Count events from history directory
+        if HISTORY_DIR.exists():
+            for json_file in HISTORY_DIR.glob('*.json'):
+                try:
+                    with open(json_file, 'r') as f:
+                        event = json.load(f)
+                    
+                    # Parse event timestamp
+                    timestamp_str = event.get('timestamp', '')
+                    if timestamp_str:
+                        # Handle ISO format timestamps
+                        event_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                        
+                        # Check if event is within last 7 days
+                        if start_date.date() <= event_time.date() <= end_date.date():
+                            # Calculate day index (0-6)
+                            day_diff = (event_time.date() - start_date.date()).days
+                            if 0 <= day_diff < 7:
+                                event_type = event.get('event_type', '')
+                                
+                                if event_type == 'phone':
+                                    daily_data['phone'][day_diff] += 1
+                                elif event_type == 'looking_away':
+                                    daily_data['looking_away'][day_diff] += 1
+                                elif event_type == 'suspicious_object':
+                                    daily_data['suspicious_object'][day_diff] += 1
+                except Exception as e:
+                    logger.debug(f"Error processing event file {json_file}: {str(e)}")
+                    continue
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': date_labels,
+                'datasets': [
+                    {
+                        'label': 'Phone Detected',
+                        'data': daily_data['phone'],
+                        'backgroundColor': 'rgba(244, 67, 54, 0.7)',
+                        'borderColor': '#F44336',
+                        'borderWidth': 2
+                    },
+                    {
+                        'label': 'Looking Away',
+                        'data': daily_data['looking_away'],
+                        'backgroundColor': 'rgba(255, 187, 51, 0.7)',
+                        'borderColor': '#FFBB33',
+                        'borderWidth': 2
+                    },
+                    {
+                        'label': 'Suspicious Objects',
+                        'data': daily_data['suspicious_object'],
+                        'backgroundColor': 'rgba(0, 229, 255, 0.7)',
+                        'borderColor': '#00E5FF',
+                        'borderWidth': 2
+                    }
+                ]
+            }
+        })
+    except Exception as e:
+        logger.error(f"Weekly trends error: {str(e)}")
+        return jsonify({'success': False, 'error': 'Failed to fetch weekly trends'}), 500
+
+
 # ============================================
 # INITIALIZATION
 # ============================================
