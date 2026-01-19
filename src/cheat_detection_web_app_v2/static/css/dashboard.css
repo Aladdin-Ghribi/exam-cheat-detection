@@ -303,6 +303,49 @@ body {
   color: var(--accent-color);
 }
 
+.stat-icon.danger {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #F44336;
+}
+
+/* Weekly Trends Chart */
+.chart-container {
+  padding: 0 2rem 2rem;
+  margin-bottom: 1rem;
+}
+
+.chart-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.chart-header h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chart-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.chart-wrapper {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  max-height: 400px;
+  position: relative;
+}
+
+.chart-wrapper canvas {
+  max-height: 350px;
+}
+
+
 /* Cameras Grid */
 .cameras-grid-container {
   padding: 0 2rem 2rem;
@@ -409,24 +452,7 @@ body {
   font-size: 1rem;
 }
 
-.camera-card-placeholder {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  height: 200px;
-  border-radius: var(--border-radius);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.3s;
-}
 
-.camera-card-placeholder:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-}
 
 /* Utilities */
 .hidden {
