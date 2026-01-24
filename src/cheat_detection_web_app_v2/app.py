@@ -603,9 +603,20 @@ def get_alert_metadata(detection):
             reasons.append("Suspicious object detected")
 
     if not reasons:
-        reasons = ["Suspicious behavior detected"]
+        return None, None
 
     alert_type = reasons[0].split()[0].lower() if reasons else "unknown"
+    
+    # Map specific alert types to standardized values
+    if alert_type == 'hand':
+        alert_type = 'hand_face'
+    elif alert_type == 'phone':
+        alert_type = 'phone'
+    elif alert_type == 'looking':
+        alert_type = 'looking_away'
+    elif alert_type == 'suspicious':
+        alert_type = 'suspicious_object'
+    
     return reasons, alert_type
 
 
@@ -1642,6 +1653,186 @@ def update_history_card():
         return jsonify({'success': True, 'message': 'Card updated successfully'})
     except Exception as e:
         print(f"Error updating card {card_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/dashboard/statistics')
+def get_dashboard_statistics():
+    """Calculate comprehensive dashboard statistics from history cards"""
+    try:
+        cards = get_all_cards()
+        
+        # Initialize statistics
+        total_alerts = len(cards)
+        confirmed_count = 0
+        declined_count = 0
+        pending_count = 0
+        
+        # Detection type counters
+        phone_count = 0
+        looking_away_count = 0
+        suspicious_object_count = 0
+        hand_face_count = 0
+        
+        # Subject counters
+        subject_counts = {}
+        
+        # Weekly data (last 7 months)
+        from collections import defaultdict
+        weekly_data = defaultdict(lambda: {'high': 0, 'medium': 0, 'low': 0})
+        
+        # Review time tracking
+        review_times = []
+        
+        # Process each card
+        for card in cards:
+            status = card.get('status', 'pending')
+            
+            # Count by status
+            if status == 'confirmed':
+                confirmed_count += 1
+            elif status == 'declined':
+                declined_count += 1
+            else:
+                pending_count += 1
+            
+            # Calculate review time ONLY for session-time reviews (not history updates)
+            # Only count if reviewed within reasonable time (< 1 hour = 3600 seconds)
+            # This filters out history page updates which happen much later
+            if status in ['confirmed', 'declined'] and 'created_at' in card and 'updated_at' in card:
+                try:
+                    created = datetime.fromisoformat(card['created_at'])
+                    updated = datetime.fromisoformat(card['updated_at'])
+                    review_time_seconds = (updated - created).total_seconds()
+                    # Only count if reviewed within 1 hour (session-time review)
+                    if 0 < review_time_seconds < 3600:
+                        review_times.append(review_time_seconds)
+                except:
+                    pass
+            
+            # Count detection types from events
+            for event in card.get('events', []):
+                event_type = event.get('type', '').lower()
+                
+                if 'phone' in event_type:
+                    phone_count += 1
+                elif 'looking' in event_type or 'away' in event_type:
+                    looking_away_count += 1
+                elif 'object' in event_type or 'suspicious' in event_type:
+                    suspicious_object_count += 1
+                elif 'face' in event_type or 'hand' in event_type:
+                    hand_face_count += 1
+            
+            # Count by exam name (not subject)
+            exam_name = card.get('exam_name', card.get('session_name', 'Unknown'))
+            if exam_name:
+                subject_counts[exam_name] = subject_counts.get(exam_name, 0) + 1
+            
+            # Monthly data by month - categorize by suspicion score from events
+            if 'created_at' in card:
+                try:
+                    created = datetime.fromisoformat(card['created_at'])
+                    # Use year-month key to distinguish same months in different years
+                    month_key = created.strftime('%Y-%m')
+                    
+                    # Categorize each event by suspicion score
+                    for event in card.get('events', []):
+                        suspicion_score = event.get('suspicion_score', 0)
+                        
+                        if suspicion_score >= 70:
+                            weekly_data[month_key]['high'] += 1
+                        elif suspicion_score >= 40:
+                            weekly_data[month_key]['medium'] += 1
+                        else:
+                            weekly_data[month_key]['low'] += 1
+                except:
+                    pass
+        
+        # Calculate percentages
+        confirmed_percentage = round((confirmed_count / total_alerts * 100) if total_alerts > 0 else 0)
+        declined_percentage = round((declined_count / total_alerts * 100) if total_alerts > 0 else 0)
+        
+        # Calculate average review time in minutes
+        avg_review_time_seconds = sum(review_times) / len(review_times) if review_times else 0
+        avg_review_time_minutes = round(avg_review_time_seconds / 60, 1)
+        
+        # Top 6 subjects sorted by count
+        top_subjects = sorted(subject_counts.items(), key=lambda x: x[1], reverse=True)[:6]
+        subjects_data = [
+            {'name': subject, 'count': count, 'percentage': round(count / total_alerts * 100) if total_alerts > 0 else 0}
+            for subject, count in top_subjects
+        ]
+        
+        # Detection types percentages
+        total_detections = phone_count + looking_away_count + suspicious_object_count + hand_face_count
+        detection_types = {
+            'phone': round((phone_count / total_detections * 100) if total_detections > 0 else 0),
+            'looking_away': round((looking_away_count / total_detections * 100) if total_detections > 0 else 0),
+            'suspicious_object': round((suspicious_object_count / total_detections * 100) if total_detections > 0 else 0),
+            'hand_face': round((hand_face_count / total_detections * 100) if total_detections > 0 else 0)
+        }
+        
+        # Generate last 12 months: always end with current month
+        current_date = datetime.now()
+        months_data = []
+        
+        for i in range(12):  # 0 to 11 (12 months total)
+            # Calculate months back from current: 11 months ago, 10 months ago, ..., current month
+            months_back = 11 - i
+            year = current_date.year
+            month = current_date.month - months_back
+            
+            # Handle year wrap-around
+            while month <= 0:
+                month += 12
+                year -= 1
+            
+            target_date = datetime(year, month, 1)
+            key = target_date.strftime('%Y-%m')
+            label = target_date.strftime('%b')
+            months_data.append({
+                'key': key,  # For lookup: "2026-01"
+                'label': label     # For display: "Jan"
+            })
+        
+        # Debug: Show the generated months and data
+        print(f"Generated months: {[m['label'] + ' ' + m['key'] for m in months_data]}")
+        
+        # Show actual data values for each month
+        high_values = [weekly_data[m['key']]['high'] for m in months_data]
+        medium_values = [weekly_data[m['key']]['medium'] for m in months_data]
+        low_values = [weekly_data[m['key']]['low'] for m in months_data]
+        
+        print(f"High values: {high_values}")
+        print(f"Medium values: {medium_values}")
+        print(f"Low values: {low_values}")
+        
+        # Format monthly data for chart (last 12 months)
+        weekly_chart_data = {
+            'labels': [m['label'] for m in months_data],
+            'high': high_values,
+            'medium': medium_values,
+            'low': low_values
+        }
+        
+        return jsonify({
+            'success': True,
+            'statistics': {
+                'total_alerts': total_alerts,
+                'confirmed_percentage': confirmed_percentage,
+                'declined_percentage': declined_percentage,
+                'pending_count': pending_count,
+                'avg_review_time_minutes': avg_review_time_minutes,
+                'detection_types': detection_types,
+                'top_subjects': subjects_data,
+                'weekly_data': weekly_chart_data
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error calculating dashboard statistics: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

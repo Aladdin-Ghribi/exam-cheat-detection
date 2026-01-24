@@ -14,9 +14,9 @@
 
 .profile-modal-content {
   background: var(--bg-secondary);
-  border-radius: 12px;
+  border-radius: 10px;
   width: 90%;
-  max-width: 450px;
+  max-width: 360px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   position: relative;
   animation: slideUp 0.3s ease;
@@ -24,11 +24,11 @@
 
 .profile-modal-close {
   position: absolute;
-  top: 15px;
-  right: 15px;
+  top: 12px;
+  right: 12px;
   background: none;
   border: none;
-  font-size: 28px;
+  font-size: 22px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: color 0.2s;
@@ -40,44 +40,44 @@
 
 .profile-modal-header {
   text-align: center;
-  padding: 30px 20px 20px;
+  padding: 24px 16px 16px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .profile-modal-avatar {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .profile-modal-header h2 {
-  font-size: 22px;
+  font-size: 18px;
   color: var(--text-primary);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .profile-modal-header p {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .profile-modal-body {
-  padding: 20px;
+  padding: 16px;
 }
 
 .profile-info-item {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 15px;
+  gap: 12px;
+  padding: 12px;
   background: var(--bg-primary);
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .profile-info-item i {
-  font-size: 24px;
+  font-size: 20px;
   color: var(--accent-color);
 }
 
@@ -87,14 +87,14 @@
 
 .profile-info-item label {
   display: block;
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text-secondary);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .profile-info-item span {
   display: block;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -139,8 +139,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -148,6 +153,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -374,4 +380,156 @@
   background: var(--accent-color);
   color: white;
   border-color: var(--accent-color);
+}
+
+/* Glossy Table Container */
+.glossy-table-container {
+  background: linear-gradient(135deg,
+      rgba(38, 57, 82, 0.5) 0%,
+      rgba(38, 57, 82, 0.3) 25%,
+      rgba(38, 57, 82, 0.2) 50%,
+      rgba(38, 57, 82, 0.3) 75%,
+      rgba(38, 57, 82, 0.5) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(220, 220, 220, 0.12);
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow:
+    0 8px 32px rgba(38, 57, 82, 0.2),
+    inset 0 1px 0 rgba(0, 229, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 229, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+  margin-top: 15px;
+}
+
+/* Glossy overlay effect */
+.glossy-table-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg,
+      rgba(38, 57, 82, 0.15) 0%,
+      rgba(38, 57, 82, 0.08) 25%,
+      rgba(38, 57, 82, 0.04) 50%,
+      transparent 100%);
+  border-radius: 16px 16px 0 0;
+  pointer-events: none;
+  opacity: 0.8;
+  z-index: 0;
+}
+
+.accounts-table {
+  width: 100%;
+  border-collapse: collapse;
+  position: relative;
+  z-index: 1;
+}
+
+.accounts-table th {
+  text-align: left;
+  padding: 16px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.accounts-table tr {
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.accounts-table tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.accounts-table td {
+  padding: 16px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.accounts-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table-edit-btn {
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.admin-table-edit-btn:hover {
+  background: var(--accent-color);
+  color: #000;
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.admin-table-edit-btn i {
+  font-size: 1.2rem;
+}
+
+/* Admin Modal Styling */
+#admin-edit-role {
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2300E5FF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 0.8rem auto;
+}
+
+.save-admin-edit-btn {
+  background: var(--accent-color);
+  color: var(--bg-primary);
+}
+
+.save-admin-edit-btn:hover {
+  background: var(--accent-hover);
+}
+
+.delete-admin-user-btn {
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  border: 1px solid #ff4444;
+}
+
+.delete-admin-user-btn:hover {
+  background: #ff4444;
+  color: white;
+}
+
+.cancel-admin-edit-btn {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.cancel-admin-edit-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
 }

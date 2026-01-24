@@ -1,15 +1,19 @@
-// Help Page JavaScript
-// Handles tab switching and content display
+// Help Page JavaScript v3.0
+// Handles tab switching and content display for Version 3.0
 
 (function () {
   'use strict';
 
   // Initialize help page when loaded
   function initHelpPage() {
-    const helpTabs = document.querySelectorAll('.help-tab');
-    const helpContents = document.querySelectorAll('.help-tab-content');
+    console.log('Help page v3.0 initialization started');
+
+    const helpTabs = document.querySelectorAll('.help-tab-v3');
+    const helpContents = document.querySelectorAll('.help-tab-content-v3');
 
     console.log(`Found ${helpTabs.length} help tabs and ${helpContents.length} content sections`);
+    console.log('Help tabs:', helpTabs);
+    console.log('Help contents:', helpContents);
 
     if (helpTabs.length === 0) {
       console.warn('No help tabs found. Retrying in 1 second...');
@@ -44,7 +48,7 @@
       });
     });
 
-    console.log('Help page initialized');
+    console.log('Help page v3.0 initialized');
   }
 
   // Initialize when page loads

@@ -22,7 +22,7 @@
   "camera_label": "test2",
   "auto_reconnect": true,
   "auto_save": false,
-  "suspicion_save_threshold": 70,
+  "suspicion_save_threshold": 100,
   "retention_period": 7,
   "show_bbox": true,
   "show_pose": false,

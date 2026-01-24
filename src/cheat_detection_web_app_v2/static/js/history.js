@@ -1,4 +1,53 @@
-﻿// History Page - Mock Data and Functionality
+// History Page - Mock Data and Functionality
+
+const subjectTree = {
+  "Computer Science": {
+    "General Subjects": [
+      "Mathematics 1",
+      "Mathematics 2",
+      "English Language 1",
+      "English Language 2",
+      "Political Science Principles",
+      "Statistics and Probabilities",
+      "Islamic Culture",
+      "Arabic Language",
+      "Linear Algebra and Logic",
+
+    ],
+    "Specialized Subjects": [
+      "Programming Basics",
+      "Intro to Computer Science",
+      "Electrical Engineering Principles",
+      "Digital Systems Intro",
+      "Computer Organization",
+      "Assembly Language",
+      "C Language",
+      "Systems Analysis",
+      "Database Management",
+      "Software Engineering",
+      "Operating Systems",
+      "Visual Programming 1",
+      "Visual Programming 2",
+      "Data Structures 1",
+      "Data Structures 2",
+      "Network Programming",
+      "Java Language",
+      "Web Design",
+      "Modeling and Simulation",
+      "Artificial Intelligence",
+      "Computer Graphics",
+      "Image Processing",
+      "Mobile Applications",
+      "Computer Architecture",
+      "Computer Networks",
+      "System Programming",
+      "Data and Information Security",
+      "Network Building and Protection",
+      "Discrete Mathematics",
+      "Numerical Methods and Programming"
+    ]
+  }
+};
 
 // Generate mock student events data
 const generateMockEvents = () => {
@@ -8,7 +57,8 @@ const generateMockEvents = () => {
   const eventTypes = [
     { value: 'phone', label: 'Phone Detected', icon: 'bx-mobile' },
     { value: 'looking_away', label: 'Looking Away', icon: 'bx-show-alt' },
-    { value: 'suspicious_object', label: 'Suspicious Object', icon: 'bx-error' }
+    { value: 'suspicious_object', label: 'Suspicious Object', icon: 'bx-error' },
+    { value: 'hand_face', label: 'Hand Near Face', icon: 'bx-face' }
   ];
 
   const severities = ['high', 'medium', 'low'];
@@ -80,12 +130,28 @@ let allEvents = [];
 let filteredEvents = [];
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Populate Department Dropdown
+  const departmentSelect = document.getElementById('department-select-simple');
+  if (departmentSelect && typeof subjectTree !== 'undefined') {
+    departmentSelect.innerHTML = '<option value="">All Departments</option>';
+    Object.keys(subjectTree).forEach(dept => {
+      const option = document.createElement('option');
+      option.value = dept;
+      option.textContent = dept;
+      departmentSelect.appendChild(option);
+    });
+  }
+
   // Fetch real data from backend
   fetchHistoryCards();
 
   // Setup event listeners
   setupFilterListeners();
-  setupModalListeners();
+
+  // Setup modal listeners after DOM is ready
+  setTimeout(() => {
+    setupModalListeners();
+  }, 100);
 });
 
 async function fetchHistoryCards() {
@@ -169,7 +235,7 @@ function transformCardToEvent(card) {
         suspicionScore: e.suspicion_score,
         confidence: e.confidence || (e.suspicion_score / 100.0),
         reasons: reasons,
-        description: reasons.length > 0 ? reasons.join(', ') : 'Suspicious behavior detected',
+        description: reasons.length > 0 ? reasons.join(', ') : '',
         notes: e.notes || '',
         status: e.status || 'pending',
         evidenceCount: e.evidence_count || 2,
@@ -193,13 +259,13 @@ function transformCardToEvent(card) {
 }
 
 function formatEventType(reasons) {
-  if (!reasons || reasons.length === 0) return 'Suspicious Behavior';
+  if (!reasons || reasons.length === 0) return 'Unknown';
   const reason = reasons[0];
   if (reason.includes('Phone')) return 'Phone Detected';
   if (reason.includes('Looking away')) return 'Looking Away';
   if (reason.includes('Suspicious object')) return 'Suspicious Object';
   if (reason.includes('face')) return 'Hand Near Face';
-  return 'Suspicious Behavior';
+  return 'Unknown';
 }
 
 function getEventIcon(reasons) {
@@ -275,9 +341,6 @@ function renderEventCards() {
                 <div class="event-card-body">
                     <div class="event-meta-row">
                         <div style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; flex: 1; align-items: center;">
-                            <span class="dept-badge">
-                                <i class='bx bx-buildings'></i> ${event.department}
-                            </span>
                             ${getUniqueEventTypeBadges(event.events)}
                         </div>
                         <span class="severity-badge severity-${event.highestSeverity}">
@@ -319,8 +382,32 @@ function renderEventCards() {
   }).join('');
 }
 
-// Setup filter listeners
+// Setup filter listeners for sidebar filter panel
 function setupFilterListeners() {
+  // Filter toggle button
+  const filterToggleBtn = document.getElementById('filter-toggle-btn');
+  const filterPanel = document.querySelector('.history-filter-panel');
+  const filterContent = document.getElementById('filter-bar-content');
+
+  if (filterToggleBtn && filterPanel && filterContent) {
+    filterToggleBtn.addEventListener('click', () => {
+      filterPanel.classList.toggle('collapsed');
+      filterContent.classList.toggle('collapsed');
+
+      // Toggle icon direction
+      const icon = filterToggleBtn.querySelector('i');
+      if (icon) {
+        if (filterPanel.classList.contains('collapsed')) {
+          icon.classList.remove('bx-chevron-left');
+          icon.classList.add('bx-chevron-right');
+        } else {
+          icon.classList.remove('bx-chevron-right');
+          icon.classList.add('bx-chevron-left');
+        }
+      }
+    });
+  }
+
   // Search
   const searchInput = document.getElementById('student-search');
   let searchTimeout;
@@ -335,7 +422,30 @@ function setupFilterListeners() {
   document.getElementById('date-from').addEventListener('change', applyFilters);
   document.getElementById('date-to').addEventListener('change', applyFilters);
 
-  // Event type filters
+  // Simple Academic Dropdowns
+  const departmentSelect = document.getElementById('department-select-simple');
+  const subjectSelect = document.getElementById('subject-select-simple');
+
+  // Department dropdown functionality
+  if (departmentSelect) {
+    departmentSelect.addEventListener('change', (e) => {
+      const selectedDept = e.target.value;
+      // Update subject dropdown based on selected department
+      updateSimpleSubjectDropdown(selectedDept);
+      // Apply filters
+      applyFilters();
+    });
+  }
+
+  // Subject dropdown functionality
+  if (subjectSelect) {
+    subjectSelect.addEventListener('change', (e) => {
+      // Apply filters
+      applyFilters();
+    });
+  }
+
+  // Event type filters - modern chip style
   document.querySelectorAll('.event-type-filter').forEach(checkbox => {
     checkbox.addEventListener('change', (e) => {
       if (e.target.value === 'all') {
@@ -360,7 +470,7 @@ function setupFilterListeners() {
     checkbox.addEventListener('change', applyFilters);
   });
 
-  // Status filters
+  // Status filters (without pending)
   document.querySelectorAll('.status-filter').forEach(checkbox => {
     checkbox.addEventListener('change', applyFilters);
   });
@@ -369,12 +479,46 @@ function setupFilterListeners() {
   document.getElementById('clear-filters').addEventListener('click', clearAllFilters);
 }
 
+// Update simple subject dropdown based on selected department
+function updateSimpleSubjectDropdown(department) {
+  const subjectSelect = document.getElementById('subject-select-simple');
+  if (!subjectSelect) return;
+
+  // Clear existing options
+  subjectSelect.innerHTML = '<option value="">All Subjects</option>';
+
+  if (department && subjectTree && subjectTree[department]) {
+    const allSubjects = [];
+
+    // Collect all subjects from all categories
+    Object.values(subjectTree[department]).forEach(categorySubjects => {
+      allSubjects.push(...categorySubjects);
+    });
+
+    // Add subjects to dropdown
+    allSubjects.sort().forEach(subject => {
+      const option = document.createElement('option');
+      option.value = subject;
+      option.textContent = subject;
+      subjectSelect.appendChild(option);
+    });
+
+    // Enable subject dropdown
+    subjectSelect.disabled = false;
+  } else {
+    // Disable subject dropdown if no department selected
+    subjectSelect.disabled = true;
+  }
+}
+
 // Apply all filters
 function applyFilters() {
   const searchTerm = document.getElementById('student-search').value.toLowerCase();
   const dateFrom = document.getElementById('date-from').value;
   const dateTo = document.getElementById('date-to').value;
 
+  const selectedDepartment = document.getElementById('department-select-simple')?.value || '';
+  const selectedSubject = document.getElementById('subject-select-simple')?.value || '';
   const selectedEventTypes = Array.from(document.querySelectorAll('.event-type-filter:checked'))
     .map(cb => cb.value);
   const selectedSeverities = Array.from(document.querySelectorAll('.severity-filter:checked'))
@@ -399,6 +543,16 @@ function applyFilters() {
       const toDate = new Date(dateTo);
       toDate.setHours(23, 59, 59);
       if (event.lastEventTime > toDate) return false;
+    }
+
+    // Department filter
+    if (selectedDepartment && selectedDepartment !== "") {
+      if (event.department !== selectedDepartment) return false;
+    }
+
+    // Subject filter
+    if (selectedSubject && selectedSubject !== "") {
+      if (event.examName !== selectedSubject) return false;
     }
 
     // Event type filter
@@ -431,6 +585,20 @@ function clearAllFilters() {
   document.getElementById('student-search').value = '';
   document.getElementById('date-from').value = '';
   document.getElementById('date-to').value = '';
+
+  // Reset department dropdown
+  const departmentSelect = document.getElementById('department-select-simple');
+  if (departmentSelect) {
+    departmentSelect.value = '';
+  }
+
+  // Reset subject dropdown
+  const subjectSelect = document.getElementById('subject-select-simple');
+  if (subjectSelect) {
+    subjectSelect.value = '';
+    subjectSelect.disabled = true;
+    subjectSelect.innerHTML = '<option value="">All Subjects</option>';
+  }
 
   document.querySelectorAll('.event-type-filter').forEach(cb => {
     cb.checked = cb.value === 'all';
@@ -531,37 +699,109 @@ function formatTimestamp(date) {
 // ============================================
 
 function setupModalListeners() {
+  console.log('Setting up modal listeners...');
+
   const modal = document.getElementById('event-detail-modal');
   const overlay = document.getElementById('modal-overlay');
   const closeBtn = document.getElementById('modal-close-btn');
 
-  // Close on overlay click
-  overlay.addEventListener('click', closeEventDetailModal);
+  console.log('Modal elements:', { modal: !!modal, overlay: !!overlay, closeBtn: !!closeBtn });
 
-  // Close on button click
-  closeBtn.addEventListener('click', closeEventDetailModal);
+  // Setup overlay click
+  if (overlay) {
+    overlay.removeEventListener('click', closeEventDetailModal);
+    overlay.addEventListener('click', closeEventDetailModal);
+    console.log('Overlay listener added');
+  }
 
-  // Save notes button
-  document.getElementById('save-notes-btn').addEventListener('click', () => {
-    const modal = document.getElementById('event-detail-modal');
-    const cardId = modal.dataset.currentCardId;
-    const notes = document.getElementById('modal-notes').value;
-    updateCardOnBackend(cardId, null, notes);
-  });
+  // Setup close button click - multiple approaches
+  if (closeBtn) {
+    // Remove any existing listeners
+    closeBtn.removeEventListener('click', closeEventDetailModal);
 
-  // Export evidence button
-  document.getElementById('export-evidence-btn').addEventListener('click', () => {
-    const modal = document.getElementById('event-detail-modal');
-    const cardId = modal.dataset.currentCardId;
-    exportEventToPDF(cardId);
-  });
+    // Add new listener with proper event handling
+    closeBtn.addEventListener('click', function (e) {
+      console.log('Close button clicked');
+      e.preventDefault();
+      e.stopPropagation();
+      closeEventDetailModal();
+    });
+
+    // Also add listener to the icon inside
+    const icon = closeBtn.querySelector('.bx-x');
+    if (icon) {
+      icon.removeEventListener('click', closeEventDetailModal);
+      icon.addEventListener('click', function (e) {
+        console.log('X icon clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        closeEventDetailModal();
+      });
+    }
+
+    console.log('Close button listeners added');
+  }
+
+  // Global fallback for any bx-x in modal
+  document.removeEventListener('click', handleModalCloseClick);
+  document.addEventListener('click', handleModalCloseClick);
+
+  console.log('Global fallback listener added');
+
+  // Setup other modal buttons
+  setupModalActionButtons();
 
   // Close on ESC key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+  document.removeEventListener('keydown', handleModalEscKey);
+  document.addEventListener('keydown', handleModalEscKey);
+
+  console.log('Modal listeners setup complete');
+}
+
+// Helper function for global click handling
+function handleModalCloseClick(e) {
+  // Check if click is on bx-x icon or close button within the modal
+  if (e.target.classList.contains('bx-x') || e.target.classList.contains('modal-close-btn')) {
+    const modal = e.target.closest('#event-detail-modal');
+    if (modal) {
+      console.log('Global close handler triggered');
+      e.preventDefault();
+      e.stopPropagation();
       closeEventDetailModal();
     }
-  });
+  }
+}
+
+// Helper function for ESC key handling
+function handleModalEscKey(e) {
+  const modal = document.getElementById('event-detail-modal');
+  if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+    console.log('ESC key pressed to close modal');
+    e.preventDefault();
+    closeEventDetailModal();
+  }
+}
+
+// Setup modal action buttons
+function setupModalActionButtons() {
+  const saveNotesBtn = document.getElementById('save-notes-btn');
+  if (saveNotesBtn) {
+    saveNotesBtn.addEventListener('click', () => {
+      const modal = document.getElementById('event-detail-modal');
+      const cardId = modal.dataset.currentCardId;
+      const notes = document.getElementById('modal-notes').value;
+      updateCardOnBackend(cardId, null, notes);
+    });
+  }
+
+  const exportBtn = document.getElementById('export-evidence-btn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      const modal = document.getElementById('event-detail-modal');
+      const cardId = modal.dataset.currentCardId;
+      exportEventToPDF(cardId);
+    });
+  }
 }
 
 function openEventDetailModal(eventId) {
@@ -631,9 +871,26 @@ function openEventDetailModal(eventId) {
 }
 
 function closeEventDetailModal() {
+  console.log('closeEventDetailModal called');
   const modal = document.getElementById('event-detail-modal');
-  modal.classList.add('hidden');
-  document.body.style.overflow = '';
+
+  if (modal) {
+    console.log('Modal found, current classes:', modal.className);
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+    console.log('Modal closed, new classes:', modal.className);
+
+    // Verify it's actually hidden
+    setTimeout(() => {
+      if (modal.classList.contains('hidden')) {
+        console.log('Modal successfully hidden');
+      } else {
+        console.error('Modal failed to hide');
+      }
+    }, 50);
+  } else {
+    console.error('Modal element not found in DOM');
+  }
 }
 
 function renderEventTimeline(events) {
@@ -886,7 +1143,7 @@ async function exportEventToPDF(cardId) {
         { align: 'center' }
       );
       doc.text(
-        'ProctorAI - Exam Cheat Detection System',
+        'Smart Invigilator - Exam Cheat Detection System',
         margin,
         pageHeight - 8
       );

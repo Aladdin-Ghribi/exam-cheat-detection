@@ -580,7 +580,7 @@ const alertSounds = {
 // DEPARTMENT & SUBJECT TREE DATA
 // ============================================
 
-const subjectTree = {
+const monitorSubjectTree = {
   "Computer Science": {
     "General Subjects": [
       "Mathematics 1",
@@ -591,9 +591,7 @@ const subjectTree = {
       "Statistics and Probabilities",
       "Islamic Culture",
       "Arabic Language",
-      "Linear Algebra and Logic",
-      "Discrete Mathematics",
-      "Numerical Methods and Programming"
+      "Linear Algebra and Logic"
     ],
     "Specialized Subjects": [
       "Programming Basics",
@@ -623,37 +621,50 @@ const subjectTree = {
       "Computer Networks",
       "System Programming",
       "Data and Information Security",
-      "Network Building and Protection"
-    ],
-    "Final Stage": [
-      "Research Methods",
-      "Graduation Project"
+      "Network Building and Protection",
+      "Discrete Mathematics",
+      "Numerical Methods and Programming"
     ]
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.initSubjectDropdowns = initSubjectDropdowns;
+}
 
 function initSubjectDropdowns() {
   const deptSelect = document.getElementById('department-select');
   const subjSelect = document.getElementById('subject-select');
   const examNameHidden = document.getElementById('exam-name-input');
 
-  if (!deptSelect || !subjSelect) return;
+  console.log('Initializing Subject Dropdowns...');
+  if (!deptSelect || !subjSelect) {
+    console.error('Dropdown elements not found!');
+    return;
+  }
+
+  // Clear existing department options (keep default)
+  while (deptSelect.options.length > 1) {
+    deptSelect.remove(1);
+  }
 
   // Populate Departments
-  Object.keys(subjectTree).forEach(dept => {
+  Object.keys(monitorSubjectTree).forEach(dept => {
     const opt = document.createElement('option');
     opt.value = dept;
     opt.textContent = dept;
     deptSelect.appendChild(opt);
   });
+  console.log('Departments populated:', Object.keys(monitorSubjectTree));
 
   // Handle Department Change
   deptSelect.addEventListener('change', () => {
+    console.log('Department selected:', deptSelect.value);
     const dept = deptSelect.value;
     subjSelect.innerHTML = '<option value="" disabled selected>Select Subject</option>';
     subjSelect.disabled = false;
 
-    const categories = subjectTree[dept];
+    const categories = monitorSubjectTree[dept];
     Object.keys(categories).forEach(catName => {
       const group = document.createElement('optgroup');
       group.label = catName;
@@ -729,7 +740,10 @@ function updateDashboardStatus(isActive) {
 // INITIALIZATION
 // ============================================
 
+console.log('Monitor.js loaded and executing...');
+
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('Monitor.js DOMContentLoaded fired');
   initSocket();
   initWebcam();
   initSubjectDropdowns(); // Added dynamic dropdowns
