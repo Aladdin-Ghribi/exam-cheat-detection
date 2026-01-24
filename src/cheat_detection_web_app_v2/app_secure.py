@@ -380,6 +380,7 @@ def get_dashboard_stats():
             'phone_detected': 0,
             'looking_away': 0,
             'suspicious_objects': 0,
+            'hand_face': 0,
             'total_alerts': 0
         }
         
@@ -397,6 +398,8 @@ def get_dashboard_stats():
                             stats['looking_away'] += 1
                         elif event_type == 'suspicious_object':
                             stats['suspicious_objects'] += 1
+                        elif event_type == 'hand_face':
+                            stats['hand_face'] += 1
                         
                         stats['total_alerts'] += 1
                 except:

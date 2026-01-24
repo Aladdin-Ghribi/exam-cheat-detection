@@ -388,13 +388,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Add User button (Admin section)
-  const addUserBtn = document.getElementById('add-user-btn');
-  if (addUserBtn) {
-    addUserBtn.addEventListener('click', () => {
-      createUser();
-    });
-  }
+  // Add User button (Admin section) - REMOVED - handled by dashboard.html validation system
+  // const addUserBtn = document.getElementById('add-user-btn');
+  // if (addUserBtn) {
+  //   addUserBtn.addEventListener('click', () => {
+  //     createUser();
+  //   });
+  // }
 
   // Toggle password visibility for new user password
   const toggleNewPassword = document.getElementById('toggle-new-password');
@@ -490,37 +490,36 @@ function loadAccountsOverview() {
       // Build the accounts table
       const tableHTML = `
         <h3 class="section-title">Accounts Overview</h3>
-        <table class="accounts-table">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Password</th>
-              <th>Role</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${users.map(user => `
+        <div class="glossy-table-container">
+          <table class="accounts-table">
+            <thead>
               <tr>
-                <td>${user.username || 'N/A'}</td>
-                <td>${user.email || 'N/A'}</td>
-                <td>${user.password || 'N/A'}</td>
-                <td>${user.role || 'N/A'}</td>
-                <td><button class="edit-btn" data-user-id="${user.id}" title="Edit User"><svg width="20" height="20" viewBox="0 0 110 117" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M93.0553 4.41701L104.308 13.3777C105.395 14.4005 106.008 15.829 105.999 17.3214C105.991 18.8136 105.363 20.2354 104.265 21.2462L95.714 31.4788L66.6187 66.1792C66.1092 66.762 65.4316 67.1716 64.6785 67.3505L49.5883 70.7709C47.6086 70.8701 45.8847 69.4308 45.6289 67.4655V51.9585C45.6799 51.2104 45.981 50.5019 46.484 49.9465L75.0404 17.6605L84.8419 5.95477C86.7806 3.413 90.3275 2.74896 93.0553 4.41701Z" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M68.9502 109.352L68.9541 111.049V113.13H35.7139V111.075L35.7188 109.352H68.9502ZM5.38184 87.7942L7.51562 87.7981C9.0333 98.8036 17.7162 107.527 28.7139 109.097V111.233L28.709 112.908C15.6217 111.289 5.26735 100.888 3.70605 87.7942H5.38184ZM100.963 87.7942C99.4015 100.889 89.046 111.29 75.958 112.908L75.9541 110.842V109.097C86.9519 107.527 95.6334 98.8036 97.1514 87.7981L99.2871 87.7942H100.963ZM75.666 89.1448V92.9241H29.0098V89.1448H75.666ZM101.169 60.8469V80.7893L99.0557 80.7942H97.3896V60.8469H101.169ZM7.27832 47.3743V80.7942H5.6123L3.5 80.7893V47.3772L4.94824 47.3743H7.27832ZM28.7139 16.9348V19.0706C17.7164 20.6408 9.03358 29.3634 7.51562 40.3684L4.93262 40.3743H3.70508C5.26581 27.2793 15.6212 16.8774 28.709 15.2581L28.7139 16.9348ZM78.3799 20.0676C79.541 22.0107 81.1192 24.1134 83.0654 25.8752L83.3662 26.1418C85.7498 28.2157 88.5635 29.6895 91.7852 29.8889L92.626 33.6926C87.9296 33.7231 83.9623 31.6696 80.8857 28.9924L80.5352 28.6819C78.1113 26.4893 76.2053 23.8829 74.8525 21.5237L78.3799 20.0676ZM48.834 15.0374V18.8157H35.7188L35.7139 16.7258V15.0374H48.834Z" fill="black" stroke="white" stroke-width="7"/>
-                  </svg></button></td>
+                <th>USERNAME</th>
+                <th>EMAIL</th>
+                <th>PASSWORD</th>
+                <th>ROLE</th>
+                <th>ACTION</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${users.map(user => `
+                <tr>
+                  <td>${user.username || 'N/A'}</td>
+                  <td>${user.email || 'N/A'}</td>
+                  <td>••••••••</td>
+                  <td>${user.role || 'N/A'}</td>
+                  <td><button class="admin-table-edit-btn" data-user-id="${user.id}" title="Edit User"><i class='bx bx-edit-alt'></i></button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       `;
 
       profileContent.innerHTML = tableHTML;
 
       // Add event listeners to edit buttons
-      document.querySelectorAll('.edit-btn').forEach(btn => {
+      document.querySelectorAll('.admin-table-edit-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const userId = e.currentTarget.dataset.userId;
           const userData = users.find(u => u.id == userId);

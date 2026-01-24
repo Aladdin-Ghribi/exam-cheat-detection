@@ -1,6 +1,6 @@
 /* Student Registration Styles */
 .students-container {
-  padding: 2rem;
+  padding: 1.5rem;
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -8,45 +8,45 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2.5rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .header-text h2 {
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   color: var(--text-primary);
 }
 
 .header-text p {
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 }
 
 /* Students Grid */
 .students-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.2rem;
 }
 
 .student-card {
   background: linear-gradient(145deg, rgba(30, 35, 40, 0.9), rgba(20, 25, 30, 0.95));
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 1.8rem 1.5rem;
+  border-radius: 16px;
+  padding: 1.4rem 1.2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(10px);
   text-align: center;
-  min-height: 220px;
+  min-height: 180px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
@@ -57,11 +57,11 @@
 }
 
 .student-photo-wrapper {
-  width: 110px;
-  height: 110px;
+  width: 85px;
+  height: 85px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid rgba(255, 255, 255, 0.2);
+  border: 2.5px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   background: #1a1c1e;
   flex-shrink: 0;
@@ -86,7 +86,7 @@
 
 .student-card-name {
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   color: var(--text-primary);
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -99,11 +99,11 @@
 
 .student-card-id {
   font-family: 'Monaco', 'Consolas', monospace;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: var(--primary-light);
   background: rgba(0, 113, 255, 0.15);
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 3px 10px;
+  border-radius: 16px;
   display: inline-block;
   letter-spacing: 0.5px;
 }
@@ -219,7 +219,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 2rem;
+  padding: 1.2rem 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   background-color: var(--bg-card);
   position: relative;
@@ -227,7 +227,7 @@
 }
 
 .registration-modal-content .modal-header h3 {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -258,10 +258,10 @@
 .registration-modal-content .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.2rem;
 }
 
 /* Modal Footer - Same as History */
@@ -269,8 +269,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem 2rem;
+  gap: 0.75rem;
+  padding: 1.2rem 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   background-color: var(--bg-card);
 }

@@ -23,24 +23,39 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentView = document.querySelector('.page-view.active');
       const selectedView = document.getElementById(viewId);
 
+      console.log(`Navigation: ${pageId} -> ${viewId}`);
+      console.log('Current view:', currentView);
+      console.log('Selected view:', selectedView);
+
       if (currentView && selectedView && currentView !== selectedView) {
         // Add fade-out to current view
         currentView.classList.add('fade-out');
 
         setTimeout(() => {
+          console.log('=== INSIDE TIMEOUT ===');
+          console.log('About to process views...');
+
           // Hide all views
           document.querySelectorAll('.page-view').forEach(view => {
+            console.log('Processing view:', view.id, 'Classes before:', view.className);
             view.classList.add('hidden');
             view.classList.remove('active', 'fade-out', 'fade-in');
+            console.log('Classes after:', view.className);
           });
+
+          console.log('All views processed. About to show selected view...');
+          console.log('Selected view before show:', selectedView);
 
           // Show selected view with fade-in
           selectedView.classList.remove('hidden');
           selectedView.classList.add('active');
 
+          console.log('Selected view after show:', selectedView.className);
+
           // Trigger fade-in animation
           setTimeout(() => {
             selectedView.classList.add('fade-in');
+            console.log('Fade-in animation added');
           }, 10);
 
           // ===== PAGE-SPECIFIC REFRESH CALLBACKS =====
@@ -61,8 +76,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
 
+          // Initialize Monitor page dropdowns when navigating to it
+          if (pageId === 'monitor') {
+            console.log('Navigated to Monitor - Initializing dropdowns...');
+            if (typeof initSubjectDropdowns === 'function') {
+              initSubjectDropdowns();
+            } else {
+              console.error('initSubjectDropdowns function is not defined');
+            }
+            if (typeof startWebcamPreview === 'function') {
+              // Ensure webcam is active
+              startWebcamPreview();
+            }
+          }
+
         }, 150); // Wait for fade-out to complete
       }
     });
   });
+
+  console.log('Router initialized.');
 });
