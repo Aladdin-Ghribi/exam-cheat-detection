@@ -1,4 +1,10 @@
-# 🕵️‍♂️ Exam Cheat Detection System
+<div align="center">
+  <img width="883" height="300" alt="image" src="https://github.com/user-attachments/assets/6d46949a-bb22-4eb4-9686-65497d4d6272" />
+
+</div>
+
+
+
 
 ![Project Status](https://img.shields.io/badge/Status-Week%2011%20Complete-success?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python&logoColor=white)
