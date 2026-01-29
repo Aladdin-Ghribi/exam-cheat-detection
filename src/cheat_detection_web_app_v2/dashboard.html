@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cheat Detection System V2</title>
+  <link rel="icon" href="static/logo.svg" type="image/svg+xml">
 
   <!-- Local Assets (Offline Support) -->
   <link rel="stylesheet" href="static/vendor/boxicons/css/boxicons.min.css">
@@ -64,28 +65,28 @@
 
       <nav class="sidebar-nav">
         <a href="#" class="nav-item active" data-page="dashboard">
-          <i class='bx bxs-grid-alt'></i>
-          <span>Dashboard</span>
+          <span class="nav-icon"><i class='bx bxs-grid-alt'></i></span>
+          <span class="nav-label">Dashboard</span>
         </a>
         <a href="#" class="nav-item" data-page="monitor">
-          <i class='bx bxs-cctv'></i>
-          <span>Monitor</span>
+          <span class="nav-icon"><i class='bx bxs-cctv'></i></span>
+          <span class="nav-label">Monitor</span>
         </a>
         <a href="#" class="nav-item" data-page="history">
-          <i class='bx bxs-time-five'></i>
-          <span>History</span>
+          <span class="nav-icon"><i class='bx bxs-time-five'></i></span>
+          <span class="nav-label">History</span>
         </a>
         <a href="#" class="nav-item" data-page="students">
-          <i class='bx bxs-user-detail'></i>
-          <span>Students</span>
+          <span class="nav-icon"><i class='bx bxs-user-detail'></i></span>
+          <span class="nav-label">Students</span>
         </a>
         <a href="#" class="nav-item" data-page="settings" id="settings-nav-item">
-          <i class='bx bxs-cog'></i>
-          <span>Settings</span>
+          <span class="nav-icon"><i class='bx bxs-cog'></i></span>
+          <span class="nav-label">Settings</span>
         </a>
         <a href="#" class="nav-item" data-page="help">
-          <i class='bx bx-help-circle'></i>
-          <span>Help</span>
+          <span class="nav-icon"><i class='bx bx-help-circle'></i></span>
+          <span class="nav-label">Help</span>
         </a>
       </nav>
 
@@ -983,40 +984,9 @@
               </div>
             </div>
             <div id="admin-content" class="setting-section hidden">
-              <div class="form-group">
-                <label class="section-title">Username:</label>
-                <input type="text" class="form-control" id="new-user-username" placeholder="Enter username">
-                <small class="validation-hint" id="username-validation-hint">Username must be at least 3 characters,
-                  letters only, no duplicates</small>
-                <div class="validation-status" id="username-validation-status"></div>
-              </div>
-              <div class="form-group">
-                <label>Email:</label>
-                <input type="email" class="form-control" id="new-user-email" placeholder="Enter email address">
-                <small class="validation-hint" id="email-validation-hint">Valid email address required</small>
-                <div class="validation-status" id="email-validation-status"></div>
-              </div>
-              <div class="form-group">
-                <label>Role:</label>
-                <select class="form-control" id="new-user-role">
-                  <option value="proctor">Proctor</option>
-                  <option value="administrator">Administrator</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Password:</label>
-                <div class="password-wrapper">
-                  <input type="password" class="form-control" id="new-user-password" placeholder="Enter password">
-                  <i class='bx bx-show' id="toggle-new-password"></i>
-                </div>
-                <small class="validation-hint" id="password-validation-hint">Password must be at least 8
-                  characters</small>
-                <div class="validation-status" id="password-validation-status"></div>
-              </div>
-              <div class="form-group">
-                <button class="action-btn add-btn" id="add-user-btn" disabled>Add User</button>
-                <div class="user-creation-status" id="user-creation-status"></div>
-              </div>
+              <!-- Admin section functionality moved to Profile modal -->
+              <p style="padding: 20px; color: var(--text-secondary);">User management has been moved to the Profile
+                section.</p>
               <h2 class="settings-title" style="margin-top: 3rem; text-align: left;">Network & Server Settings</h2>
               <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">
                 <i class='bx bx-info-circle'></i> These settings are read-only. Server configuration is managed in
@@ -1164,14 +1134,70 @@
                   <div class="help-section">
                     <h3>Pro Tips for a Smooth Experience</h3>
                     <ul class="help-list">
-                      <li><i class='bx bx-laptop'></i> <strong>Dedicated GPU:</strong> If using "Large" or "Medium" AI
-                        models, a dedicated GPU (RTX series) ensures zero lag.</li>
-                      <li><i class='bx bx-webcam'></i> <strong>Camera Setup:</strong> Place the camera 60-100cm away
-                        from the student. 720p resolution is the "sweet spot" for accuracy vs speed.</li>
-                      <li><i class='bx bx-sun'></i> <strong>Lighting:</strong> Ensure front-facing light. Backlighting
-                        (windows behind the student) can cause face recognition to fail.</li>
-                      <li><i class='bx bx-globe'></i> <strong>Browser:</strong> Use <strong>Google Chrome</strong> or
-                        <strong>Microsoft Edge</strong> for the best WebGL and Camera API performance.
+                      <li>
+                        <i class='bx bx-chip'></i>
+                        <div>
+                          <strong>Hardware & Model Choice</strong>
+                          <ul class="help-sublist">
+                            <li>Use <strong>Medium/Large</strong> only with a dedicated GPU.</li>
+                            <li><strong>Nano/Small</strong> is ideal for CPU-only laptops.</li>
+                            <li>Close heavy apps (recorders, games) to keep FPS stable.</li>
+                          </ul>
+                        </div>
+                      </li>
+                      <li>
+                        <i class='bx bx-webcam'></i>
+                        <div>
+                          <strong>Camera Framing</strong>
+                          <ul class="help-sublist">
+                            <li>Keep the camera 60–100cm from the student.</li>
+                            <li>Frame head + shoulders; avoid extreme angles.</li>
+                            <li>720p is the best balance of speed and accuracy.</li>
+                          </ul>
+                        </div>
+                      </li>
+                      <li>
+                        <i class='bx bx-sun'></i>
+                        <div>
+                          <strong>Lighting & Background</strong>
+                          <ul class="help-sublist">
+                            <li>Use front lighting; avoid bright windows behind the student.</li>
+                            <li>Reduce shadows on the face for reliable Face ID.</li>
+                            <li>Keep the background simple to minimize false detections.</li>
+                          </ul>
+                        </div>
+                      </li>
+                      <li>
+                        <i class='bx bx-globe'></i>
+                        <div>
+                          <strong>Browser & Permissions</strong>
+                          <ul class="help-sublist">
+                            <li>Use <strong>Chrome</strong> or <strong>Edge</strong> for best WebGL and camera support.
+                            </li>
+                            <li>Allow camera permissions and refresh if the feed is blocked.</li>
+                          </ul>
+                        </div>
+                      </li>
+                      <li>
+                        <i class='bx bx-id-card'></i>
+                        <div>
+                          <strong>Face ID Quality</strong>
+                          <ul class="help-sublist">
+                            <li>Register with neutral expression and stable lighting.</li>
+                            <li>If glasses are worn during exams, register with them on.</li>
+                            <li>Re-register if the system consistently misidentifies a student.</li>
+                          </ul>
+                        </div>
+                      </li>
+                      <li>
+                        <i class='bx bx-wifi'></i>
+                        <div>
+                          <strong>Network & Session Health</strong>
+                          <ul class="help-sublist">
+                            <li>Keep a stable network for alert sync and evidence uploads.</li>
+                            <li>Test each camera feed before starting multi-camera sessions.</li>
+                          </ul>
+                        </div>
                       </li>
                     </ul>
                   </div>
@@ -1237,7 +1263,7 @@
                   <div class="help-section">
                     <h3>How it Works (AI Tech)</h3>
                     <ul class="help-list">
-                      <li><strong>Biometric Embeddings:</strong> The system uses <strong>ArcFace</strong> (99.4%
+                      <li><strong>Biometric Embeddings:</strong> The system uses <strong>GhostFaceNets</strong> (99.4%
                         accuracy) to convert facial features into a mathematical vector.</li>
                       <li><strong>Privacy First:</strong> While thumbnails are kept for proctor reference,
                         identification uses "embeddings" – high-dimensional numbers that are secure and efficient.</li>
@@ -1282,17 +1308,72 @@
                     </ul>
                   </div>
 
-                  <div class="help-section">
-                    <h3>Start & Stop Sessions</h3>
-                    <ol class="help-list">
-                      <li>Enter an exam/session name.</li>
-                      <li>Click <strong>Start Pipeline</strong> and wait for live feed.</li>
-                      <li>Monitor alerts in real time.</li>
-                      <li>Click <strong>Stop Pipeline</strong> when the session ends.</li>
-                    </ol>
-                    <div class="help-warning">
-                      <i class='bx bx-error-circle'></i>
-                      <p><strong>Tip:</strong> Clear or confirm pending alerts before ending a session.</p>
+                  <div class="help-section steps-section">
+                    <h2 class="section-title">How to Use the System</h2>
+                    <p class="section-subtitle">Follow these 4 simple steps to run your exam session.</p>
+
+                    <div class="steps-container">
+                      <div class="step-card">
+                        <div class="step-number">01</div>
+                        <div class="step-content">
+                          <h3 class="step-title">Enter Session Details</h3>
+                          <div class="step-description">
+                            <p>Enter a descriptive exam/session name for easy identification later.</p>
+                            <div class="step-tip">
+                              <strong>Tip:</strong> Include date and course code (e.g., "2024-MATH101-Final")
+                            </div>
+                          </div>
+                        </div>
+                        <div class="step-icon"><i class='bx bx-edit-alt'></i></div>
+                      </div>
+
+                      <div class="step-card">
+                        <div class="step-number">02</div>
+                        <div class="step-content">
+                          <h3 class="step-title">Start the Pipeline</h3>
+                          <div class="step-description">
+                            <p>Click the <span class="button-preview start-button">Start Pipeline</span> button and
+                              wait for the live feed to initialize.</p>
+                            <div class="step-checklist">
+                              <span class="check-item"><i class='bx bx-check-circle'></i> Camera detected</span>
+                              <span class="check-item"><i class='bx bx-check-circle'></i> Face recognition loaded</span>
+                              <span class="check-item"><i class='bx bx-check-circle'></i> Live feed active</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="step-icon"><i class='bx bx-rocket'></i></div>
+                      </div>
+
+                      <div class="step-card">
+                        <div class="step-number">03</div>
+                        <div class="step-content">
+                          <h3 class="step-title">Monitor in Real-Time</h3>
+                          <div class="step-description">
+                            <p>Monitor detection alerts as they appear in real-time on the dashboard.</p>
+                            <div class="alert-types">
+                              <span class="alert-type suspicion"><i class='bx bx-error-circle'></i> Suspicion Alerts</span>
+                              <span class="alert-type face-match"><i class='bx bx-id-card'></i> Face Match Alerts</span>
+                              <span class="alert-type multiple"><i class='bx bx-group'></i> Multiple Person Alerts</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="step-icon"><i class='bx bx-show'></i></div>
+                      </div>
+
+                      <div class="step-card">
+                        <div class="step-number">04</div>
+                        <div class="step-content">
+                          <h3 class="step-title">End the Session</h3>
+                          <div class="step-description">
+                            <p>Click <span class="button-preview stop-button">Stop Pipeline</span> when the exam
+                              session ends.</p>
+                            <div class="step-note">
+                              <strong>Note:</strong> All data is saved automatically and available in History.
+                            </div>
+                          </div>
+                        </div>
+                        <div class="step-icon"><i class='bx bx-stop-circle'></i></div>
+                      </div>
                     </div>
                   </div>
 
@@ -1321,13 +1402,22 @@
 
                   <div class="help-section">
                     <h3>Best Practice Checklist</h3>
-                    <ul>
-                      <li class="help-list"><i class='bx bx-check-circle'></i> Test camera and lighting before the exam.
+                    <ul class="help-list">
+                      <li>
+                        <i class='bx bx-check-circle'></i>
+                        <div>Test camera and lighting before the exam.</div>
                       </li>
-                      <li class="help-list"><i class='bx bx-check-circle'></i> Keep the camera angle stable and wide.
+                      <li>
+                        <i class='bx bx-check-circle'></i>
+                        <div>Keep the camera angle stable and wide.</div>
                       </li>
-                      <li class="help-list"><i class='bx bx-check-circle'></i> Review alerts promptly.</li>
-                      <li class="help-list"><i class='bx bx-check-circle'></i> Add clear notes for every confirmed case.
+                      <li>
+                        <i class='bx bx-check-circle'></i>
+                        <div>Review alerts promptly to avoid backlog.</div>
+                      </li>
+                      <li>
+                        <i class='bx bx-check-circle'></i>
+                        <div>Add clear notes for every confirmed case.</div>
                       </li>
                     </ul>
                   </div>
@@ -1486,46 +1576,74 @@
                     <h2><i class='bx bx-help-circle'></i> Frequently Asked Questions</h2>
                     <p class="section-intro">Common questions and answers.</p>
                   </div>
+                  <div class="faq-list">
+                    <div class="faq-item">
+                      <div class="faq-question">
+                        <h3>Why do I see extra alerts?</h3>
+                        <i class='bx bx-chevron-down'></i>
+                      </div>
+                      <div class="faq-answer">
+                        <p><strong>Answer:</strong> Raise <strong>Suspicion Score</strong> or increase yaw/pitch
+                          thresholds
+                          in <strong>Settings → Detection</strong>.</p>
+                      </div>
+                    </div>
 
-                  <div class="help-faq">
-                    <h3>Why do I see extra alerts?</h3>
-                    <p><strong>Answer:</strong> Raise <strong>Suspicion Score</strong> or increase yaw/pitch thresholds
-                      in
-                      <strong>Settings → Detection</strong>.
-                    </p>
-                  </div>
+                    <div class="faq-item">
+                      <div class="faq-question">
+                        <h3>Which YOLO model should I use?</h3>
+                        <i class='bx bx-chevron-down'></i>
+                      </div>
+                      <div class="faq-answer">
+                        <p><strong>Answer:</strong> Use <strong>small/medium</strong> for balance,
+                          <strong>large</strong>
+                          for maximum accuracy (GPU recommended), and <strong>nano</strong> for low-power devices.</p>
+                      </div>
+                    </div>
 
-                  <div class="help-faq">
-                    <h3>Which YOLO model should I use?</h3>
-                    <p><strong>Answer:</strong> Use <strong>small/medium</strong> for balance, <strong>large</strong>
-                      for maximum
-                      accuracy (GPU recommended), and <strong>nano</strong> for low-power devices.</p>
-                  </div>
+                    <div class="faq-item">
+                      <div class="faq-question">
+                        <h3>Where is evidence stored?</h3>
+                        <i class='bx bx-chevron-down'></i>
+                      </div>
+                      <div class="faq-answer">
+                        <p><strong>Answer:</strong> Evidence is stored locally in <code>output/history/cards/</code> and
+                          <code>output/flagged_evidence/</code>.
+                        </p>
+                      </div>
+                    </div>
 
-                  <div class="help-faq">
-                    <h3>Where is evidence stored?</h3>
-                    <p><strong>Answer:</strong> Evidence is stored locally in <code>output/history/cards/</code> and
-                      <code>output/flagged_evidence/</code>.
-                    </p>
-                  </div>
+                    <div class="faq-item">
+                      <div class="faq-question">
+                        <h3>How long is data kept?</h3>
+                        <i class='bx bx-chevron-down'></i>
+                      </div>
+                      <div class="faq-answer">
+                        <p><strong>Answer:</strong> Retention defaults to 7 days (privacy policy). Admins can review
+                          policy in <strong>Settings → Privacy</strong>.</p>
+                      </div>
+                    </div>
 
-                  <div class="help-faq">
-                    <h3>How long is data kept?</h3>
-                    <p><strong>Answer:</strong> Retention defaults to 7 days (privacy policy). Admins can review policy
-                      in
-                      <strong>Settings → Privacy</strong>.
-                    </p>
-                  </div>
+                    <div class="faq-item">
+                      <div class="faq-question">
+                        <h3>What if the system is slow?</h3>
+                        <i class='bx bx-chevron-down'></i>
+                      </div>
+                      <div class="faq-answer">
+                        <p><strong>Answer:</strong> Lower the model size, enable frame skipping, or reduce processing
+                          size.</p>
+                      </div>
+                    </div>
 
-                  <div class="help-faq">
-                    <h3>What if the system is slow?</h3>
-                    <p><strong>Answer:</strong> Lower the model size, enable frame skipping, or reduce processing size.
-                    </p>
-                  </div>
-
-                  <div class="help-faq">
-                    <h3>Can I edit confirmed events?</h3>
-                    <p><strong>Answer:</strong> Yes. Open the event in History and update the status with notes.</p>
+                    <div class="faq-item">
+                      <div class="faq-question">
+                        <h3>Can I edit confirmed events?</h3>
+                        <i class='bx bx-chevron-down'></i>
+                      </div>
+                      <div class="faq-answer">
+                        <p><strong>Answer:</strong> Yes. Open the event in History and update the status with notes.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1555,7 +1673,7 @@
                       </tr>
                       <tr>
                         <td><strong>Status:</strong></td>
-                        <td>Production Ready</td>
+                        <td>Demo</td>
                       </tr>
                     </table>
                   </div>
@@ -1563,7 +1681,7 @@
                   <div class="help-section">
                     <h3>Technology Stack</h3>
                     <ul class="help-list">
-                      <li><strong>AI Engine:</strong> YOLOv11, MediaPipe, DeepFace (ArcFace)</li>
+                      <li><strong>AI Engine:</strong> YOLOv11, MediaPipe, DeepFace (GhostFaceNets)</li>
                       <li><strong>Backend Architecture:</strong> Flask, SocketIO, OpenCV</li>
                       <li><strong>Frontend Stack:</strong> Vanilla JS, CSS Glassmorphism, Boxicons</li>
                     </ul>
@@ -1619,6 +1737,32 @@
   </div>
 
   <!-- Scripts -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        window.location.href = '/';
+        return;
+      }
+
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const headers = new Headers(init.headers || {});
+        if (!headers.has('Authorization')) {
+          headers.set('Authorization', `Bearer ${token}`);
+        }
+        init = { ...init, headers };
+        return originalFetch(input, init).then((response) => {
+          if (response.status === 401) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+          }
+          return response;
+        });
+      };
+    })();
+  </script>
   <script src="static/js/router.js"></script>
   <script src="static/js/sidebar.js"></script>
   <script src="static/js/dashboard.js"></script>
@@ -1694,6 +1838,63 @@
     </div>
   </div>
 
+  <!-- Add User Modal (Styled like Alert Review Modal) -->
+  <div class="alert-review-modal hidden" id="add-user-modal" style="z-index: 2000;">
+    <div class="modal-overlay-alert" id="add-user-overlay"></div>
+    <div class="modal-content-alert" style="max-width: 500px;">
+      <div class="modal-header-alert">
+        <h3>Add New User</h3>
+        <button class="modal-close-btn-alert" id="close-add-user-modal">
+          <i class='bx bx-x'></i>
+        </button>
+      </div>
+      <div class="modal-body-alert">
+        <form id="add-user-form">
+          <div class="form-group-alert" style="margin-bottom: 1rem;">
+            <label for="modal-username"
+              style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Username</label>
+            <input type="text" id="modal-username" class="form-input-alert" placeholder="username" required
+              style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);">
+            <div id="modal-username-val" style="font-size: 0.75rem; margin-top: 5px;"></div>
+          </div>
+          <div class="form-group-alert" style="margin-bottom: 1rem;">
+            <label for="modal-email"
+              style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Email</label>
+            <input type="email" id="modal-email" class="form-input-alert" placeholder="email@example.com" required
+              style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);">
+            <div id="modal-email-val" style="font-size: 0.75rem; margin-top: 5px;"></div>
+          </div>
+          <div class="form-group-alert" style="margin-bottom: 1rem;">
+            <label for="modal-password"
+              style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Password</label>
+            <input type="password" id="modal-password" class="form-input-alert" placeholder="password" required
+              style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);">
+            <div id="modal-password-val" style="font-size: 0.75rem; margin-top: 5px;"></div>
+          </div>
+          <div class="form-group-alert" style="margin-bottom: 1rem;">
+            <label for="modal-role"
+              style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Role</label>
+            <select id="modal-role" class="form-input-alert"
+              style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);">
+              <option value="proctor">Proctor</option>
+              <option value="administrator">Administrator</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer-alert">
+        <div id="add-user-status" style="margin-right: auto; padding-left: 10px; font-size: 0.85rem;"></div>
+        <button class="btn-decline-alert" id="btn-cancel-add-user"
+          style="background-color: #444; border: 1px solid #555;">
+          Cancel
+        </button>
+        <button class="btn-confirm-alert" id="btn-confirm-add-user">
+          <i class='bx bx-user-plus'></i> Create User
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- History Detail Modal -->
   <div class="event-detail-modal hidden" id="event-detail-modal">
     <div class="modal-overlay" id="modal-overlay"></div>
@@ -1731,7 +1932,7 @@
           <div class="modal-status-actions" id="modal-status-actions"></div>
         </div>
         <div class="modal-section">
-          <h3 class="modal-section-title"><i class='bx bx-note'></i> Proctor Notes</h3>
+          <h3 class="modal-section-title"><i class='bx bx-note'></i>Proctor Notes</h3>
           <div class="notes-container">
             <textarea id="modal-notes" class="modal-notes-textarea"
               placeholder="Add notes about this student's behavior..."></textarea>
@@ -2231,26 +2432,80 @@
     });
 
     // Import settings
-    document.getElementById('import-settings-btn').addEventListener('click', function () {
-      document.getElementById('import-settings-file').click();
-    });
+    const importSettingsBtn = document.getElementById('import-settings-btn');
+    const importSettingsFile = document.getElementById('import-settings-file');
+    if (importSettingsBtn && importSettingsFile) {
+      importSettingsBtn.addEventListener('click', function () {
+        importSettingsFile.click();
+      });
+    }
 
-    document.getElementById('import-settings-file').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    if (importSettingsFile) {
+      importSettingsFile.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        try {
-          const settings = JSON.parse(event.target.result);
-          console.log('Importing settings:', settings);
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          try {
+            const settings = JSON.parse(event.target.result);
+            console.log('Importing settings:', settings);
 
-          // Apply settings to UI
-          applySettings(settings);
+            // Apply settings to UI
+            applySettings(settings);
 
-          // Save all settings to backend config
+            // Save all settings to backend config
+            if (typeof saveConfig === 'function') {
+              saveConfig(settings);
+            } else {
+              // Fallback: try to use fetch directly
+              fetch('/api/config', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(settings)
+              }).then(response => {
+                if (response.ok) {
+                  console.log('Settings saved to backend successfully');
+                } else {
+                  console.error('Failed to save settings to backend');
+                }
+              }).catch(error => {
+                console.error('Error saving settings to backend:', error);
+              });
+            }
+
+            // Show success message
+            const modal = document.getElementById('generic-alert-overlay');
+            const title = document.getElementById('generic-alert-title');
+            const message = document.getElementById('generic-alert-message');
+
+            title.textContent = 'Settings Imported Successfully';
+            message.textContent = 'All settings have been imported and applied.';
+            modal.classList.remove('hidden');
+          } catch (error) {
+            console.error('Error importing settings:', error);
+            alert('Error importing settings: ' + error.message);
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    // Reset to defaults
+    const resetSettingsBtn = document.getElementById('reset-settings-btn');
+    if (resetSettingsBtn) {
+      resetSettingsBtn.addEventListener('click', function () {
+        if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
+          console.log('Resetting to defaults:', DEFAULT_SETTINGS);
+
+          // Apply default settings to UI
+          applySettings(DEFAULT_SETTINGS);
+
+          // Save all default settings to backend config
           if (typeof saveConfig === 'function') {
-            saveConfig(settings);
+            saveConfig(DEFAULT_SETTINGS);
           } else {
             // Fallback: try to use fetch directly
             fetch('/api/config', {
@@ -2258,15 +2513,15 @@
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify(settings)
+              body: JSON.stringify(DEFAULT_SETTINGS)
             }).then(response => {
               if (response.ok) {
-                console.log('Settings saved to backend successfully');
+                console.log('Default settings saved to backend successfully');
               } else {
-                console.error('Failed to save settings to backend');
+                console.error('Failed to save default settings to backend');
               }
             }).catch(error => {
-              console.error('Error saving settings to backend:', error);
+              console.error('Error saving default settings to backend:', error);
             });
           }
 
@@ -2275,571 +2530,303 @@
           const title = document.getElementById('generic-alert-title');
           const message = document.getElementById('generic-alert-message');
 
-          title.textContent = 'Settings Imported Successfully';
-          message.textContent = 'All settings have been imported and applied.';
+          title.textContent = 'Settings Reset Successfully';
+          message.textContent = 'All settings have been reset to default values.';
           modal.classList.remove('hidden');
-        } catch (error) {
-          console.error('Error importing settings:', error);
-          alert('Error importing settings: ' + error.message);
         }
-      };
-      reader.readAsText(file);
-    });
-
-    // Reset to defaults
-    document.getElementById('reset-settings-btn').addEventListener('click', function () {
-      if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
-        console.log('Resetting to defaults:', DEFAULT_SETTINGS);
-
-        // Apply default settings to UI
-        applySettings(DEFAULT_SETTINGS);
-
-        // Save all default settings to backend config
-        if (typeof saveConfig === 'function') {
-          saveConfig(DEFAULT_SETTINGS);
-        } else {
-          // Fallback: try to use fetch directly
-          fetch('/api/config', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(DEFAULT_SETTINGS)
-          }).then(response => {
-            if (response.ok) {
-              console.log('Default settings saved to backend successfully');
-            } else {
-              console.error('Failed to save default settings to backend');
-            }
-          }).catch(error => {
-            console.error('Error saving default settings to backend:', error);
-          });
-        }
-
-        // Show success message
-        const modal = document.getElementById('generic-alert-overlay');
-        const title = document.getElementById('generic-alert-title');
-        const message = document.getElementById('generic-alert-message');
-
-        title.textContent = 'Settings Reset Successfully';
-        message.textContent = 'All settings have been reset to default values.';
-        modal.classList.remove('hidden');
-      }
-    });
+      });
+    }
 
     // Initialize slider value updates
     document.addEventListener('DOMContentLoaded', function () {
       // Add event listeners for all sliders
       const sliders = document.querySelectorAll('input[type="range"]');
       sliders.forEach(slider => {
-        slider.addEventListener('input', updateSliderValues);
+        if (typeof updateSliderValues === 'function') {
+          slider.addEventListener('input', updateSliderValues);
+        }
       });
 
       // Initial update
-      updateSliderValues();
+      if (typeof updateSliderValues === 'function') {
+        updateSliderValues();
+      }
     });
 
-    // User Creation Validation System
-    class UserValidator {
-      constructor() {
-        this.existingUsers = [];
-        this.validationState = {
-          username: false,
-          email: false,
-          password: false
-        };
-        this.isCreating = false; // Track creation state
-        this.lastCreationTime = 0; // Track last creation attempt
-        this.debounceTimeout = null; // Debounce timer
-        this.init();
+    // --- Clean User Management Module ---
+    window.UserManagement = (function () {
+      const state = {
+        username: { valid: false, value: '' },
+        email: { valid: false, value: '' },
+        password: { valid: false, value: '' },
+        isSubmitting: false,
+        existingUsers: new Set()
+      };
+
+      const els = {};
+
+      function init() {
+        els.username = document.getElementById('new-user-username');
+        els.email = document.getElementById('new-user-email');
+        els.role = document.getElementById('new-user-role');
+        els.password = document.getElementById('new-user-password');
+        els.togglePass = document.getElementById('toggle-new-password');
+        els.addBtn = document.getElementById('add-user-btn');
+        els.status = document.getElementById('user-creation-status');
+
+        els.usernameStatus = document.getElementById('username-validation-status');
+        els.emailStatus = document.getElementById('email-validation-status');
+        els.passwordStatus = document.getElementById('password-validation-status');
+
+        if (!els.username || !els.addBtn) return;
+
+        // Load existing users for duplicate checks (non-blocking)
+        loadExistingUsers();
+
+        els.username.addEventListener('input', debounce(() => validate('username'), 250));
+        els.username.addEventListener('blur', () => validate('username'));
+        els.email.addEventListener('input', debounce(() => validate('email'), 250));
+        els.email.addEventListener('blur', () => validate('email'));
+        els.password.addEventListener('input', debounce(() => validate('password'), 250));
+        els.password.addEventListener('blur', () => validate('password'));
+
+        if (els.togglePass) {
+          els.togglePass.addEventListener('click', () => {
+            const type = els.password.type === 'password' ? 'text' : 'password';
+            els.password.type = type;
+            els.togglePass.className = type === 'password' ? 'bx bx-show' : 'bx bx-hide';
+          });
+        }
+
+        els.addBtn.onclick = handleSubmit;
+        els.addBtn.addEventListener('click', () => {
+          console.log('Add User button clicked!');
+        });
+        checkForm();
       }
 
-      init() {
-        this.loadExistingUsers();
-        this.setupEventListeners();
-        this.setupPasswordToggle();
-      }
-
-      loadExistingUsers() {
-        // Load existing users from backend or localStorage
-        fetch('/api/users?current_user_role=administrator')
+      function loadExistingUsers() {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserRole = currentUser.role || 'administrator';
+        fetch(`/api/users?current_user_role=${encodeURIComponent(currentUserRole)}`)
           .then(response => response.json())
-          .then(users => {
-            this.existingUsers = users.map(user => user.username.toLowerCase());
-            console.log('Loaded existing users:', this.existingUsers);
+          .then(data => {
+            const users = Array.isArray(data) ? data : (data.users || []);
+            state.existingUsers = new Set(users.map(u => (u.username || '').toLowerCase()));
           })
-          .catch(error => {
-            console.error('Error loading existing users:', error);
-            // Fallback to empty array
-            this.existingUsers = [];
+          .catch(() => {
+            state.existingUsers = new Set();
           });
       }
 
-      setupEventListeners() {
-        const usernameInput = document.getElementById('new-user-username');
-        const emailInput = document.getElementById('new-user-email');
-        const passwordInput = document.getElementById('new-user-password');
-        const addButton = document.getElementById('add-user-btn');
+      function validate(field) {
+        const val = els[field].value.trim();
+        let isValid = false;
+        let msg = '';
 
-        // Username validation
-        usernameInput.addEventListener('input', (e) => {
-          console.log('Username input event triggered, isCreating:', this.isCreating);
-          if (!this.isCreating) this.validateUsername(e.target.value);
-        });
-        usernameInput.addEventListener('blur', (e) => {
-          console.log('Username blur event triggered, isCreating:', this.isCreating);
-          if (!this.isCreating) this.validateUsername(e.target.value);
-        });
+        console.log(`Validating ${field}: "${val}"`);
 
-        // Email validation
-        emailInput.addEventListener('input', (e) => {
-          console.log('Email input event triggered, isCreating:', this.isCreating);
-          if (!this.isCreating) this.validateEmail(e.target.value);
-        });
-        emailInput.addEventListener('blur', (e) => {
-          console.log('Email blur event triggered, isCreating:', this.isCreating);
-          if (!this.isCreating) this.validateEmail(e.target.value);
-        });
+        if (field === 'username') {
+          if (!val) msg = 'Username is required';
+          else if (val.length < 3) msg = 'Username must be at least 3 characters';
+          else if (!/^[a-zA-Z0-9_]+$/.test(val)) msg = 'Letters, numbers, underscore only';
+          else if (state.existingUsers.has(val.toLowerCase())) msg = 'Username already exists';
+          else { isValid = true; msg = 'Username available'; }
+        }
 
-        // Password validation
-        passwordInput.addEventListener('input', (e) => {
-          console.log('Password input event triggered, isCreating:', this.isCreating);
-          if (!this.isCreating) this.validatePassword(e.target.value);
-        });
-        passwordInput.addEventListener('blur', (e) => {
-          console.log('Password blur event triggered, isCreating:', this.isCreating);
-          if (!this.isCreating) this.validatePassword(e.target.value);
-        });
+        if (field === 'email') {
+          if (!val) msg = 'Email is required';
+          else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) msg = 'Invalid email format';
+          else { isValid = true; msg = 'Valid email address'; }
+        }
 
-        // Add user button - REMOVE ALL OTHER LISTENERS FIRST
-        const newAddButton = addButton.cloneNode(true);
-        addButton.parentNode.replaceChild(newAddButton, addButton);
+        if (field === 'password') {
+          if (!val) msg = 'Password is required';
+          else if (val.length < 8) msg = 'Password must be at least 8 characters';
+          else if (!/[a-zA-Z]/.test(val) || !/\d/.test(val)) msg = 'Password must contain letters and numbers';
+          else { isValid = true; msg = 'Strong password'; }
+        }
 
-        newAddButton.addEventListener('click', (e) => {
-          console.log('Add User button clicked, isCreating:', this.isCreating);
-          e.preventDefault();
-          e.stopPropagation();
-
-          // Debounce: clear existing timeout
-          if (this.debounceTimeout) {
-            clearTimeout(this.debounceTimeout);
-          }
-
-          // Debounce: wait 300ms before processing
-          this.debounceTimeout = setTimeout(() => {
-            this.handleAddUser();
-          }, 300);
-        });
+        console.log(`${field} validation result: ${isValid}, message: ${msg}`);
+        state[field].valid = isValid;
+        state[field].value = val;
+        updateFieldStatus(field, isValid, msg);
+        checkForm();
+        return isValid;
       }
 
-      setupPasswordToggle() {
-        const toggleIcon = document.getElementById('toggle-new-password');
-        const passwordInput = document.getElementById('new-user-password');
+      function updateFieldStatus(field, isValid, message) {
+        const statusEl = field === 'username' ? els.usernameStatus
+          : field === 'email' ? els.emailStatus
+            : els.passwordStatus;
 
-        toggleIcon.addEventListener('click', () => {
-          if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            toggleIcon.classList.remove('bx-show');
-            toggleIcon.classList.add('bx-hide');
-          } else {
-            passwordInput.type = 'password';
-            toggleIcon.classList.remove('bx-hide');
-            toggleIcon.classList.add('bx-show');
-          }
-        });
-      }
+        const hintEl = document.getElementById(`${field}-validation-hint`);
 
-      validateUsername(username) {
-        const statusElement = document.getElementById('username-validation-status');
-        const inputElement = document.getElementById('new-user-username');
-        const hintElement = document.getElementById('username-validation-hint');
-
-        // Skip validation if user creation is in progress
-        const addButton = document.getElementById('add-user-btn');
-        if (addButton.disabled && addButton.textContent === 'Creating...') {
-          return this.validationState.username;
+        if (statusEl) {
+          const icon = isValid ? '✅' : '❌';
+          statusEl.textContent = message ? `${icon} ${message}` : '';
+          statusEl.className = `validation-status ${isValid ? 'success' : 'error'}`;
         }
 
-        // Remove leading/trailing whitespace
-        username = username.trim();
-
-        // Check if empty
-        if (!username) {
-          this.setValidationStatus(statusElement, 'error', 'Username is required');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.username = false;
-          this.updateAddButton();
-          return false;
+        if (hintEl) {
+          hintEl.className = `validation-hint ${isValid ? 'success' : 'error'}`;
         }
 
-        // Check minimum length
-        if (username.length < 3) {
-          this.setValidationStatus(statusElement, 'error', 'Username must be at least 3 characters');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.username = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check for numbers
-        if (/\d/.test(username)) {
-          this.setValidationStatus(statusElement, 'error', 'Username cannot contain numbers');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.username = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check for special characters (only letters allowed)
-        if (!/^[a-zA-Z]+$/.test(username)) {
-          this.setValidationStatus(statusElement, 'error', 'Username can only contain letters');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.username = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check for duplicates
-        if (this.existingUsers.includes(username.toLowerCase())) {
-          this.setValidationStatus(statusElement, 'error', 'Username already exists');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.username = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // All checks passed
-        this.setValidationStatus(statusElement, 'success', 'Username available');
-        this.setFieldValidation(inputElement, true);
-        this.validationState.username = true;
-        this.updateAddButton();
-        return true;
-      }
-
-      validateEmail(email) {
-        const statusElement = document.getElementById('email-validation-status');
-        const inputElement = document.getElementById('new-user-email');
-
-        email = email.trim();
-
-        // Check if empty
-        if (!email) {
-          this.setValidationStatus(statusElement, 'error', 'Email is required');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.email = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Basic email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-          this.setValidationStatus(statusElement, 'error', 'Invalid email format');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.email = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // More thorough email validation
-        const emailRegexStrict = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegexStrict.test(email)) {
-          this.setValidationStatus(statusElement, 'error', 'Please enter a valid email address');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.email = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // All checks passed
-        this.setValidationStatus(statusElement, 'success', 'Valid email address');
-        this.setFieldValidation(inputElement, true);
-        this.validationState.email = true;
-        this.updateAddButton();
-        return true;
-      }
-
-      validatePassword(password) {
-        const statusElement = document.getElementById('password-validation-status');
-        const inputElement = document.getElementById('new-user-password');
-
-        // Check if empty
-        if (!password) {
-          this.setValidationStatus(statusElement, 'error', 'Password is required');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.password = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check minimum length
-        if (password.length < 8) {
-          this.setValidationStatus(statusElement, 'error', 'Password must be at least 8 characters');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.password = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check for at least one uppercase letter
-        if (!/[A-Z]/.test(password)) {
-          this.setValidationStatus(statusElement, 'error', 'Password must contain at least one uppercase letter');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.password = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check for at least one lowercase letter
-        if (!/[a-z]/.test(password)) {
-          this.setValidationStatus(statusElement, 'error', 'Password must contain at least one lowercase letter');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.password = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check for at least one number
-        if (!/\d/.test(password)) {
-          this.setValidationStatus(statusElement, 'error', 'Password must contain at least one number');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.password = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // Check for at least one special character
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-          this.setValidationStatus(statusElement, 'error', 'Password must contain at least one special character');
-          this.setFieldValidation(inputElement, false);
-          this.validationState.password = false;
-          this.updateAddButton();
-          return false;
-        }
-
-        // All checks passed
-        this.setValidationStatus(statusElement, 'success', 'Strong password');
-        this.setFieldValidation(inputElement, true);
-        this.validationState.password = true;
-        this.updateAddButton();
-        return true;
-      }
-
-      setValidationStatus(element, type, message) {
-        element.textContent = message;
-        element.className = `validation-status ${type}`;
-      }
-
-      setFieldValidation(element, isValid) {
-        if (isValid) {
-          element.classList.remove('invalid');
-          element.classList.add('valid');
-        } else {
-          element.classList.remove('valid');
-          element.classList.add('invalid');
+        const inputEl = els[field];
+        if (inputEl) {
+          inputEl.classList.toggle('valid', isValid);
+          inputEl.classList.toggle('invalid', !isValid);
         }
       }
 
-      updateAddButton() {
-        const addButton = document.getElementById('add-user-btn');
-        const allValid = this.validationState.username &&
-          this.validationState.email &&
-          this.validationState.password;
-
-        addButton.disabled = !allValid;
+      function checkForm() {
+        const isFormValid = state.username.valid && state.email.valid && state.password.valid;
+        els.addBtn.disabled = !isFormValid || state.isSubmitting;
       }
 
-      async handleAddUser() {
-        console.log('=== handleAddUser called ===');
-        console.log('isCreating:', this.isCreating);
-        console.log('validationState:', this.validationState);
-        console.log('lastCreationTime:', this.lastCreationTime);
-        console.log('Current time:', Date.now());
+      async function handleSubmit(e) {
+        e.preventDefault();
+        if (state.isSubmitting) return;
 
-        if (!this.validationState.username || !this.validationState.email || !this.validationState.password) {
-          console.log('Validation failed - returning');
-          this.showUserCreationStatus('error', 'Please fix all validation errors before creating a user');
+        const allValid = validate('username') && validate('email') && validate('password');
+        if (!allValid) {
+          showStatus('error', 'Please fix validation errors before creating a user');
           return;
         }
 
-        const username = document.getElementById('new-user-username').value.trim();
-        const email = document.getElementById('new-user-email').value.trim();
-        const password = document.getElementById('new-user-password').value;
-        const role = document.getElementById('new-user-role').value;
-
-        console.log('User data:', { username, email, role });
-
-        // STRICT PREVENTION: Multiple checks
-        const currentTime = Date.now();
-        if (this.isCreating) {
-          console.log('BLOCKED: Already creating user');
-          return;
-        }
-
-        if (currentTime - this.lastCreationTime < 2000) {
-          console.log('BLOCKED: Too soon since last creation attempt');
-          return;
-        }
-
-        // Set creation state and time
-        this.isCreating = true;
-        this.lastCreationTime = currentTime;
-
-        console.log('CREATION STARTED - Setting isCreating to true');
-
-        // Disable button during creation
-        const addButton = document.getElementById('add-user-btn');
-        addButton.disabled = true;
-        addButton.textContent = 'Creating...';
+        state.isSubmitting = true;
+        checkForm();
+        els.addBtn.textContent = 'Creating...';
+        if (els.status) els.status.style.display = 'none';
 
         try {
-          // Double-check duplicate before sending
-          if (this.existingUsers.includes(username.toLowerCase())) {
-            console.log('BLOCKED: Username already exists locally');
-            this.showUserCreationStatus('error', `Username "${username}" already exists`);
-            return;
-          }
-
-          // Get current user from localStorage
           const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-          const currentUserRole = currentUser.role || 'administrator';
+          const payload = {
+            username: state.username.value,
+            email: state.email.value,
+            password: els.password.value,
+            role: els.role.value,
+            current_user_role: currentUser.role || 'administrator'
+          };
 
-          console.log('Sending API request to /api/user/create with role:', currentUserRole);
+          console.log('Creating user with payload:', payload);
+          console.log('Current user:', currentUser);
+          console.log('Auth token:', localStorage.getItem('authToken'));
 
-          // Send user creation request to backend
-          const response = await fetch('/api/user/create', {
+          const res = await fetch('/api/user/create', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              username,
-              email,
-              password,
-              role,
-              current_user_role: currentUserRole
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
           });
 
-          console.log('API response status:', response.status);
+          console.log('Response status:', res.status);
+          console.log('Response headers:', [...res.headers.entries()]);
 
-          if (response.ok) {
-            const result = await response.json();
-            console.log('User created successfully:', result);
-            this.showUserCreationStatus('success', `User "${username}" created successfully!`);
+          const data = await res.json();
+          console.log('Response data:', data);
 
-            // Add to existing users list immediately
-            this.existingUsers.push(username.toLowerCase());
-
-            // Refresh user list from backend to ensure sync
-            setTimeout(() => {
-              this.loadExistingUsers();
-            }, 500);
-
-            // Clear form
-            this.clearForm();
-
-            // Update validation states
-            this.validationState = { username: false, email: false, password: false };
-            this.updateAddButton();
-
-            // Clear validation statuses
-            document.getElementById('username-validation-status').textContent = '';
-            document.getElementById('email-validation-status').textContent = '';
-            document.getElementById('password-validation-status').textContent = '';
-
-            // Remove validation classes
-            document.getElementById('new-user-username').classList.remove('valid', 'invalid');
-            document.getElementById('new-user-email').classList.remove('valid', 'invalid');
-            document.getElementById('new-user-password').classList.remove('valid', 'invalid');
-
+          if (res.ok) {
+            showStatus('success', `User "${data.username || payload.username}" created successfully!`);
+            state.existingUsers.add(payload.username.toLowerCase());
+            resetForm();
           } else {
-            const error = await response.json();
-            console.log('API error:', error);
-            this.showUserCreationStatus('error', error.message || 'Failed to create user');
-
-            // If it's a duplicate error, refresh user list
-            if (error.message && error.message.toLowerCase().includes('duplicate')) {
-              setTimeout(() => {
-                this.loadExistingUsers();
-              }, 1000);
-            }
+            showStatus('error', data.error || data.message || 'Failed to create user');
           }
-        } catch (error) {
-          console.error('Network error creating user:', error);
-          this.showUserCreationStatus('error', 'Network error. Please try again.');
+        } catch (err) {
+          showStatus('error', 'Network error. Please try again.');
         } finally {
-          // Reset creation state and re-enable button
-          console.log('CREATION FINISHED - Setting isCreating to false');
-          this.isCreating = false;
-          addButton.disabled = !this.validationState.username || !this.validationState.email || !this.validationState.password;
-          addButton.textContent = 'Add User';
+          state.isSubmitting = false;
+          els.addBtn.textContent = 'Add User';
+          checkForm();
         }
       }
 
-      clearForm() {
-        document.getElementById('new-user-username').value = '';
-        document.getElementById('new-user-email').value = '';
-        document.getElementById('new-user-password').value = '';
-        document.getElementById('new-user-role').value = 'proctor';
+      function resetForm() {
+        els.username.value = '';
+        els.email.value = '';
+        els.password.value = '';
+        els.role.value = 'proctor';
+
+        state.username.valid = false;
+        state.email.valid = false;
+        state.password.valid = false;
+
+        updateFieldStatus('username', false, '');
+        updateFieldStatus('email', false, '');
+        updateFieldStatus('password', false, '');
+        checkForm();
       }
 
-      showUserCreationStatus(type, message) {
-        const statusElement = document.getElementById('user-creation-status');
-        statusElement.textContent = message;
-        statusElement.className = `user-creation-status ${type}`;
-        statusElement.style.display = 'block';
+      function showStatus(type, message) {
+        if (!els.status) return;
+        els.status.textContent = message;
+        els.status.className = `user-creation-status ${type}`;
+        els.status.style.display = 'block';
 
-        // Auto-hide success messages after 5 seconds
         if (type === 'success') {
           setTimeout(() => {
-            statusElement.style.display = 'none';
+            if (els.status) els.status.style.display = 'none';
           }, 5000);
         }
       }
+
+      function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+      }
+
+      function initWhenAdminVisible() {
+        // Safety: avoid double-binding if already initialized
+        if (window.__userManagementInit) return;
+        window.__userManagementInit = true;
+        init();
+      }
+
+      return { init, initWhenAdminVisible };
+    })();
+
+    // Initialize Helpers
+    function initHelpers() {
+      // Help Tabs
+      document.querySelectorAll('.help-tab-v3').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const target = tab.dataset.tab;
+          document.querySelectorAll('.help-tab-v3').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.help-tab-content-v3').forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(target)?.classList.add('active');
+        });
+      });
+
+      // FAQ
+      document.querySelectorAll('.faq-question').forEach(q => {
+        q.addEventListener('click', () => {
+          const ans = q.nextElementSibling || q.querySelector('.faq-answer');
+          const icon = q.querySelector('i');
+          if (ans) {
+            const isHidden = ans.style.display === 'none' || !ans.style.display;
+            ans.style.display = isHidden ? 'block' : 'none';
+            if (icon) icon.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+          }
+        });
+      });
     }
 
-    // Initialize Help Page v3.0 Tabs
-    document.addEventListener('DOMContentLoaded', function () {
-      // Initialize Help Page v3.0 Tabs
-      const helpTabsV3 = document.querySelectorAll('.help-tab-v3');
-      const helpTabContentsV3 = document.querySelectorAll('.help-tab-content-v3');
+    // Main Init
+    function initDashboardInteractions() {
+      initHelpers();
+      UserManagement.init();
+    }
 
-      helpTabsV3.forEach(tab => {
-        tab.addEventListener('click', () => {
-          const targetTab = tab.getAttribute('data-tab');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDashboardInteractions);
+    } else {
+      initDashboardInteractions();
+    }
+  </script>
+</body>
 
-          // Remove active class from all tabs and contents
-          helpTabsV3.forEach(t => t.classList.remove('active'));
-          helpTabContentsV3.forEach(content => content.classList.remove('active'));
-
-          // Add active class to clicked tab and corresponding content
-          tab.classList.add('active');
-          const targetContent = document.getElementById(targetTab);
-          if (targetContent) {
-            targetContent.classList.add('active');
-          }
-        });
-      });
-
-      // Add FAQ accordion functionality
-      const faqQuestions = document.querySelectorAll('.faq-question');
-      faqQuestions.forEach(question => {
-        question.addEventListener('click', () => {
-          const faqItem = question.parentElement;
-          const answer = faqItem.querySelector('.faq-answer');
-          const icon = question.querySelector('i');
-
-          // Toggle answer visibility
-          if (answer.style.display === 'none' || !answer.style.display) {
-            answer.style.display = 'block';
-            icon.style.transform = 'rotate(90deg)';
-          } else {
-            answer.style.display = 'none';
-            icon.style.transform = 'rotate(0deg)';
-          }
-        });
-      });
-
-      window.userValidator = new UserValidator();
-    });
+</html>

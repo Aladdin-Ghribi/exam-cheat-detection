@@ -26,12 +26,16 @@
   "retention_period": 7,
   "show_bbox": true,
   "show_pose": false,
-  "show_confidence": false,
-  "show_track_ids": false,
+  "show_confidence": true,
+  "show_track_ids": true,
   "head_weight": 0.75,
   "hands_face_weight": 0.15,
   "hands_object_weight": 0.1,
   "smoothing_factor": 0.5,
   "history_length": 10,
-  "model_complexity": 0
+  "model_complexity": 0,
+  "face_debug": true,
+  "face_check_interval": 15,
+  "face_track_max_attempts": 3,
+  "face_track_cooldown_sec": 10
 }

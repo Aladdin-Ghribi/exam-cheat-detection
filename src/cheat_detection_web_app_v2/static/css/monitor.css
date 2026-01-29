@@ -8,7 +8,7 @@
   grid-template-columns: 1fr 380px;
   gap: 2rem;
   height: calc(100vh - var(--header-height));
-  padding: 1.2rem;
+  padding: 1.5rem;
   overflow: hidden;
   max-width: 1600px;
   margin: 0 auto;
@@ -21,7 +21,7 @@
 
 /* Adjust padding when sidebar is expanded - normal left padding */
 .main-content:not(.sidebar-collapsed) .monitor-container {
-  padding-left: 1.2rem;
+  padding-left: 1.5rem;
 }
 
 /* ============================================
@@ -244,28 +244,31 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.6rem 1.2rem;
-  border: none;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+
 }
 
 .btn-start-pipeline {
-  background: linear-gradient(135deg, #00C851, #007E33);
-  color: white;
+  background: rgba(0, 200, 120, 0.2);
+  color: #7dffd0;
+  border-color: rgba(0, 200, 120, 0.35);
 }
 
 .btn-start-pipeline:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 200, 81, 0.4);
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-stop-pipeline {
-  background: linear-gradient(135deg, #FF4444, #CC0000);
-  color: white;
+  background: rgba(255, 0, 0, 0.2);
+    color: #ff7d7d;
+    border-color: rgba(200, 0, 0, 0.35);
 }
 
 .btn-stop-pipeline:hover {

@@ -23,9 +23,37 @@ import sys
 import torch
 from pathlib import Path
 
+# Security and config
+from dotenv import load_dotenv
+from src.utils.auth_utils import (
+    hash_password,
+    verify_password,
+    generate_token,
+    verify_token,
+    token_required,
+    admin_required,
+)
+from src.utils.validation import (
+    validate_username,
+    validate_password,
+    validate_email,
+    ValidationError,
+)
+from src.utils.security import (
+    rate_limit,
+    check_failed_login_attempts,
+    record_failed_login,
+    clear_failed_login_attempts,
+)
+from src.utils.audit_logger import audit_logger
+from src.utils.config import Config
+
 # Path setup - MUST BE FIRST
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+# Load environment variables
+load_dotenv(PROJECT_ROOT / '.env')
 
 # Now import project modules
 
@@ -37,7 +65,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 app = Flask(__name__,
             template_folder=str(Path(__file__).parent),
             static_folder=str(Path(__file__).parent / 'static'))
-app.config['SECRET_KEY'] = 'exam-cheat-detection-v2-secret-key'
+app.config.from_object(Config)
+Config.validate()
 
 socketio = SocketIO(
     app,
@@ -58,6 +87,9 @@ def add_security_headers(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
     return response
 
 
@@ -72,6 +104,36 @@ CONFIG_FILE = DATA_DIR / 'config.json'
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 HISTORY_DIR.mkdir(parents=True, exist_ok=True)
 (DATA_DIR / 'student_faces').mkdir(parents=True, exist_ok=True)
+
+# ============================================
+# USER PASSWORD MIGRATION (AUTO)
+# ============================================
+
+def ensure_passwords_hashed():
+    """Hash any plain-text passwords in users.json (one-time migration)."""
+    if not USERS_FILE.exists():
+        return
+
+    try:
+        with open(USERS_FILE, 'r') as f:
+            users = json.load(f)
+    except Exception:
+        return
+
+    updated = False
+    for user in users:
+        stored_password = user.get('password', '')
+        if stored_password and not stored_password.startswith('$2b$'):
+            user['password'] = hash_password(stored_password)
+            updated = True
+
+    if updated:
+        with open(USERS_FILE, 'w') as f:
+            json.dump(users, f, indent=2)
+        print("✅ Password migration: plaintext passwords hashed")
+
+
+ensure_passwords_hashed()
 
 # ============================================
 # DETECTION PIPELINE INITIALIZATION
@@ -1009,6 +1071,7 @@ def logout():
 
 
 @app.route('/api/session/active')
+@token_required
 def get_active_session():
     """Get the currently active session"""
     if active_session and active_session['status'] == 'active':
@@ -1017,6 +1080,7 @@ def get_active_session():
 
 
 @app.route('/api/history/cards')
+@token_required
 def get_history_cards():
     """Get all event cards for history page"""
     cards = get_all_cards()
@@ -1024,6 +1088,7 @@ def get_history_cards():
 
 
 @app.route('/api/history/card/<card_id>')
+@token_required
 def get_card_detail(card_id):
     """Get detailed card data including evidence paths"""
     card_folder = HISTORY_DIR / card_id
@@ -1052,7 +1117,16 @@ def get_card_detail(card_id):
 
 @app.route('/api/evidence/<card_id>/<event_id>/<filename>')
 def get_evidence_file(card_id, event_id, filename):
-    """Serve evidence images"""
+    """Serve evidence images (supports Bearer or ?token=)"""
+    token = request.headers.get('Authorization', '')
+    if token.startswith('Bearer '):
+        token = token.split(' ', 1)[1]
+    else:
+        token = request.args.get('token', '')
+
+    if not token or not verify_token(token):
+        return jsonify({'error': 'Unauthorized'}), 401
+
     filepath = HISTORY_DIR / card_id / "evidence" / event_id / filename
     if filepath.exists():
         return send_file(filepath)
@@ -1060,52 +1134,79 @@ def get_evidence_file(card_id, event_id, filename):
 
 
 @app.route('/api/login', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=60)
 def api_login():
     """Authenticate user credentials"""
-    data = request.get_json()
-    username = data.get('username', '').strip()
-    password = data.get('password', '').strip()
+    data = request.get_json() or {}
 
-    if not username or not password:
-        return jsonify({'success': False, 'error': 'Username and password required'}), 400
+    try:
+        username = validate_username(data.get('username', ''))
+        password = validate_password(data.get('password', ''))
+    except ValidationError as e:
+        audit_logger.log_login_failure(data.get('username', ''), str(e))
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+    if check_failed_login_attempts(username):
+        audit_logger.log_login_failure(username, 'Account locked')
+        return jsonify({
+            'success': False,
+            'error': 'Account locked due to too many failed attempts. Try again later.'
+        }), 403
 
     if not USERS_FILE.exists():
+        audit_logger.log_login_failure(username, 'User database not found')
         return jsonify({'success': False, 'error': 'User database not found'}), 500
 
     with open(USERS_FILE, 'r') as f:
         users = json.load(f)
 
     for user in users:
-        if user.get('username') == username and user.get('password') == password:
-            return jsonify({
-                'success': True,
-                'user': {
+        if user.get('username') == username:
+            stored_password = user.get('password', '')
+            if stored_password.startswith('$2b$'):
+                password_valid = verify_password(password, stored_password)
+            else:
+                password_valid = (password == stored_password)
+
+            if password_valid:
+                clear_failed_login_attempts(username)
+                user_data = {
                     'id': user.get('id'),
                     'username': user.get('username'),
                     'email': user.get('email'),
                     'role': user.get('role')
                 }
-            })
+                token = generate_token(user_data['id'], user_data['username'], user_data['role'])
+                audit_logger.log_login_success(user.get('id'), username)
+                return jsonify({
+                    'success': True,
+                    'token': token,
+                    'user': user_data
+                })
 
+            record_failed_login(username)
+            audit_logger.log_login_failure(username, 'Invalid password')
+            return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
+
+    record_failed_login(username)
+    audit_logger.log_login_failure(username, 'User not found')
     return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
 
 
 @app.route('/api/users', methods=['GET'])
+@token_required
+@admin_required
 def get_users():
     """Get list of users (for settings/admin)"""
     if USERS_FILE.exists():
         with open(USERS_FILE, 'r') as f:
             users = json.load(f)
-        # Include passwords for admin users (check current user role from localStorage)
-        current_user_role = request.args.get('current_user_role', '')
-        if current_user_role == 'administrator':
-            return jsonify({'users': users})
-        else:
-            return jsonify({'users': [{k: v for k, v in u.items() if k != 'password'} for u in users]})
+        return jsonify({'users': [{k: v for k, v in u.items() if k != 'password'} for u in users]})
     return jsonify({'users': []})
 
 
 @app.route('/api/config', methods=['GET'])
+@token_required
 def get_config():
     """Get current configuration"""
     if CONFIG_FILE.exists():
@@ -1119,6 +1220,8 @@ def get_config():
 
 
 @app.route('/api/config', methods=['POST'])
+@token_required
+@admin_required
 def update_config():
     """Update configuration"""
     config = request.get_json()
@@ -1414,10 +1517,12 @@ def update_config():
     # Broadcast config update to all connected clients
     socketio.emit('config_updated', existing_config)
 
+    audit_logger.log_config_change(request.user.get('user_id'), config)
     return jsonify({'success': True})
 
 
 @app.route('/api/user/update', methods=['POST'])
+@token_required
 def update_user():
     """Update user profile information"""
     data = request.get_json()
@@ -1425,6 +1530,14 @@ def update_user():
     username = data.get('username', '').strip()
     password = data.get('password', '').strip()
     role = data.get('role', '').strip()
+
+    try:
+        if username:
+            username = validate_username(username)
+        if password:
+            validate_password(password)
+    except ValidationError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
 
     if not user_id or not username:
         return jsonify({'success': False, 'error': 'User ID and username are required'}), 400
@@ -1435,17 +1548,17 @@ def update_user():
     with open(USERS_FILE, 'r') as f:
         users = json.load(f)
 
-    # Check if current user is admin (from localStorage, passed in request)
-    current_user_role = data.get('current_user_role', '')
-    is_admin = current_user_role == 'administrator'
+    is_admin = request.user.get('role') == 'administrator'
+    if not is_admin and request.user.get('user_id') != user_id:
+        return jsonify({'success': False, 'error': 'Forbidden'}), 403
 
     user_found = False
     for user in users:
         if user.get('id') == user_id:
             # Update allowed fields
             user['username'] = username
-            if password:  # Only update password if provided
-                user['password'] = password
+            if password:
+                user['password'] = hash_password(password)
             # Only allow role update if current user is admin
             if is_admin and role:
                 user['role'] = role
@@ -1458,12 +1571,14 @@ def update_user():
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=2)
 
+    audit_logger.log_event('USER_UPDATED', request.user.get('user_id'), {'updated_user_id': user_id})
     return jsonify({'success': True, 'message': 'Profile updated successfully'})
 
 
 # --- STUDENT REGISTRATION API ---
 
 @app.route('/api/students/list', methods=['GET'])
+@token_required
 def get_students():
     """Get list of all registered students with face data."""
     students = detector.face_recognizer.get_all_students()
@@ -1471,6 +1586,7 @@ def get_students():
 
 
 @app.route('/api/students/register', methods=['POST'])
+@token_required
 def register_student():
     """Register a new student with face photo."""
     data = request.get_json()
@@ -1492,6 +1608,7 @@ def register_student():
 
 
 @app.route('/api/students/delete', methods=['POST'])
+@token_required
 def delete_student():
     """Delete a student from the face database."""
     data = request.get_json()
@@ -1508,6 +1625,8 @@ def delete_student():
 
 
 @app.route('/api/user/delete', methods=['POST'])
+@token_required
+@admin_required
 def delete_user():
     """Delete a user account"""
     data = request.get_json()
@@ -1521,11 +1640,6 @@ def delete_user():
 
     with open(USERS_FILE, 'r') as f:
         users = json.load(f)
-
-    # Check if current user is admin (from localStorage, passed in request)
-    current_user_role = data.get('current_user_role', '')
-    if current_user_role != 'administrator':
-        return jsonify({'success': False, 'error': 'Only administrators can delete users'}), 403
 
     user_found = False
     for i, user in enumerate(users):
@@ -1543,18 +1657,16 @@ def delete_user():
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=2)
 
+    audit_logger.log_user_deleted(request.user.get('user_id'), user_id)
     return jsonify({'success': True, 'message': 'User deleted successfully'})
 
 
 @app.route('/api/user/create', methods=['POST'])
+@token_required
+@admin_required
 def create_user():
     """Create a new user account (admin only)"""
     data = request.get_json()
-
-    # Check if current user is admin
-    current_user_role = data.get('current_user_role', '')
-    if current_user_role != 'administrator':
-        return jsonify({'success': False, 'error': 'Only administrators can create users'}), 403
 
     # Get form data
     username = data.get('username', '').strip()
@@ -1563,12 +1675,12 @@ def create_user():
     role = data.get('role', 'proctor').strip()
 
     # Validate required fields
-    if not username:
-        return jsonify({'success': False, 'error': 'Username is required'}), 400
-    if not email:
-        return jsonify({'success': False, 'error': 'Email is required'}), 400
-    if not password:
-        return jsonify({'success': False, 'error': 'Password is required'}), 400
+    try:
+        username = validate_username(username)
+        email = validate_email(email)
+        validate_password(password)
+    except ValidationError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     if role not in ['proctor', 'administrator']:
         return jsonify({'success': False, 'error': 'Invalid role'}), 400
 
@@ -1601,7 +1713,7 @@ def create_user():
         'id': new_id,
         'username': username,
         'email': email,
-        'password': password,
+        'password': hash_password(password),
         'role': role
     }
 
@@ -1612,10 +1724,12 @@ def create_user():
         json.dump(users, f, indent=2)
 
     print(f"New user created: {username} ({role})")
+    audit_logger.log_user_created(request.user.get('user_id'), new_id, username)
     return jsonify({'success': True, 'message': f'User {username} created successfully', 'user': {'id': new_id, 'username': username, 'email': email, 'role': role}})
 
 
 @app.route('/api/history/update_card', methods=['POST'])
+@token_required
 def update_history_card():
     """Update a history card status and notes"""
     data = request.get_json()
@@ -1657,6 +1771,7 @@ def update_history_card():
 
 
 @app.route('/api/dashboard/statistics')
+@token_required
 def get_dashboard_statistics():
     """Calculate comprehensive dashboard statistics from history cards"""
     try:

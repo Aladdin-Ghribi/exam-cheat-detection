@@ -4,6 +4,7 @@ from .pose_detector import PoseDetector
 from .exam_seat_manager import ExamSeatManager
 from .object_tracker import ObjectTracker
 from .face_recognizer import FaceRecognizer
+from .suspicion_config import load_config
 from config import YOLO_MODEL, YOLO_MODEL_OPTIONS, CONFIDENCE_THRESHOLD, IMG_SIZE_GPU, IMG_SIZE_CPU, IMG_SIZE_NANO, ENABLE_FRAME_SKIPPING, FRAME_SKIP_THRESHOLD_MS, MAX_FRAME_SKIP
 from ultralytics import YOLO
 import cv2
@@ -96,8 +97,22 @@ class YOLODetector:
         self.face_recognizer = FaceRecognizer()
         self.face_id_cache = {}  # track_id -> {id_type, primary_id, confidence, ...}
         self.face_id_last_check = {}  # track_id -> frame_count when last checked
+
+        # Cache behavior (configurable via data/config.json)
+        config = load_config()
         # Run face recognition every 15 frames (~once per half second at 30fps)
-        self.face_check_interval = 15
+        self.face_check_interval = config.get('face_check_interval', 15)
+
+        # TRACK-only retry + cooldown logic
+        self.face_track_max_attempts = config.get('face_track_max_attempts', 3)
+        self.face_track_cooldown_sec = config.get(
+            'face_track_cooldown_sec', 10)
+        self.face_track_fail_counts = {}  # track_id -> failed attempts
+        self.face_track_cooldown_until = {}  # track_id -> timestamp
+
+        # Debug logging
+        self.face_debug = bool(config.get('face_debug', False)) or (
+            os.getenv('FACE_DEBUG', '0') == '1')
 
         # 🔥 Warm up the pipeline to avoid initial latency spikes
         self.warmup()
@@ -236,16 +251,31 @@ class YOLODetector:
                     track_id = det.get('track_id')
                     if track_id is not None and self.face_recognizer is not None:
                         last_check = self.face_id_last_check.get(track_id, 0)
+                        now = time.time()
+                        cached = self.face_id_cache.get(track_id)
+
+                        # Cooldown only applies to TRACK results
+                        cooldown_until = self.face_track_cooldown_until.get(
+                            track_id, 0)
+                        in_cooldown = bool(
+                            cached and cached.get(
+                                'id_type') == 'TRACK' and now < cooldown_until
+                        )
 
                         # Only run recognition if:
                         # 1. We haven't recognized anyone yet THIS frame
                         # 2. It's time to check THIS person OR they are new
-                        can_check = not face_processed_this_frame and (
+                        can_check = not face_processed_this_frame and not in_cooldown and (
                             self.frame_count - last_check >= self.face_check_interval or
                             track_id not in self.face_id_cache
                         )
 
                         if can_check:
+                            attempt = self.face_track_fail_counts.get(
+                                track_id, 0) + 1
+                            if self.face_debug:
+                                print(
+                                    f"🔎 FaceCheck track={track_id} attempt={attempt}/{self.face_track_max_attempts}")
                             id_type, primary_id, confidence = self.face_recognizer.get_primary_id(
                                 track_id, frame, det['bbox']
                             )
@@ -257,6 +287,29 @@ class YOLODetector:
                             }
                             self.face_id_last_check[track_id] = self.frame_count
                             face_processed_this_frame = True  # Lock for this frame
+
+                            # TRACK retry + cooldown logic
+                            if id_type == 'SID':
+                                if self.face_debug:
+                                    name = self.face_recognizer.student_names.get(
+                                        primary_id, '')
+                                    print(
+                                        f"✅ FaceRecognized track={track_id} sid={primary_id} name={name} conf={confidence:.2f}")
+                                self.face_track_fail_counts.pop(track_id, None)
+                                self.face_track_cooldown_until.pop(
+                                    track_id, None)
+                            else:
+                                if self.face_debug:
+                                    print(
+                                        f"❌ FaceFailed track={track_id} status=TRACK conf={confidence:.2f}")
+                                failures = self.face_track_fail_counts.get(
+                                    track_id, 0) + 1
+                                if failures >= self.face_track_max_attempts:
+                                    self.face_track_cooldown_until[track_id] = (
+                                        now + self.face_track_cooldown_sec
+                                    )
+                                    failures = 0  # reset after cooldown starts
+                                self.face_track_fail_counts[track_id] = failures
 
                         # Retrieve identity (Always from cache if available)
                         if track_id in self.face_id_cache:

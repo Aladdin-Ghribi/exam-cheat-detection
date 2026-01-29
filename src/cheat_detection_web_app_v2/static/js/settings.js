@@ -489,7 +489,9 @@ function loadAccountsOverview() {
 
       // Build the accounts table
       const tableHTML = `
-        <h3 class="section-title">Accounts Overview</h3>
+        <div class="profile-overview-header">
+          <h3 class="section-title">Accounts Overview</h3>
+        </div>
         <div class="glossy-table-container">
           <table class="accounts-table">
             <thead>
@@ -514,9 +516,22 @@ function loadAccountsOverview() {
             </tbody>
           </table>
         </div>
+        <div class="profile-actions-row">
+          <button class="btn-primary" id="btn-trigger-add-user">
+            <i class='bx bx-user-plus'></i> Add New User
+          </button>
+        </div>
       `;
 
       profileContent.innerHTML = tableHTML;
+
+      // Add User Button Listener
+      const addUserBtn = document.getElementById('btn-trigger-add-user');
+      if (addUserBtn) {
+        addUserBtn.addEventListener('click', () => {
+          openAddUserModal();
+        });
+      }
 
       // Add event listeners to edit buttons
       document.querySelectorAll('.admin-table-edit-btn').forEach(btn => {
@@ -1085,3 +1100,132 @@ function saveConfig(updates) {
       console.error('Error saving config:', error);
     });
 }
+
+// --- Add User Modal Logic ---
+
+function openAddUserModal() {
+  const modal = document.getElementById('add-user-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    // Clear form
+    const form = document.getElementById('add-user-form');
+    if (form) form.reset();
+
+    const status = document.getElementById('add-user-status');
+    if (status) status.textContent = '';
+
+    // Clear validation messages
+    if (document.getElementById('modal-username-val')) document.getElementById('modal-username-val').textContent = '';
+    if (document.getElementById('modal-email-val')) document.getElementById('modal-email-val').textContent = '';
+    if (document.getElementById('modal-password-val')) document.getElementById('modal-password-val').textContent = '';
+  }
+}
+
+function closeAddUserModal() {
+  const modal = document.getElementById('add-user-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+// Initialize Modal Listeners on Load
+document.addEventListener('DOMContentLoaded', () => {
+  // Modal Event Listeners
+  const modal = document.getElementById('add-user-modal');
+  const closeBtn = document.getElementById('close-add-user-modal');
+  const cancelBtn = document.getElementById('btn-cancel-add-user');
+  const overlay = document.getElementById('add-user-overlay');
+  const confirmBtn = document.getElementById('btn-confirm-add-user');
+
+  if (closeBtn) closeBtn.addEventListener('click', closeAddUserModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeAddUserModal);
+  if (overlay) overlay.addEventListener('click', closeAddUserModal);
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      const usernameInput = document.getElementById('modal-username');
+      const emailInput = document.getElementById('modal-email');
+      const passwordInput = document.getElementById('modal-password');
+      const roleInput = document.getElementById('modal-role');
+      const statusDiv = document.getElementById('add-user-status');
+
+      if (!usernameInput || !emailInput || !passwordInput || !roleInput) return;
+
+      // Basic Frontend Validation
+      const username = usernameInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const role = roleInput.value;
+
+      let isValid = true;
+      document.getElementById('modal-username-val').textContent = '';
+      document.getElementById('modal-email-val').textContent = '';
+      document.getElementById('modal-password-val').textContent = '';
+      document.getElementById('modal-username-val').style.color = '#ff4444';
+      document.getElementById('modal-email-val').style.color = '#ff4444';
+      document.getElementById('modal-password-val').style.color = '#ff4444';
+
+      if (username.length < 3) {
+        document.getElementById('modal-username-val').textContent = 'Username must be at least 3 characters.';
+        isValid = false;
+      }
+      if (!email.includes('@')) {
+        document.getElementById('modal-email-val').textContent = 'Invalid email address.';
+        isValid = false;
+      }
+      if (password.length < 8) {
+        document.getElementById('modal-password-val').textContent = 'Password must be at least 8 characters.';
+        isValid = false;
+      }
+
+      if (!isValid) return;
+
+      // Prepare Payload
+      const payload = {
+        username: username,
+        email: email,
+        password: password,
+        role: role
+      };
+
+      if (statusDiv) {
+        statusDiv.textContent = 'Creating user...';
+        statusDiv.style.color = 'var(--text-primary)';
+      }
+
+      try {
+        const response = await fetch('/api/user/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (statusDiv) {
+          if (response.ok && data.success) {
+            statusDiv.textContent = 'User created successfully!';
+            statusDiv.style.color = '#00C851';
+            setTimeout(() => {
+              closeAddUserModal();
+              loadAccountsOverview(); // Refresh table
+            }, 1500);
+          } else {
+            statusDiv.textContent = data.error || 'Failed to create user.';
+            statusDiv.style.color = '#ff4444';
+          }
+        }
+      } catch (err) {
+        console.error('Error creating user:', err);
+        if (statusDiv) {
+          statusDiv.textContent = 'Network error or server unavailable.';
+          statusDiv.style.color = '#ff4444';
+        }
+      }
+    });
+  }
+});
