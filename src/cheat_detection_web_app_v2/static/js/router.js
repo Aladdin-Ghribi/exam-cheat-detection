@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const viewId = `view-${pageId}`;
 
       // Update Title
-      pageTitle.textContent = item.querySelector('span').textContent;
+      pageTitle.textContent = item.querySelector('.nav-label')?.textContent || '';
 
       // Get current and new views
       const currentView = document.querySelector('.page-view.active');

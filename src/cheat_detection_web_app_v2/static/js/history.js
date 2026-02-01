@@ -129,6 +129,19 @@ const generateMockEvents = () => {
 let allEvents = [];
 let filteredEvents = [];
 
+// Auth helpers for evidence image access
+function getAuthToken() {
+  return localStorage.getItem('authToken') || '';
+}
+
+function buildEvidenceUrl(url) {
+  if (!url) return '';
+  const token = getAuthToken();
+  if (!token) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Populate Department Dropdown
   const departmentSelect = document.getElementById('department-select-simple');
@@ -239,7 +252,7 @@ function transformCardToEvent(card) {
         notes: e.notes || '',
         status: e.status || 'pending',
         evidenceCount: e.evidence_count || 2,
-        evidencePath: `/api/evidence/${card.card_id}/${e.event_id}`,
+        evidencePath: buildEvidenceUrl(`/api/evidence/${card.card_id}/${e.event_id}`),
         evidence: e.evidence || {}
       };
     }),
@@ -324,7 +337,7 @@ function renderEventCards() {
     // Use first event's crop image as thumbnail
     const firstEvidence = latestEvent.evidence || {};
     const evidenceThumbnail = firstEvidence.crop
-      ? `/api/evidence/${event.id}/${firstEvidence.crop}`
+      ? buildEvidenceUrl(`/api/evidence/${event.id}/${firstEvidence.crop}`)
       : 'static/assets/studentTestPic.png';  // Fallback
 
     return `
@@ -942,7 +955,7 @@ function renderEvidenceGallery(events) {
     // Add crop image if exists
     if (evidence.crop) {
       evidenceImages.push({
-        url: `/api/evidence/${currentEventCardId}/${evidence.crop}`,
+        url: buildEvidenceUrl(`/api/evidence/${currentEventCardId}/${evidence.crop}`),
         timestamp: event.timestamp,
         eventType: event.typeLabel
       });
@@ -951,7 +964,7 @@ function renderEvidenceGallery(events) {
     // Add frame image if exists
     if (evidence.frame) {
       evidenceImages.push({
-        url: `/api/evidence/${currentEventCardId}/${evidence.frame}`,
+        url: buildEvidenceUrl(`/api/evidence/${currentEventCardId}/${evidence.frame}`),
         timestamp: event.timestamp,
         eventType: event.typeLabel
       });
@@ -1085,6 +1098,74 @@ async function loadImageAsBase64(url) {
   });
 }
 
+// Arabic text helpers for PDF export
+function containsArabic(text) {
+  return /[\u0600-\u06FF]/.test(text || '');
+}
+
+function mmToPx(mm) {
+  return Math.round((mm * 96) / 25.4);
+}
+
+function wrapCanvasText(ctx, text, maxWidthPx) {
+  if (!text) return [''];
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+
+  words.forEach(word => {
+    const testLine = line ? `${line} ${word}` : word;
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidthPx && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = testLine;
+    }
+  });
+
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawTextAsImage(doc, text, x, y, options = {}) {
+  const {
+    font = '16px Arial',
+    color = '#000000',
+    maxWidthMm = 70,
+    align = 'left'
+  } = options;
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = font;
+
+  const maxWidthPx = mmToPx(maxWidthMm);
+  const lines = wrapCanvasText(ctx, text, maxWidthPx);
+  const fontSize = parseInt(font, 10) || 16;
+  const lineHeight = Math.ceil(fontSize * 1.35);
+
+  canvas.width = maxWidthPx;
+  canvas.height = Math.max(lineHeight * lines.length, lineHeight);
+
+  ctx.font = font;
+  ctx.fillStyle = color;
+  ctx.textBaseline = 'top';
+  ctx.direction = align === 'right' ? 'rtl' : 'ltr';
+  ctx.textAlign = align === 'right' ? 'right' : 'left';
+
+  const drawX = align === 'right' ? canvas.width : 0;
+  lines.forEach((line, index) => {
+    ctx.fillText(line, drawX, index * lineHeight);
+  });
+
+  const dataUrl = canvas.toDataURL('image/png');
+  const widthMm = (canvas.width / 96) * 25.4;
+  const heightMm = (canvas.height / 96) * 25.4;
+  doc.addImage(dataUrl, 'PNG', x, y - (heightMm * 0.75), widthMm, heightMm);
+  return heightMm;
+}
+
 async function exportEventToPDF(cardId) {
   const event = allEvents.find(e => e.id === cardId);
   if (!event) {
@@ -1204,33 +1285,62 @@ async function exportEventToPDF(cardId) {
     doc.setFont('helvetica', 'normal');
     const col1X = margin + 8;
     const col2X = pageWidth / 2 + 5;
+    const colValueWidth = (pageWidth / 2) - margin - 35;
+    const col1ValueLeft = col1X + 25;
+    const col2ValueLeft = col2X + 25;
+    const col1ValueBoxLeft = col2X - 10 - colValueWidth;
+    const col2ValueBoxLeft = pageWidth - margin - 10 - colValueWidth;
 
     doc.setFont('helvetica', 'bold');
     doc.text('Full Name:', col1X, yPos);
     doc.setFont('helvetica', 'normal');
-    doc.text(event.studentName, col1X + 25, yPos);
+    if (containsArabic(event.studentName)) {
+      drawTextAsImage(doc, event.studentName, col1ValueBoxLeft, yPos, {
+        font: '14px Arial',
+        maxWidthMm: colValueWidth,
+        align: 'right'
+      });
+    } else {
+      doc.text(event.studentName, col1ValueLeft, yPos);
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.text('Student ID:', col2X, yPos);
     doc.setFont('helvetica', 'normal');
-    doc.text(event.studentId, col2X + 25, yPos);
+    doc.text(event.studentId, col2ValueLeft, yPos);
     yPos += 7;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Exam Name:', col1X, yPos);
+    doc.text('Department:', col1X, yPos);
     doc.setFont('helvetica', 'normal');
-    doc.text(event.examName, col1X + 25, yPos);
+    if (containsArabic(event.department)) {
+      drawTextAsImage(doc, event.department, col1ValueBoxLeft, yPos, {
+        font: '12px Arial',
+        maxWidthMm: colValueWidth,
+        align: 'right'
+      });
+    } else {
+      doc.text(event.department || 'N/A', col1ValueLeft, yPos);
+    }
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Session ID:', col2X, yPos);
+    doc.text('Subject:', col2X, yPos);
     doc.setFont('helvetica', 'normal');
-    doc.text(event.sessionId || 'N/A', col2X + 25, yPos);
+    if (containsArabic(event.examName)) {
+      drawTextAsImage(doc, event.examName, col2ValueBoxLeft, yPos, {
+        font: '12px Arial',
+        maxWidthMm: colValueWidth,
+        align: 'right'
+      });
+    } else {
+      doc.text(event.examName, col2ValueLeft, yPos);
+    }
     yPos += 7;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Report Date:', col1X, yPos);
+    doc.text('Exam Date:', col1X, yPos);
     doc.setFont('helvetica', 'normal');
-    doc.text(formatTimestamp(event.lastEventTime), col1X + 25, yPos);
+    doc.text(formatTimestamp(event.lastEventTime), col1ValueLeft, yPos);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Status:', col2X, yPos);
@@ -1298,24 +1408,34 @@ async function exportEventToPDF(cardId) {
     if (event.notes && event.notes.trim()) {
       checkPageBreak(40);
 
-      doc.setFillColor(255, 252, 230);
+      doc.setFillColor(245, 248, 255);
       const notesHeight = 5 + Math.ceil(event.notes.length / 80) * 5;
       doc.roundedRect(margin, yPos - 3, pageWidth - 2 * margin, notesHeight + 15, 2, 2, 'F');
 
       doc.setTextColor(...colors.dark);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('📝 Proctor Notes', margin + 5, yPos + 3);
+      doc.text('Proctor Notes', margin + 5, yPos + 3);
 
       yPos += 10;
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      const notesLines = doc.splitTextToSize(event.notes, pageWidth - 2 * margin - 10);
-      notesLines.forEach(line => {
-        doc.text(line, margin + 5, yPos);
-        yPos += 5;
-      });
-      yPos += 10;
+      const notesText = event.notes.trim();
+      if (containsArabic(notesText)) {
+        const notesHeight = drawTextAsImage(doc, notesText, margin + 5, yPos + 2, {
+          font: '13px Arial',
+          maxWidthMm: pageWidth - 2 * margin - 10,
+          align: 'right'
+        });
+        yPos += Math.max(notesHeight, 6) + 8;
+      } else {
+        const notesLines = doc.splitTextToSize(notesText, pageWidth - 2 * margin - 10);
+        notesLines.forEach(line => {
+          doc.text(line, margin + 5, yPos);
+          yPos += 5;
+        });
+        yPos += 10;
+      }
     }
 
     // === EVENT TIMELINE SECTION ===
@@ -1330,84 +1450,109 @@ async function exportEventToPDF(cardId) {
     // Sort events by timestamp
     const sortedEvents = [...event.events].sort((a, b) => a.timestamp - b.timestamp);
 
+    // Table layout for timeline
+    const tableWidth = pageWidth - 2 * margin;
+    const colIndexW = 8;
+    const colTypeW = 36;
+    const colSeverityW = 22;
+    const colConfW = 22;
+    const colTimeW = 30;
+    const colReasonsW = tableWidth - (colIndexW + colTypeW + colSeverityW + colConfW + colTimeW);
+
+    const colX = {
+      index: margin,
+      type: margin + colIndexW,
+      severity: margin + colIndexW + colTypeW,
+      confidence: margin + colIndexW + colTypeW + colSeverityW,
+      reasons: margin + colIndexW + colTypeW + colSeverityW + colConfW,
+      time: margin + colIndexW + colTypeW + colSeverityW + colConfW + colReasonsW
+    };
+
+    // Header row
+    doc.setFillColor(...colors.primary);
+    doc.rect(margin, yPos, tableWidth, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('#', colX.index + 2, yPos + 7);
+    doc.text('Type', colX.type + 2, yPos + 7);
+    doc.text('Severity', colX.severity + 2, yPos + 7);
+    doc.text('Conf.', colX.confidence + 2, yPos + 7);
+    doc.text('Details / Reasons', colX.reasons + 2, yPos + 7);
+    doc.text('Time', colX.time + 2, yPos + 7);
+    yPos += 10;
+
     for (let i = 0; i < sortedEvents.length; i++) {
       const evt = sortedEvents[i];
-      checkPageBreak(60);
-
-      // Event card background
-      const cardHeight = 45;
-      doc.setFillColor(250, 250, 250);
-      doc.roundedRect(margin, yPos - 3, pageWidth - 2 * margin, cardHeight, 2, 2, 'F');
-
-      // Event number badge
       const badgeColor = evt.severity === 'high' ? colors.danger :
         evt.severity === 'medium' ? colors.warning : colors.success;
-      doc.setFillColor(...badgeColor);
-      doc.circle(margin + 8, yPos + 3, 5, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text((i + 1).toString(), margin + 8, yPos + 4.5, { align: 'center' });
 
-      // Event header
+      const reasonsText = (evt.reasons && evt.reasons.length > 0)
+        ? evt.reasons.join(', ')
+        : (evt.description || '');
+
+      let reasonsHeight = 8;
+      let reasonsLines = [];
+
+      if (containsArabic(reasonsText)) {
+        const fontPx = 12;
+        const ctx = document.createElement('canvas').getContext('2d');
+        ctx.font = `${fontPx}px Arial`;
+        const lines = wrapCanvasText(ctx, reasonsText, mmToPx(colReasonsW - 4));
+        reasonsHeight = ((Math.ceil(fontPx * 1.35) * lines.length) / 96) * 25.4;
+      } else {
+        reasonsLines = doc.splitTextToSize(reasonsText, colReasonsW - 4);
+        reasonsHeight = Math.max(8, reasonsLines.length * 4.5);
+      }
+
+      const rowHeight = Math.max(12, reasonsHeight + 6);
+      checkPageBreak(rowHeight + 4);
+
+      if (i % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(margin, yPos, tableWidth, rowHeight, 'F');
+      }
+
       doc.setTextColor(...colors.dark);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text(evt.typeLabel, margin + 18, yPos + 4);
-
-      // Timestamp
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...colors.secondary);
-      doc.text(formatTimestamp(evt.timestamp), pageWidth - margin - 5, yPos + 4, { align: 'right' });
-
-      yPos += 10;
-
-      // Event details
-      doc.setFontSize(9);
-      doc.setTextColor(...colors.dark);
+      doc.text((i + 1).toString(), colX.index + 2, yPos + 7);
 
       doc.setFont('helvetica', 'bold');
-      doc.text('Confidence:', margin + 18, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${(evt.confidence * 100).toFixed(0)}%`, margin + 40, yPos);
+      doc.text(evt.typeLabel, colX.type + 2, yPos + 7);
 
-      doc.setFont('helvetica', 'bold');
-      doc.text('Severity:', margin + 70, yPos);
-      doc.setFont('helvetica', 'normal');
       doc.setTextColor(...badgeColor);
-      doc.text(evt.severity.toUpperCase(), margin + 90, yPos);
+      doc.setFont('helvetica', 'bold');
+      doc.text(evt.severity.toUpperCase(), colX.severity + 2, yPos + 7);
+
       doc.setTextColor(...colors.dark);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${(evt.confidence * 100).toFixed(0)}%`, colX.confidence + 2, yPos + 7);
 
-      if (evt.suspicionScore !== undefined) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('Score:', margin + 120, yPos);
-        doc.setFont('helvetica', 'normal');
-        doc.text(evt.suspicionScore.toString(), margin + 135, yPos);
-      }
-
-      yPos += 6;
-
-      // Reasons
-      if (evt.reasons && evt.reasons.length > 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('Detection Reasons:', margin + 18, yPos);
-        yPos += 5;
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(8);
-        const reasonsText = evt.reasons.join(', ');
-        const reasonsLines = doc.splitTextToSize(reasonsText, pageWidth - 2 * margin - 25);
-        reasonsLines.forEach(line => {
-          doc.text(line, margin + 18, yPos);
-          yPos += 4;
+      if (containsArabic(reasonsText)) {
+        drawTextAsImage(doc, reasonsText, colX.reasons + 2, yPos + 6, {
+          font: '12px Arial',
+          maxWidthMm: colReasonsW - 4,
+          align: 'right'
         });
-        yPos += 2;
+      } else {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        let textY = yPos + 6;
+        reasonsLines.forEach(line => {
+          doc.text(line, colX.reasons + 2, textY);
+          textY += 4.5;
+        });
       }
 
-      yPos += cardHeight - 25;
+      doc.setTextColor(...colors.dark);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatTimestamp(evt.timestamp), colX.time + 2, yPos + 7);
+
+      yPos += rowHeight;
     }
 
-    yPos += 5;
+    yPos += 6;
 
     // === EVIDENCE GALLERY SECTION ===
     checkPageBreak(40);
@@ -1443,7 +1588,7 @@ async function exportEventToPDF(cardId) {
         }
 
         try {
-          const imgUrl = `/api/evidence/${currentEventCardId}/${evidence.crop}`;
+          const imgUrl = buildEvidenceUrl(`/api/evidence/${currentEventCardId}/${evidence.crop}`);
           const base64Image = await loadImageAsBase64(imgUrl);
 
           if (base64Image) {

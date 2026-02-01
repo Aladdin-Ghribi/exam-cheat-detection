@@ -4,14 +4,15 @@ Authentication utilities for secure password handling
 import bcrypt
 import secrets
 import jwt
+import os
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify
 
-# Secret key for JWT (should be in environment variable in production)
-JWT_SECRET = secrets.token_hex(32)
-JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION_HOURS = 24
+# Secret key for JWT (use environment variable in production)
+JWT_SECRET = os.getenv('JWT_SECRET_KEY', secrets.token_hex(32))
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
+JWT_EXPIRATION_HOURS = int(os.getenv('JWT_EXPIRATION_HOURS', '24'))
 
 
 def hash_password(password: str) -> str:

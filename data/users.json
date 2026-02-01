@@ -2,7 +2,7 @@
   {
     "id": "1",
     "username": "admin",
-    "password": "$2b$12$ftcG59nNz3IVv7ecp78zMO4qsYYXrsUCosgaACJMannG9WeIgt8MG",
+    "password": "$2b$12$qDFWivwgTaYYj7A8H..MhO2ax6zDQldLmv.nscB5QRJ7jOSyGwH8C",
     "email": "admin@proctor.com",
     "role": "administrator"
   },
@@ -10,7 +10,14 @@
     "id": "2",
     "username": "aladdin",
     "email": "test@gmail.com",
-    "password": "$2b$12$Bm81v8RmCmTaxmLAe9rQ5eig5ymbf70eh2rn7e.Q/al/vk10Ldl52",
+    "password": "$2b$12$TbceSWVd0i06376aFRGZieh99KsBxPiyYd8Om18l74sgNuleL4WEm",
     "role": "proctor"
+  },
+  {
+    "id": "3",
+    "username": "alan",
+    "email": "aladdin@test.com",
+    "password": "$2b$12$CoolAMevB9XUG2UQgDGKeej0gJJ4/BUfkxvU5Suy66tqvR6w71M5a",
+    "role": "administrator"
   }
 ]

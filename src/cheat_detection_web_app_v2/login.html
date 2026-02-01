@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login | Smart Invigilator</title>
+  <link rel="icon" href="static/logo.svg" type="image/svg+xml">
 
   <!-- Fonts -->
   <!-- Local Assets (Offline Support) -->
@@ -38,6 +39,11 @@
       </div>
       <div id="errorMessage" style="color: #FF4444; margin: 10px 0; font-size: 14px; display: none;"></div>
       <button id="loginBtn" onclick="handleLogin()">Login</button>
+      <button id="presentationLaunchBtn" class="presentation-launch" type="button">
+        <i class='bx bx-slideshow'></i>
+        Open Presentation
+      </button>
+      <div class="presentation-hint">Start a full-screen demo for your graduation presentation.</div>
     </div>
 
     <div class="illustration-section">
@@ -88,6 +94,573 @@
           <span class="dot" onclick="goToSlide(3)"></span>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Presentation Overlay -->
+  <div id="presentationOverlay" class="presentation-overlay hidden" aria-hidden="true">
+    <div class="presentation-bg">
+      <div class="bg-orb orb-1"></div>
+      <div class="bg-orb orb-2"></div>
+      <div class="bg-orb orb-3"></div>
+      <div class="grid-lines"></div>
+    </div>
+
+    <div class="presentation-header">
+      <div class="presentation-brand">
+        <img src="static/logo.svg" alt="Smart Invigilator Logo" />
+        <span>Smart Invigilator</span>
+      </div>
+      <div class="presentation-uni">
+        <img src="static/assets/presentation/UniversityLogo.png" alt="College Logo" />
+      </div>
+      <div class="presentation-controls">
+        <button class="presentation-nav" id="presentationPrevBtn" aria-label="Previous slide">
+          <i class='bx bx-left-arrow-alt'></i>
+        </button>
+        <button class="presentation-nav" id="presentationNextBtn" aria-label="Next slide">
+          <i class='bx bx-right-arrow-alt'></i>
+        </button>
+        <button class="presentation-close" id="presentationCloseBtn" aria-label="Exit presentation">
+          <i class='bx bx-x'></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="presentation-track">
+      <section class="presentation-slide active">
+        <div class="slide-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">Graduation Project</div>
+            <h1>Smart Invigilator</h1>
+            <p class="slide-subtitle">Real-time exam integrity, privacy-first evidence, and instant alerting.</p>
+            <div class="slide-highlight">
+              <div class="highlight-item"><i class='bx bx-bolt-circle'></i> Live AI Pipeline</div>
+              <div class="highlight-item"><i class='bx bx-shield-quarter'></i> Secure Evidence</div>
+              <div class="highlight-item"><i class='bx bx-data'></i> Full Analytics</div>
+            </div>
+          </div>
+          <div class="slide-visual hero-visual">
+            <div class="glass-screen">
+              <div class="screen-header">
+                <span class="screen-dot"></span>
+                <span class="screen-dot"></span>
+                <span class="screen-dot"></span>
+              </div>
+              <div class="screen-content">
+                <div class="screen-title">Live Monitoring</div>
+                <div class="screen-metrics">
+                  <div class="metric-card">
+                    <span>Active Session</span>
+                    <strong>Exam Hall A</strong>
+                  </div>
+                  <div class="metric-card">
+                    <span>Live Alerts</span>
+                    <strong>Updating</strong>
+                  </div>
+                  <div class="metric-card">
+                    <span>Evidence Vault</span>
+                    <strong>Ready</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="floating-badges">
+              <span><i class='bx bx-camera'></i> Camera</span>
+              <span><i class='bx bx-bell'></i> Alerts</span>
+              <span><i class='bx bx-lock-alt'></i> Secure</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">The Problem</div>
+            <h2>Traditional invigilation misses subtle cheating</h2>
+            <ul class="slide-list">
+              <li><i class='bx bx-x-circle'></i> Manual monitoring is inconsistent</li>
+              <li><i class='bx bx-x-circle'></i> Video review is slow and subjective</li>
+              <li><i class='bx bx-x-circle'></i> Evidence lacks structure and traceability</li>
+            </ul>
+          </div>
+          <div class="slide-visual">
+            <div class="stat-stack">
+              <div class="stat-card">
+                <h4>Blind Spots</h4>
+                <p>Large halls reduce human visibility.</p>
+              </div>
+              <div class="stat-card">
+                <h4>Delayed Review</h4>
+                <p>Manual auditing creates bottlenecks.</p>
+              </div>
+              <div class="stat-card">
+                <h4>Missing Context</h4>
+                <p>Evidence is scattered and unlinked.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Solution</div>
+        <h2>AI-powered, real-time exam supervision</h2>
+        <div class="slide-cards">
+          <div class="slide-card">
+            <i class='bx bx-camera'></i>
+            <h3>Live Feed</h3>
+            <p>Monitor exams with overlays and session control.</p>
+          </div>
+          <div class="slide-card">
+            <i class='bx bx-bell'></i>
+            <h3>Instant Alerts</h3>
+            <p>Suspicious behavior flagged in seconds.</p>
+          </div>
+          <div class="slide-card">
+            <i class='bx bx-folder-open'></i>
+            <h3>Evidence Vault</h3>
+            <p>Organized, exportable, and review-ready.</p>
+          </div>
+          <div class="slide-card">
+            <i class='bx bx-shield-quarter'></i>
+            <h3>Role Control</h3>
+            <p>Admin and proctor workflows stay separated.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">Capabilities</div>
+            <h2>Operational coverage in one system</h2>
+            <ul class="slide-list">
+              <li><i class='bx bx-timer'></i> Real-time monitoring with low-latency alerts</li>
+              <li><i class='bx bx-id-card'></i> GhostFaceNets-powered identity matching</li>
+              <li><i class='bx bx-shield'></i> Evidence storage with audit-ready metadata</li>
+              <li><i class='bx bx-export'></i> Export-ready reports for compliance workflows</li>
+            </ul>
+            <div class="slide-metrics">
+              <div class="kpi-card">
+                <div class="kpi-label">Detection Modes</div>
+                <div class="kpi-value">4+</div>
+                <div class="kpi-sub">Face, pose, object, behavior</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Evidence Types</div>
+                <div class="kpi-value">3</div>
+                <div class="kpi-sub">Frames, crops, timeline</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Security</div>
+                <div class="kpi-value">JWT</div>
+                <div class="kpi-sub">Role-based access</div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-visual">
+            <div class="chart-card">
+              <div class="chart-title">Sample alert distribution</div>
+              <svg class="mini-chart" viewBox="0 0 240 140" role="img" aria-label="Alert distribution sample chart">
+                <defs>
+                  <linearGradient id="alertGradient" x1="0" x2="1">
+                    <stop offset="0%" stop-color="#00e5ff" />
+                    <stop offset="100%" stop-color="#0071ff" />
+                  </linearGradient>
+                </defs>
+                <rect x="20" y="80" width="40" height="40" rx="8" fill="url(#alertGradient)" opacity="0.9" />
+                <rect x="80" y="60" width="40" height="60" rx="8" fill="url(#alertGradient)" opacity="0.7" />
+                <rect x="140" y="40" width="40" height="80" rx="8" fill="url(#alertGradient)" opacity="0.85" />
+                <rect x="200" y="70" width="20" height="50" rx="8" fill="url(#alertGradient)" opacity="0.6" />
+                <line x1="15" y1="120" x2="225" y2="120" stroke="rgba(255,255,255,0.25)" />
+              </svg>
+              <div class="chart-legend">
+                <span><i class='bx bx-time'></i> Looking away</span>
+                <span><i class='bx bx-mobile'></i> Phone</span>
+                <span><i class='bx bx-user'></i> Face mismatch</span>
+                <span><i class='bx bx-group'></i> Multiple people</span>
+              </div>
+              <div class="chart-note">Demo data, aligned with real alert categories.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Pipeline</div>
+        <h2>End-to-end detection flow</h2>
+        <div class="pipeline-diagram-card pipeline-diagram--detailed">
+          <div class="pipeline-grid">
+            <div class="flow-col">
+              <div class="flow-node">
+                <div class="flow-node-icon"><i class='bx bx-video'></i></div>
+                <div class="flow-node-title">Webcam Input</div>
+                <div class="flow-node-desc">Live frames, 720p optimized</div>
+              </div>
+              <span class="flow-down"></span>
+              <div class="flow-detail">Frame Capture</div>
+            </div>
+            <div class="flow-col">
+              <div class="flow-node">
+                <div class="flow-node-icon"><i class='bx bx-target-lock'></i></div>
+                <div class="flow-node-title">YOLOv11 Detection</div>
+                <div class="flow-node-desc">Phones, people, forbidden items</div>
+              </div>
+              <span class="flow-down"></span>
+              <div class="flow-detail">Object Detection</div>
+            </div>
+            <div class="flow-col">
+              <div class="flow-node">
+                <div class="flow-node-icon"><i class='bx bx-body'></i></div>
+                <div class="flow-node-title">MediaPipe Pose</div>
+                <div class="flow-node-desc">Head yaw, pitch, hand proximity</div>
+              </div>
+              <span class="flow-down"></span>
+              <div class="flow-detail">Pose & Head Angle</div>
+            </div>
+            <div class="flow-col">
+              <div class="flow-node">
+                <div class="flow-node-icon"><i class='bx bx-filter-alt'></i></div>
+                <div class="flow-node-title">Fusion Logic</div>
+                <div class="flow-node-desc">Rules + thresholds + scoring</div>
+              </div>
+              <span class="flow-down"></span>
+              <div class="flow-detail">Suspicion Scoring</div>
+            </div>
+            <div class="flow-col">
+              <div class="flow-node">
+                <div class="flow-node-icon"><i class='bx bx-bell'></i></div>
+                <div class="flow-node-title">Alert + Evidence</div>
+                <div class="flow-node-desc">Snapshot, metadata, audit trail</div>
+              </div>
+              <span class="flow-down"></span>
+              <div class="flow-detail">Evidence Snapshot</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">Dashboard</div>
+            <h2>Full statistics & decision support</h2>
+            <ul class="slide-list">
+              <li><i class='bx bx-chart'></i> Confirmed / Declined / Pending</li>
+              <li><i class='bx bx-pie-chart-alt-2'></i> Detection type distribution</li>
+              <li><i class='bx bx-line-chart'></i> Trend analytics and review time</li>
+            </ul>
+            <div class="slide-metrics">
+              <div class="kpi-card">
+                <div class="kpi-label">Review Window</div>
+                <div class="kpi-value">Live</div>
+                <div class="kpi-sub">Auto refresh + filters</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Evidence Status</div>
+                <div class="kpi-value">Tracked</div>
+                <div class="kpi-sub">Pending → Confirmed</div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-visual">
+            <div class="screenshot-frame">
+              <img src="static/assets/presentation/dashboard.png" alt="Dashboard statistics view"
+                class="screenshot-img" />
+              <div class="screenshot-caption">Full statistics overview</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">Monitor Workspace</div>
+            <h2>One-click session control</h2>
+            <ul class="slide-list">
+              <li><i class='bx bx-select-multiple'></i> Department & subject selection</li>
+              <li><i class='bx bx-timer'></i> Live session timer and speed</li>
+              <li><i class='bx bx-check-circle'></i> Evidence review with notes</li>
+            </ul>
+          </div>
+          <div class="slide-visual">
+            <div class="screenshot-frame">
+              <img src="static/assets/presentation/monitor.png" alt="Monitor workspace" class="screenshot-img" />
+              <div class="screenshot-caption">Live monitor and alerts</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">History & Evidence</div>
+            <h2>Structured review workflow</h2>
+            <div class="timeline">
+              <div class="timeline-step">
+                <span class="timeline-icon"><i class='bx bx-bell'></i></span>
+                <div>
+                  <h4>Alert Triggered</h4>
+                  <p>Suspicious event captured with timestamp.</p>
+                </div>
+              </div>
+              <div class="timeline-step">
+                <span class="timeline-icon"><i class='bx bx-zoom-in'></i></span>
+                <div>
+                  <h4>Evidence Review</h4>
+                  <p>Zoom, annotate, and verify event reasons.</p>
+                </div>
+              </div>
+              <div class="timeline-step">
+                <span class="timeline-icon"><i class='bx bx-check-shield'></i></span>
+                <div>
+                  <h4>Decision & Export</h4>
+                  <p>Confirm/decline with notes and export logs.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-visual">
+            <div class="screenshot-frame">
+              <img src="static/assets/presentation/history.png" alt="History and evidence view"
+                class="screenshot-img" />
+              <div class="screenshot-caption">History grid and filters</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">Alert Review</div>
+            <h2>Evidence-focused decisions</h2>
+            <ul class="slide-list">
+              <li><i class='bx bx-zoom-in'></i> Zoom evidence instantly</li>
+              <li><i class='bx bx-note'></i> Add notes before confirming</li>
+              <li><i class='bx bx-check-circle'></i> Confirm or decline in one step</li>
+            </ul>
+          </div>
+          <div class="slide-visual">
+            <div class="screenshot-frame">
+              <img src="static/assets/presentation/alert-review.png" alt="Alert review modal" class="screenshot-img" />
+              <div class="screenshot-caption">Review modal with evidence and notes</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Security & Privacy</div>
+        <h2>Built for trust and compliance</h2>
+        <div class="badge-grid">
+          <span><i class='bx bx-lock-alt'></i> Bcrypt Password Hashing</span>
+          <span><i class='bx bx-shield'></i> JWT Session Protection</span>
+          <span><i class='bx bx-data'></i> Local Evidence Storage</span>
+          <span><i class='bx bx-time-five'></i> 7-day Retention Policy</span>
+          <span><i class='bx bx-user-check'></i> Role-Based Access</span>
+          <span><i class='bx bx-file'></i> Audit Logging</span>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Technology Stack</div>
+        <h2>Modern AI + Secure Web Architecture</h2>
+        <div class="tech-groups">
+          <div class="tech-group tech-group--ai">
+            <div class="tech-group-title">AI / Computer Vision</div>
+            <div class="tech-grid">
+              <div class="tech-card">
+                <img src="static/assets/presentation/Ultralytics%20YOLO11.png" alt="YOLOv11" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/MediaPipe.png" alt="MediaPipe" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/OpenCV.png" alt="OpenCV" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/Pytorch_logo.png" alt="PyTorch" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/NumPy_logo_2020.svg.png" alt="NumPy" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/DeepFace.jpg" alt="DeepFace" class="tech-icon" />
+              </div>
+            </div>
+          </div>
+
+          <div class="tech-group">
+            <div class="tech-group-title">Backend</div>
+            <div class="tech-grid">
+              <div class="tech-card">
+                <img src="static/assets/presentation/py.png" alt="Python" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/fLASK.png" alt="Flask" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/SocketIO.png" alt="SocketIO" class="tech-icon" />
+              </div>
+            </div>
+          </div>
+
+          <div class="tech-group">
+            <div class="tech-group-title">Frontend</div>
+            <div class="tech-grid">
+              <div class="tech-card">
+                <img src="static/assets/presentation/Html%20(2).png" alt="HTML" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/CSS.png" alt="CSS" class="tech-icon" />
+              </div>
+              <div class="tech-card">
+                <img src="static/assets/presentation/JS.png" alt="JavaScript" class="tech-icon" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Demo Flow</div>
+        <h2>3-minute live walkthrough</h2>
+        <div class="step-grid">
+          <div class="step-card"><span>1</span> Login</div>
+          <div class="step-card"><span>2</span> Select Department</div>
+          <div class="step-card"><span>3</span> Start Pipeline</div>
+          <div class="step-card"><span>4</span> Review Alerts</div>
+          <div class="step-card"><span>5</span> Export Evidence</div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Impact</div>
+        <h2>Cleaner workflow, stronger integrity</h2>
+        <div class="impact-metrics">
+          <div class="impact-metric">
+            <span class="metric-label">Evidence Readiness</span>
+            <span class="metric-value">Structured</span>
+          </div>
+          <div class="impact-metric">
+            <span class="metric-label">Review Workflow</span>
+            <span class="metric-value">Streamlined</span>
+          </div>
+          <div class="impact-metric">
+            <span class="metric-label">Audit Trail</span>
+            <span class="metric-value">Consistent</span>
+          </div>
+        </div>
+        <div class="impact-grid impact-grid--modern">
+          <div class="impact-card">
+            <h3><i class='bx bx-time-five'></i> Efficiency & Speed</h3>
+            <p>Automated prioritization of alerts using confidence scores dramatically reduces manual review time,
+              allowing proctors to focus only on genuine threats.</p>
+          </div>
+          <div class="impact-card">
+            <h3><i class='bx bx-search-alt'></i> Verifiable Integrity</h3>
+            <p>Every flagged incident is securely logged with high-resolution visual snapshots and timestamped metadata,
+              creating an irrefutable audit trail.</p>
+          </div>
+          <div class="impact-card">
+            <h3><i class='bx bx-server'></i> Scalable Architecture</h3>
+            <p>Optimized YOLO models allow a single generic server to process multiple high-definition streams in
+              real-time without significant latency.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Roadmap</div>
+        <h2>Recommendations & Future Work</h2>
+        <div class="pipeline-grid roadmap-grid">
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Multi-modal Fusion</div>
+              <div class="flow-node-desc">Integrating CV, Audio, and Eye Tracking for higher accuracy.</div>
+            </div>
+          </div>
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Continuous Learning</div>
+              <div class="flow-node-desc">Self-improving models that adapt based on new anomaly data.</div>
+            </div>
+          </div>
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Multi-Device Support</div>
+              <div class="flow-node-desc">Expanding secure exam support to tablets and mobile devices.</div>
+            </div>
+          </div>
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">GenAI Simulation</div>
+              <div class="flow-node-desc">Using Generative AI to create realistic cheat scenarios for training.</div>
+            </div>
+          </div>
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Context Awareness</div>
+              <div class="flow-node-desc">Smart filtering to reduce false positives (e.g., drinking water).</div>
+            </div>
+          </div>
+
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Multi-Language</div>
+              <div class="flow-node-desc">UI Internationalization beyond English/Arabic.</div>
+            </div>
+          </div>
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Multi-Camera</div>
+              <div class="flow-node-desc">Unified tracking using multiple angles per student.</div>
+            </div>
+          </div>
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Behavioral Analysis</div>
+              <div class="flow-node-desc">Long-term session monitoring to detect subtle anomaly patterns.</div>
+            </div>
+          </div>
+          <div class="flow-col">
+            <div class="flow-node">
+              <div class="flow-node-title">Advanced Settings</div>
+              <div class="flow-node-desc">Granular sensitivity controls and admin dashboards.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">Prepared By</div>
+        <h2>Smart Invigilator Team</h2>
+        <div class="credit-grid">
+          <div>
+            <p class="credit-title">Prepared by</p>
+            <p>Aladdin Abderrahim Ghribi</p>
+            <p>Malak Tarek Khalaf</p>
+          </div>
+          <div>
+            <p class="credit-title">Supervisor</p>
+            <p>Abdulghani Abied</p>
+          </div>
+        </div>
+        <div class="closing-note">Thank you — Questions?</div>
+      </section>
+    </div>
+
+    <div class="presentation-footer">
+      <div class="presentation-progress">
+        <div class="presentation-progress-bar" id="presentationProgress"></div>
+      </div>
+      <div class="presentation-counter" id="presentationCounter">1 / 15</div>
+      <div class="presentation-hint-bottom">Use Esc to exit | Arrow keys to navigate</div>
     </div>
   </div>
 
@@ -165,6 +738,9 @@
 
         if (data.success) {
           localStorage.setItem('user', JSON.stringify(data.user));
+          if (data.token) {
+            localStorage.setItem('authToken', data.token);
+          }
           localStorage.setItem('loginTime', Date.now().toString());
           window.location.href = '/dashboard';
         } else {
@@ -186,6 +762,99 @@
     });
     document.getElementById('usernameInput').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') handleLogin();
+    });
+
+    // Presentation Logic
+    const presentationOverlay = document.getElementById('presentationOverlay');
+    const presentationSlides = Array.from(document.querySelectorAll('.presentation-slide'));
+    const presentationCounter = document.getElementById('presentationCounter');
+    const presentationProgress = document.getElementById('presentationProgress');
+    const presentationLaunchBtn = document.getElementById('presentationLaunchBtn');
+    const presentationCloseBtn = document.getElementById('presentationCloseBtn');
+    const presentationPrevBtn = document.getElementById('presentationPrevBtn');
+    const presentationNextBtn = document.getElementById('presentationNextBtn');
+
+    let presentationIndex = 0;
+
+    function updatePresentationUI() {
+      presentationSlides.forEach((slide, idx) => {
+        slide.classList.toggle('active', idx === presentationIndex);
+      });
+      if (presentationCounter) {
+        presentationCounter.textContent = `${presentationIndex + 1} / ${presentationSlides.length}`;
+      }
+      if (presentationProgress) {
+        const percent = ((presentationIndex + 1) / presentationSlides.length) * 100;
+        presentationProgress.style.width = `${percent}%`;
+      }
+    }
+
+    function openPresentation() {
+      if (!presentationOverlay) return;
+      presentationOverlay.classList.remove('hidden');
+      presentationOverlay.setAttribute('aria-hidden', 'false');
+      presentationIndex = 0;
+      updatePresentationUI();
+      document.body.style.overflow = 'hidden';
+
+      if (presentationOverlay.requestFullscreen) {
+        presentationOverlay.requestFullscreen().catch(() => { });
+      }
+    }
+
+    function closePresentation() {
+      if (!presentationOverlay) return;
+      presentationOverlay.classList.add('hidden');
+      presentationOverlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => { });
+      }
+    }
+
+    function nextPresentationSlide() {
+      if (presentationIndex < presentationSlides.length - 1) {
+        presentationIndex += 1;
+        updatePresentationUI();
+      }
+    }
+
+    function prevPresentationSlide() {
+      if (presentationIndex > 0) {
+        presentationIndex -= 1;
+        updatePresentationUI();
+      }
+    }
+
+    if (presentationLaunchBtn) {
+      presentationLaunchBtn.addEventListener('click', openPresentation);
+    }
+
+    if (presentationCloseBtn) {
+      presentationCloseBtn.addEventListener('click', closePresentation);
+    }
+
+    if (presentationNextBtn) {
+      presentationNextBtn.addEventListener('click', nextPresentationSlide);
+    }
+
+    if (presentationPrevBtn) {
+      presentationPrevBtn.addEventListener('click', prevPresentationSlide);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (!presentationOverlay || presentationOverlay.classList.contains('hidden')) return;
+
+      if (e.key === 'Escape') {
+        closePresentation();
+      } else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        nextPresentationSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevPresentationSlide();
+      }
     });
   </script>
 </body>

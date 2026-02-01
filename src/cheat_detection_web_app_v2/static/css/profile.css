@@ -404,6 +404,33 @@
   margin-top: 15px;
 }
 
+.profile-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.profile-overview-header .section-title {
+  margin: 0;
+}
+
+.profile-actions-row {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-actions-row .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 12px 24px rgba(0, 229, 255, 0.15);
+}
+
 /* Glossy overlay effect */
 .glossy-table-container::before {
   content: '';
