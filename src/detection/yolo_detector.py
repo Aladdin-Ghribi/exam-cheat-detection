@@ -35,7 +35,7 @@ CHEATING_OBJECT_MIN_CONFIDENCE = 0.5
 
 
 class YOLODetector:
-    def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=True, enable_pose=True, room_config=None, model_size="medium"):
+    def __init__(self, model_path=YOLO_MODEL, enable_tracking=True, enable_seat_mapping=False, enable_pose=True, room_config=None, model_size="medium"):
         # 🔧 Configure PyTorch BEFORE loading model
         if torch.cuda.is_available():
             # Use correct environment variable name
@@ -103,18 +103,18 @@ class YOLODetector:
         # Run face recognition every 15 frames (~once per half second at 30fps)
         self.face_check_interval = config.get('face_check_interval', 15)
 
-        # TRACK-only retry + cooldown logic
+        # Track retry/cooldown settings
         self.face_track_max_attempts = config.get('face_track_max_attempts', 3)
         self.face_track_cooldown_sec = config.get(
             'face_track_cooldown_sec', 10)
         self.face_track_fail_counts = {}  # track_id -> failed attempts
         self.face_track_cooldown_until = {}  # track_id -> timestamp
 
-        # Debug logging
+        # Debug flag
         self.face_debug = bool(config.get('face_debug', False)) or (
             os.getenv('FACE_DEBUG', '0') == '1')
 
-        # 🔥 Warm up the pipeline to avoid initial latency spikes
+        # Warm up the pipeline to reduce first-frame latency
         self.warmup()
 
     def warmup(self):
@@ -142,9 +142,7 @@ class YOLODetector:
                 _ = self.pose_detector.detect(dummy_crop)
                 print("✅ Pose Estimation Warm")
 
-            # 3. Face Recognizer is already partially warmed in its __init__,
-            # but we can trigger a represent call to be sure kernels are ready
-            # (Note: recognize_face returns quickly if no faces, but library is loaded)
+            # 3. Face recognizer is initialized in __init__
 
             # 4. Clear cache after warmup to start clean
             if self.device == 'cuda':
@@ -235,15 +233,15 @@ class YOLODetector:
 
                     detections.append(detection)
 
-        # Filter out duplicate/overlapping person detections (e.g., extended arms detected as persons)
+        # Filter out duplicate/overlapping person detections
         detections = self._filter_overlapping_persons(detections)
 
         if self.enable_tracking:
             detections = self.tracker.update(detections)
 
-            # 🎯 FACE RECOGNITION INTEGRATION
+            # Face recognition
             # After tracking is updated, attempt to identify each person
-            # 🏁 STAGGERED RECOGNITION: Only process ONE face per frame to avoid CPU spikes
+            # Process at most one face per frame to limit CPU load
             face_processed_this_frame = False
 
             for det in detections:
@@ -262,9 +260,8 @@ class YOLODetector:
                                 'id_type') == 'TRACK' and now < cooldown_until
                         )
 
-                        # Only run recognition if:
-                        # 1. We haven't recognized anyone yet THIS frame
-                        # 2. It's time to check THIS person OR they are new
+                        # Only run recognition if we have not processed a face this frame
+                        # and it is time to recheck or the track is new
                         can_check = not face_processed_this_frame and not in_cooldown and (
                             self.frame_count - last_check >= self.face_check_interval or
                             track_id not in self.face_id_cache
@@ -279,16 +276,16 @@ class YOLODetector:
                             id_type, primary_id, confidence = self.face_recognizer.get_primary_id(
                                 track_id, frame, det['bbox']
                             )
-                            # Update Cache
+                            # Update cache
                             self.face_id_cache[track_id] = {
                                 'id_type': id_type,
                                 'primary_id': primary_id,
                                 'id_confidence': confidence
                             }
                             self.face_id_last_check[track_id] = self.frame_count
-                            face_processed_this_frame = True  # Lock for this frame
+                            face_processed_this_frame = True  # One per frame
 
-                            # TRACK retry + cooldown logic
+                            # Retry/cooldown logic
                             if id_type == 'SID':
                                 if self.face_debug:
                                     name = self.face_recognizer.student_names.get(
@@ -308,10 +305,10 @@ class YOLODetector:
                                     self.face_track_cooldown_until[track_id] = (
                                         now + self.face_track_cooldown_sec
                                     )
-                                    failures = 0  # reset after cooldown starts
+                                    failures = 0  # reset after cooldown
                                 self.face_track_fail_counts[track_id] = failures
 
-                        # Retrieve identity (Always from cache if available)
+                        # Retrieve identity from cache
                         if track_id in self.face_id_cache:
                             cached = self.face_id_cache[track_id]
                             det['id_type'] = cached['id_type']
@@ -323,7 +320,7 @@ class YOLODetector:
                                 det['student_name'] = self.face_recognizer.student_names.get(
                                     det['student_id'], '')
                         else:
-                            # Not identified yet - use track ID
+                            # Not identified yet, use track ID
                             det['id_type'] = 'TRACK'
                             det['primary_id'] = f'TRACK_{track_id}'
                             det['id_confidence'] = 1.0

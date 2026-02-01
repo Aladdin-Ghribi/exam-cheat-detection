@@ -1,5 +1,5 @@
 {
-  "suspicion_threshold": 23,
+  "suspicion_threshold": 30,
   "confidence_threshold": 0.5,
   "yaw_threshold": 0,
   "pitch_threshold": 13,

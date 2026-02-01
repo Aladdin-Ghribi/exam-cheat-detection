@@ -228,7 +228,7 @@ function updateWeeklyDetectionsChart(weeklyData) {
         pointHoverBorderWidth: 2
       }, {
         label: 'Medium Priority',
-        data: weeklyData.medium,
+        data: filteredData.medium,
         fill: true,
         backgroundColor: function (context) {
           const ctx = context.chart.ctx;
@@ -247,7 +247,7 @@ function updateWeeklyDetectionsChart(weeklyData) {
         pointHoverBorderWidth: 2
       }, {
         label: 'Low Priority',
-        data: weeklyData.low,
+        data: filteredData.low,
         fill: true,
         backgroundColor: function (context) {
           const ctx = context.chart.ctx;

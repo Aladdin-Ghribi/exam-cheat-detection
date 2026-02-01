@@ -64,7 +64,7 @@ class FlaggedEvidenceSaver:
         if timestamp is None:
             timestamp = datetime.now()
 
-        # Check each person individually - FIXED for multi-person flagging
+        # Check each person individually
         for det in detections:
             if det.get('class_id') != 0:  # Skip non-person objects
                 continue
@@ -359,7 +359,7 @@ class FlaggedEvidenceSaver:
         # Store current auto_save state
         original_auto_save = self.auto_save_enabled
 
-        # Temporarily enable auto-save to allow manual save
+        # Enable auto-save for manual save
         self.auto_save_enabled = True
 
         # Force save with high suspicion score
@@ -425,7 +425,7 @@ class FlaggedEvidenceSaver:
                 os.remove(file_path)
         except Exception as e:
             print(f"Error secure deleting {file_path}: {e}")
-            # Fallback to standard delete if secure delete fails
+            # Fallback to standard delete
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)

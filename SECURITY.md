@@ -14,15 +14,12 @@ pip install bcrypt pyjwt python-dotenv
 
 ### 2. Migrate Existing Passwords
 ```bash
-python migrate_passwords.py
+python tools/migrate_passwords.py
 ```
 This will hash all plain-text passwords in `users.json`.
 
 ### 3. Setup Environment Variables
 ```bash
-# Copy template
-cp .env.example .env
-
 # Generate secure keys (Linux/Mac)
 python -c "import secrets; print(secrets.token_hex(32))"
 

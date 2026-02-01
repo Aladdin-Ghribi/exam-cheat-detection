@@ -1,16 +1,13 @@
 
+import cv2
+import time
+import numpy as np
+from src.detection.suspicion_scorer import SuspicionScorer
+from src.detection.pose_detector import PoseDetector
+from src.detection.yolo_detector import YOLODetector
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
-
-from src.detection.yolo_detector import YOLODetector
-from src.detection.pose_detector import PoseDetector
-from src.detection.suspicion_scorer import SuspicionScorer
-import numpy as np
-import time
-import cv2
 
 
 # Add project root to sys.path
@@ -259,7 +256,7 @@ def test_webcam_pose():
             if key is not None:
                 frame_active_keys.add(key)
 
-            # FIXED: Get bbox color based on suspicion level
+            # Get bbox color based on suspicion level
             level = suspicion_info.get('smoothed', 0.0)
             bbox_color = get_suspicion_color(level)
 
@@ -333,7 +330,7 @@ def test_webcam_pose():
                     pitch = orientation['pitch']
                     roll = orientation['roll']
 
-                    # FIXED: Display actual values for debugging
+                    # Display actual orientation values
                     metrics_text.append(f"Yaw: {yaw:.1f}°")
                     metrics_text.append(f"Pitch: {pitch:.1f}°")
                     metrics_text.append(f"Roll: {roll:.1f}°")
@@ -346,7 +343,7 @@ def test_webcam_pose():
                     metrics_text.append(f"Raw: {raw_score:.2f}")
                     metrics_text.append(f"Smooth: {smooth_score:.2f}")
 
-                    # FIXED: Risk level indicator with proper thresholds
+                    # Risk level indicator
                     if smooth_score < 0.2:
                         risk_level = "LOW"
                         risk_color = (0, 255, 0)
