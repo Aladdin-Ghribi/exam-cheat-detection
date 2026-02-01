@@ -1,6 +1,6 @@
 """
 Centralized configuration for suspicion scoring parameters.
-This file provides DEFAULT values that can be overridden by config.json.
+Defaults can be overridden by config.json.
 """
 import json
 from pathlib import Path
@@ -21,7 +21,7 @@ def load_config():
     return {}
 
 
-# Main suspicion threshold (0-100 scale) - DEFAULT VALUE
+# Main suspicion threshold (0-100 scale)
 SUSPICION_THRESHOLD = 15  # Can be overridden by config.json
 
 
@@ -59,5 +59,5 @@ MEDIUM_RISK_OBJECTS = frozenset({
 
 
 # Performance settings (FPS)
-RENDER_FPS = 30  # Client-side render loop FPS (smooth display)
-PROCESS_FPS = 10  # Server-side processing FPS (AI inference)
+RENDER_FPS = 30  # Client-side render loop FPS
+PROCESS_FPS = 10  # Server-side processing FPS (model inference)

@@ -40,10 +40,10 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Output files from scripts (like your smoke test)
+# Output files from scripts 
 output/
 
-# Potentially large sample data (if you add more later)
+# Potentially large sample data
 data/samples/
 data/student_faces/
 assets/

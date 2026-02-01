@@ -1,3 +1,5 @@
+from src.detection.yolo_detector import YOLODetector
+from src.detection.pose_detector import PoseDetector
 import os
 import sys
 import cv2
@@ -8,8 +10,6 @@ import numpy as np
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.detection.pose_detector import PoseDetector
-from src.detection.yolo_detector import YOLODetector
 
 def test_optimized_pose_detection(source, save_output=False, output_path=None):
     """
@@ -32,16 +32,17 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
     )
 
     # Initialize YOLO detector for person detection
-    yolo_detector = YOLODetector(enable_tracking=False, enable_seat_mapping=False)
+    yolo_detector = YOLODetector(
+        enable_tracking=False, enable_seat_mapping=False)
 
     # Initialize video capture
     cap = cv2.VideoCapture(source)
-    
+
     # Check if camera opened successfully
     if not cap.isOpened():
         print(f"Error: Could not open video source {source}")
         return
-    
+
     # For webcam, set resolution
     if source == 0:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -69,7 +70,7 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
 
     # Simple person tracking based on position
     prev_positions = {}
-    
+
     # Give camera time to initialize
     print("Initializing camera...")
     time.sleep(2.0)
@@ -84,7 +85,8 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
 
         # Detect people first using YOLO
         yolo_result = yolo_detector.detect_frame(small_frame)
-        person_detections = [d for d in yolo_result['detections'] if d['class_id'] == 0]  # Filter for person class
+        person_detections = [d for d in yolo_result['detections']
+                             if d['class_id'] == 0]  # Filter for person class
 
         # Start with original frame
         annotated_frame = frame.copy()
@@ -115,7 +117,8 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
             min_dist = float('inf')
             if prev_positions:  # Check if prev_positions is not empty
                 for prev_id, (prev_x, prev_y) in prev_positions.items():
-                    dist = np.sqrt((center_x - prev_x)**2 + (center_y - prev_y)**2)
+                    dist = np.sqrt((center_x - prev_x)**2 +
+                                   (center_y - prev_y)**2)
                     if dist < min_dist and dist < 100:  # Threshold for matching
                         min_dist = dist
                         track_id = prev_id
@@ -134,28 +137,32 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
             # Draw pose landmarks if detected
             if pose_result['success']:
                 # Get posture metrics
-                posture_metrics = pose_detector.get_posture_metrics(pose_result['landmarks'])
+                posture_metrics = pose_detector.get_posture_metrics(
+                    pose_result['landmarks'])
 
                 # Draw pose landmarks on person in original frame
                 if pose_result['head']:
                     for landmark in pose_result['head']:
                         x = int(x1 + landmark['x'] * (x2 - x1))
                         y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (0, 0, 255), -1)  # Red for head
+                        cv2.circle(annotated_frame, (x, y), 5,
+                                   (0, 0, 255), -1)  # Red for head
 
                 if pose_result['shoulders']:
                     for landmark in pose_result['shoulders']:
                         x = int(x1 + landmark['x'] * (x2 - x1))
                         y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (0, 255, 0), -1)  # Green for shoulders
+                        cv2.circle(annotated_frame, (x, y), 5,
+                                   (0, 255, 0), -1)  # Green for shoulders
 
                 if pose_result['hands']:
                     for landmark in pose_result['hands']:
                         x = int(x1 + landmark['x'] * (x2 - x1))
                         y = int(y1 + landmark['y'] * (y2 - y1))
-                        cv2.circle(annotated_frame, (x, y), 5, (255, 0, 0), -1)  # Blue for hands
+                        cv2.circle(annotated_frame, (x, y), 5,
+                                   (255, 0, 0), -1)  # Blue for hands
 
-                # Draw posture metrics if available
+                # Draw posture metrics
                 if posture_metrics:
                     metrics_text = [
                         f"Person {track_id}",
@@ -170,12 +177,12 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
 
                     # Draw text
                     for j, text in enumerate(metrics_text):
-                        cv2.putText(annotated_frame, text, (x1, y1 - 10 - j*20), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                        cv2.putText(annotated_frame, text, (x1, y1 - 10 - j*20),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
                 # Draw pose skeleton if connections are enabled
                 if show_connections:
-                    # Draw connections on a temporary image
+                    # Draw connections on a buffer image
                     temp_img = np.zeros_like(person_img)
                     skeleton_img = pose_detector.draw_landmarks(
                         temp_img,
@@ -190,7 +197,7 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
         # If no people detected, show a message
         if len(person_detections) == 0:
             cv2.putText(annotated_frame, "No people detected", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         # Print pose info every 30 frames
         if frame_count % 30 == 0:
@@ -205,7 +212,7 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
         ]
         for i, text in enumerate(instructions):
             cv2.putText(annotated_frame, text, (width - 250, 30 + i*30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
         # Display frame
         cv2.imshow('Optimized Pose Detection', annotated_frame)
@@ -243,16 +250,20 @@ def test_optimized_pose_detection(source, save_output=False, output_path=None):
     # Close detector
     pose_detector.close()
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Test optimized multi-person pose detection')
-    parser.add_argument('--source', type=str, default=0, help='Video source (0 for webcam, path to video file)')
-    parser.add_argument('--save', action='store_true', help='Save output video')
+    parser = argparse.ArgumentParser(
+        description='Test optimized multi-person pose detection')
+    parser.add_argument('--source', type=str, default=0,
+                        help='Video source (0 for webcam, path to video file)')
+    parser.add_argument('--save', action='store_true',
+                        help='Save output video')
     parser.add_argument('--output', type=str, help='Output video path')
 
     args = parser.parse_args()
 
     result = test_optimized_pose_detection(args.source, args.save, args.output)
-    
+
     # Keep window open until user closes it
     if result is not None and args.source == 0:
         cv2.waitKey(0)

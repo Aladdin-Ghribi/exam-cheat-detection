@@ -1,11 +1,6 @@
 """
-Face Recognition Module for Exam Cheat Detection System
-
-The Primary 'Best' Implementation:
-- Model: ArcFace (99.4% accuracy)
-- Backend: DeepFace
-- Hardware: GPU Accelerated (RTX 3070/4060/1660Ti)
-- Strategy: Hybrid SID/Track mapping with session caching
+Face recognition module for the exam cheat detection system.
+Uses DeepFace and a hybrid SID/track mapping with session caching.
 """
 
 import os
@@ -29,18 +24,10 @@ try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
-        # Performance boosting policies
-        # from tensorflow.keras import mixed_precision
-        # try:
-        #     mixed_precision.set_global_policy('mixed_float16')
-        #     print("🚀 Face AI: GPU acceleration ENABLED (FP16 Mixed Precision)")
-        # except:
-        #     print("✅ Face AI: GPU acceleration ENABLED")
-        print("✅ Face AI: GPU acceleration ENABLED")
+        print("Face acceleration enabled")
     else:
-        # On Native Windows, TF 2.11+ is CPU only. This is normal.
-        # We compensate with the ultra-light GhostFaceNet model.
-        print("⚡ Face AI: Native Windows Optimized (CPU Mode)")
+        # On Native Windows, TF 2.11+ is CPU only
+        print("Face acceleration unavailable (CPU mode)")
 except Exception:
     pass
 

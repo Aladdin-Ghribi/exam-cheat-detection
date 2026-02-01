@@ -15,7 +15,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="static/css/variables.css">
   <link rel="stylesheet" href="static/css/reset.css">
-  <link rel="stylesheet" href="static/css/login.css">
+  <link rel="stylesheet" href="static/css/login.css?v=20260130">
 </head>
 
 <body>
@@ -98,7 +98,7 @@
   </div>
 
   <!-- Fullscreen Presentation Overlay -->
-  <div id="presentationOverlay" class="presentation-overlay hidden" aria-hidden="true">
+  <div id="presentationOverlay" class="presentation-overlay hidden" aria-hidden="true" dir="rtl" lang="ar">
     <div class="presentation-bg">
       <div class="bg-orb orb-1"></div>
       <div class="bg-orb orb-2"></div>
@@ -108,22 +108,24 @@
 
     <div class="presentation-header">
       <div class="presentation-brand">
-        <img src="static/logo.svg" alt="Smart Invigilator Logo" />
+        <img src="static/logo.svg" alt="شعار المراقب الذكي" />
         <span>Smart Invigilator</span>
       </div>
-      <div class="presentation-uni">
-        <img src="static/assets/presentation/UniversityLogo.png" alt="College Logo" />
-      </div>
-      <div class="presentation-controls">
-        <button class="presentation-nav" id="presentationPrevBtn" aria-label="Previous slide">
-          <i class='bx bx-left-arrow-alt'></i>
-        </button>
-        <button class="presentation-nav" id="presentationNextBtn" aria-label="Next slide">
-          <i class='bx bx-right-arrow-alt'></i>
-        </button>
-        <button class="presentation-close" id="presentationCloseBtn" aria-label="Exit presentation">
-          <i class='bx bx-x'></i>
-        </button>
+      <div class="presentation-right">
+        <div class="presentation-uni">
+          <img src="static/assets/presentation/UniversityLogo.png" alt="شعار جامعة الرفاق" />
+        </div>
+        <div class="presentation-controls">
+          <button class="presentation-nav" id="presentationPrevBtn" aria-label="الشريحة السابقة">
+            <i class='bx bx-left-arrow-alt'></i>
+          </button>
+          <button class="presentation-nav" id="presentationNextBtn" aria-label="الشريحة التالية">
+            <i class='bx bx-right-arrow-alt'></i>
+          </button>
+          <button class="presentation-close" id="presentationCloseBtn" aria-label="إنهاء العرض">
+            <i class='bx bx-x'></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -131,13 +133,23 @@
       <section class="presentation-slide active">
         <div class="slide-layout">
           <div class="slide-text">
-            <div class="slide-eyebrow">Graduation Project</div>
-            <h1>Smart Invigilator</h1>
-            <p class="slide-subtitle">Real-time exam integrity, privacy-first evidence, and instant alerting.</p>
+            <h1>نظام الكشف عن الغش في الامتحانات</h1>
+            <p class="slide-subtitle">باستخدام الرؤية الحاسوبية والشبكات العصبية لتوفير رقابة عادلة وموثوقة.</p>
+            <div class="slide-credits">
+              <div class="slide-credits-group">
+                <div class="credit-label">إعداد الطلاب</div>
+                <div class="credit-name">علاء الدين عبد الرحيم غريبي</div>
+                <div class="credit-name">ملاك طارق خلف</div>
+              </div>
+              <div class="slide-credits-group">
+                <div class="credit-label">المشرف</div>
+                <div class="credit-name">عبد الغني عبيد</div>
+              </div>
+            </div>
             <div class="slide-highlight">
-              <div class="highlight-item"><i class='bx bx-bolt-circle'></i> Live AI Pipeline</div>
-              <div class="highlight-item"><i class='bx bx-shield-quarter'></i> Secure Evidence</div>
-              <div class="highlight-item"><i class='bx bx-data'></i> Full Analytics</div>
+              <div class="highlight-item"><i class='bx bx-camera'></i> رؤية حاسوبية</div>
+              <div class="highlight-item"><i class='bx bx-bolt-circle'></i> كشف لحظي</div>
+              <div class="highlight-item"><i class='bx bx-shield-quarter'></i> أدلة منظمة</div>
             </div>
           </div>
           <div class="slide-visual hero-visual">
@@ -148,27 +160,100 @@
                 <span class="screen-dot"></span>
               </div>
               <div class="screen-content">
-                <div class="screen-title">Live Monitoring</div>
+                <div class="screen-title">مراقبة مباشرة</div>
                 <div class="screen-metrics">
                   <div class="metric-card">
-                    <span>Active Session</span>
-                    <strong>Exam Hall A</strong>
+                    <span>جلسة نشطة</span>
+                    <strong>قاعة الامتحان</strong>
                   </div>
                   <div class="metric-card">
-                    <span>Live Alerts</span>
-                    <strong>Updating</strong>
+                    <span>تنبيهات مباشرة</span>
+                    <strong>تتحدث الآن</strong>
                   </div>
                   <div class="metric-card">
-                    <span>Evidence Vault</span>
-                    <strong>Ready</strong>
+                    <span>سجل الأدلة</span>
+                    <strong>جاهز</strong>
                   </div>
                 </div>
               </div>
             </div>
             <div class="floating-badges">
-              <span><i class='bx bx-camera'></i> Camera</span>
-              <span><i class='bx bx-bell'></i> Alerts</span>
-              <span><i class='bx bx-lock-alt'></i> Secure</span>
+              <span><i class='bx bx-camera'></i> كاميرا</span>
+              <span><i class='bx bx-bell'></i> تنبيهات</span>
+              <span><i class='bx bx-lock-alt'></i> آمن</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout problem-layout">
+          <div class="slide-text">
+            <h2>الرقابة التقليدية لا تكفي</h2>
+            <div class="problem-combined-text">
+              <p>تواجه أنظمة الامتحانات التقليدية تحديات جسيمة، فالمراقبة البشرية غالباً ما تفتقر للاتساق والدقة، كما أن
+                البحث اليدوي في السجلات والفيديوهات يُعد عملية بطيئة ومرهقة للغاية، مما يؤدي في النهاية إلى تشتت الأدلة
+                وصعوبة تتبع المخالفات بشكل منظم.</p>
+              <div class="problem-highlights">
+                <div class="p-h-item"><i class='bx bx-error-alt'></i> عدم دقة</div>
+                <div class="p-h-item"><i class='bx bx-time-five'></i> استنزاف وقت</div>
+                <div class="p-h-item"><i class='bx bx-archive'></i> تشتت أدلة</div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-visual problem-visual">
+            <div class="problem-illustration">
+              <img src="static/assets/presentation/Questions-pana.svg" alt="توضيح للمشكلة"
+                class="problem-illustration-img" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-eyebrow">الحل المقترح</div>
+        <h2>منظومة ذكية للمراقبة الشاملة</h2>
+
+        <div class="solution-container">
+          <div class="solution-hero">
+            <p class="solution-statement">
+              تحويل المراقبة من عملية بشرية محدودة إلى <br>
+              <strong>منظومة ذكية، لحظية، عادلة، وموثوقة</strong> <br>
+              تضمن النزاهة الأكاديمية في كل مرحلة.
+            </p>
+          </div>
+
+          <div class="solution-capabilities">
+            <div class="capability-card">
+              <div class="capability-icon"><i class='bx bx-mobile-vibration'></i></div>
+              <div class="capability-info">
+                <h4>كشف الأجهزة المحظورة</h4>
+                <p>مراقبة الطالب واكتشاف تفاعلاته مع الهواتف أو أي أجهزة ممنوعة فوراً.</p>
+              </div>
+            </div>
+
+            <div class="capability-card">
+              <div class="capability-icon"><i class='bx bx-scan'></i></div>
+              <div class="capability-info">
+                <h4>تحليل الوضعيات والتحركات</h4>
+                <p>تحديد وضعيات وحركات رأس الطالب وجسده لكشف السلوكيات المشبوهة.</p>
+              </div>
+            </div>
+
+            <div class="capability-card">
+              <div class="capability-icon"><i class='bx bx-camera-movie'></i></div>
+              <div class="capability-info">
+                <h4>التوثيق التلقائي بالأدلة</h4>
+                <p>حفظ لقطات كأدلة قاطعة عند رصد أي محاولة غش.</p>
+              </div>
+            </div>
+
+            <div class="capability-card">
+              <div class="capability-icon"><i class='bx bx-user-voice'></i></div>
+              <div class="capability-info">
+                <h4>دعم اتخاذ القرار</h4>
+                <p>تنبيه المراقب البشري لحظياً بالوقائع لاتخاذ الإجراء العادل والسريع.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -177,481 +262,333 @@
       <section class="presentation-slide">
         <div class="slide-layout">
           <div class="slide-text">
-            <div class="slide-eyebrow">The Problem</div>
-            <h2>Traditional invigilation misses subtle cheating</h2>
+            <div class="slide-eyebrow">التقنيات المستخدمة</div>
+            <h2>أدوات حديثة ودقيقة</h2>
             <ul class="slide-list">
-              <li><i class='bx bx-x-circle'></i> Manual monitoring is inconsistent</li>
-              <li><i class='bx bx-x-circle'></i> Video review is slow and subjective</li>
-              <li><i class='bx bx-x-circle'></i> Evidence lacks structure and traceability</li>
+              <li><i class='bx bx-camera'></i> OpenCV و MediaPipe لتحليل وضعيات الرأس واليدين</li>
+              <li><i class='bx bx-mobile'></i> YOLOv11 لكشف الهواتف والعناصر الممنوعة</li>
+              <li><i class='bx bx-id-card'></i> GhostFaceNet للتحقق من هوية الطالب</li>
+              <li><i class='bx bx-code-alt'></i> Python + Flask-SocketIO للاتصال اللحظي</li>
+              <li><i class='bx bx-palette'></i> HTML/CSS/JS و Figma لتجربة مستخدم واضحة</li>
             </ul>
           </div>
           <div class="slide-visual">
-            <div class="stat-stack">
-              <div class="stat-card">
-                <h4>Blind Spots</h4>
-                <p>Large halls reduce human visibility.</p>
-              </div>
-              <div class="stat-card">
-                <h4>Delayed Review</h4>
-                <p>Manual auditing creates bottlenecks.</p>
-              </div>
-              <div class="stat-card">
-                <h4>Missing Context</h4>
-                <p>Evidence is scattered and unlinked.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-eyebrow">Solution</div>
-        <h2>AI-powered, real-time exam supervision</h2>
-        <div class="slide-cards">
-          <div class="slide-card">
-            <i class='bx bx-camera'></i>
-            <h3>Live Feed</h3>
-            <p>Monitor exams with overlays and session control.</p>
-          </div>
-          <div class="slide-card">
-            <i class='bx bx-bell'></i>
-            <h3>Instant Alerts</h3>
-            <p>Suspicious behavior flagged in seconds.</p>
-          </div>
-          <div class="slide-card">
-            <i class='bx bx-folder-open'></i>
-            <h3>Evidence Vault</h3>
-            <p>Organized, exportable, and review-ready.</p>
-          </div>
-          <div class="slide-card">
-            <i class='bx bx-shield-quarter'></i>
-            <h3>Role Control</h3>
-            <p>Admin and proctor workflows stay separated.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-layout">
-          <div class="slide-text">
-            <div class="slide-eyebrow">Capabilities</div>
-            <h2>Operational coverage in one system</h2>
-            <ul class="slide-list">
-              <li><i class='bx bx-timer'></i> Real-time monitoring with low-latency alerts</li>
-              <li><i class='bx bx-id-card'></i> GhostFaceNets-powered identity matching</li>
-              <li><i class='bx bx-shield'></i> Evidence storage with audit-ready metadata</li>
-              <li><i class='bx bx-export'></i> Export-ready reports for compliance workflows</li>
-            </ul>
-            <div class="slide-metrics">
-              <div class="kpi-card">
-                <div class="kpi-label">Detection Modes</div>
-                <div class="kpi-value">4+</div>
-                <div class="kpi-sub">Face, pose, object, behavior</div>
-              </div>
-              <div class="kpi-card">
-                <div class="kpi-label">Evidence Types</div>
-                <div class="kpi-value">3</div>
-                <div class="kpi-sub">Frames, crops, timeline</div>
-              </div>
-              <div class="kpi-card">
-                <div class="kpi-label">Security</div>
-                <div class="kpi-value">JWT</div>
-                <div class="kpi-sub">Role-based access</div>
-              </div>
-            </div>
-          </div>
-          <div class="slide-visual">
-            <div class="chart-card">
-              <div class="chart-title">Sample alert distribution</div>
-              <svg class="mini-chart" viewBox="0 0 240 140" role="img" aria-label="Alert distribution sample chart">
-                <defs>
-                  <linearGradient id="alertGradient" x1="0" x2="1">
-                    <stop offset="0%" stop-color="#00e5ff" />
-                    <stop offset="100%" stop-color="#0071ff" />
-                  </linearGradient>
-                </defs>
-                <rect x="20" y="80" width="40" height="40" rx="8" fill="url(#alertGradient)" opacity="0.9" />
-                <rect x="80" y="60" width="40" height="60" rx="8" fill="url(#alertGradient)" opacity="0.7" />
-                <rect x="140" y="40" width="40" height="80" rx="8" fill="url(#alertGradient)" opacity="0.85" />
-                <rect x="200" y="70" width="20" height="50" rx="8" fill="url(#alertGradient)" opacity="0.6" />
-                <line x1="15" y1="120" x2="225" y2="120" stroke="rgba(255,255,255,0.25)" />
-              </svg>
-              <div class="chart-legend">
-                <span><i class='bx bx-time'></i> Looking away</span>
-                <span><i class='bx bx-mobile'></i> Phone</span>
-                <span><i class='bx bx-user'></i> Face mismatch</span>
-                <span><i class='bx bx-group'></i> Multiple people</span>
-              </div>
-              <div class="chart-note">Demo data, aligned with real alert categories.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-eyebrow">Pipeline</div>
-        <h2>End-to-end detection flow</h2>
-        <div class="pipeline-diagram-card pipeline-diagram--detailed">
-          <div class="pipeline-grid">
-            <div class="flow-col">
-              <div class="flow-node">
-                <div class="flow-node-icon"><i class='bx bx-video'></i></div>
-                <div class="flow-node-title">Webcam Input</div>
-                <div class="flow-node-desc">Live frames, 720p optimized</div>
-              </div>
-              <span class="flow-down"></span>
-              <div class="flow-detail">Frame Capture</div>
-            </div>
-            <div class="flow-col">
-              <div class="flow-node">
-                <div class="flow-node-icon"><i class='bx bx-target-lock'></i></div>
-                <div class="flow-node-title">YOLOv11 Detection</div>
-                <div class="flow-node-desc">Phones, people, forbidden items</div>
-              </div>
-              <span class="flow-down"></span>
-              <div class="flow-detail">Object Detection</div>
-            </div>
-            <div class="flow-col">
-              <div class="flow-node">
-                <div class="flow-node-icon"><i class='bx bx-body'></i></div>
-                <div class="flow-node-title">MediaPipe Pose</div>
-                <div class="flow-node-desc">Head yaw, pitch, hand proximity</div>
-              </div>
-              <span class="flow-down"></span>
-              <div class="flow-detail">Pose & Head Angle</div>
-            </div>
-            <div class="flow-col">
-              <div class="flow-node">
-                <div class="flow-node-icon"><i class='bx bx-filter-alt'></i></div>
-                <div class="flow-node-title">Fusion Logic</div>
-                <div class="flow-node-desc">Rules + thresholds + scoring</div>
-              </div>
-              <span class="flow-down"></span>
-              <div class="flow-detail">Suspicion Scoring</div>
-            </div>
-            <div class="flow-col">
-              <div class="flow-node">
-                <div class="flow-node-icon"><i class='bx bx-bell'></i></div>
-                <div class="flow-node-title">Alert + Evidence</div>
-                <div class="flow-node-desc">Snapshot, metadata, audit trail</div>
-              </div>
-              <span class="flow-down"></span>
-              <div class="flow-detail">Evidence Snapshot</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-layout">
-          <div class="slide-text">
-            <div class="slide-eyebrow">Dashboard</div>
-            <h2>Full statistics & decision support</h2>
-            <ul class="slide-list">
-              <li><i class='bx bx-chart'></i> Confirmed / Declined / Pending</li>
-              <li><i class='bx bx-pie-chart-alt-2'></i> Detection type distribution</li>
-              <li><i class='bx bx-line-chart'></i> Trend analytics and review time</li>
-            </ul>
-            <div class="slide-metrics">
-              <div class="kpi-card">
-                <div class="kpi-label">Review Window</div>
-                <div class="kpi-value">Live</div>
-                <div class="kpi-sub">Auto refresh + filters</div>
-              </div>
-              <div class="kpi-card">
-                <div class="kpi-label">Evidence Status</div>
-                <div class="kpi-value">Tracked</div>
-                <div class="kpi-sub">Pending → Confirmed</div>
-              </div>
-            </div>
-          </div>
-          <div class="slide-visual">
-            <div class="screenshot-frame">
-              <img src="static/assets/presentation/dashboard.png" alt="Dashboard statistics view"
-                class="screenshot-img" />
-              <div class="screenshot-caption">Full statistics overview</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-layout">
-          <div class="slide-text">
-            <div class="slide-eyebrow">Monitor Workspace</div>
-            <h2>One-click session control</h2>
-            <ul class="slide-list">
-              <li><i class='bx bx-select-multiple'></i> Department & subject selection</li>
-              <li><i class='bx bx-timer'></i> Live session timer and speed</li>
-              <li><i class='bx bx-check-circle'></i> Evidence review with notes</li>
-            </ul>
-          </div>
-          <div class="slide-visual">
-            <div class="screenshot-frame">
-              <img src="static/assets/presentation/monitor.png" alt="Monitor workspace" class="screenshot-img" />
-              <div class="screenshot-caption">Live monitor and alerts</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-layout">
-          <div class="slide-text">
-            <div class="slide-eyebrow">History & Evidence</div>
-            <h2>Structured review workflow</h2>
-            <div class="timeline">
-              <div class="timeline-step">
-                <span class="timeline-icon"><i class='bx bx-bell'></i></span>
-                <div>
-                  <h4>Alert Triggered</h4>
-                  <p>Suspicious event captured with timestamp.</p>
+            <div class="tech-groups">
+              <div class="tech-group tech-group--ai">
+                <div class="tech-group-title">الذكاء الاصطناعي والرؤية</div>
+                <div class="tech-grid">
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/Ultralytics%20YOLO11.png" alt="YOLOv11" class="tech-icon" />
+                  </div>
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/MediaPipe.png" alt="MediaPipe" class="tech-icon" />
+                  </div>
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/OpenCV.png" alt="OpenCV" class="tech-icon" />
+                  </div>
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/DeepFace.jpg" alt="DeepFace" class="tech-icon" />
+                  </div>
                 </div>
               </div>
-              <div class="timeline-step">
-                <span class="timeline-icon"><i class='bx bx-zoom-in'></i></span>
-                <div>
-                  <h4>Evidence Review</h4>
-                  <p>Zoom, annotate, and verify event reasons.</p>
+
+              <div class="tech-group">
+                <div class="tech-group-title">الخلفية</div>
+                <div class="tech-grid">
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/py.png" alt="Python" class="tech-icon" />
+                  </div>
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/fLASK.png" alt="Flask" class="tech-icon" />
+                  </div>
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/SocketIO.png" alt="SocketIO" class="tech-icon" />
+                  </div>
                 </div>
               </div>
-              <div class="timeline-step">
-                <span class="timeline-icon"><i class='bx bx-check-shield'></i></span>
-                <div>
-                  <h4>Decision & Export</h4>
-                  <p>Confirm/decline with notes and export logs.</p>
+
+              <div class="tech-group">
+                <div class="tech-group-title">الواجهة</div>
+                <div class="tech-grid">
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/Html%20(2).png" alt="HTML" class="tech-icon" />
+                  </div>
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/CSS.png" alt="CSS" class="tech-icon" />
+                  </div>
+                  <div class="tech-card">
+                    <img src="static/assets/presentation/JS.png" alt="JavaScript" class="tech-icon" />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="slide-visual">
-            <div class="screenshot-frame">
-              <img src="static/assets/presentation/history.png" alt="History and evidence view"
-                class="screenshot-img" />
-              <div class="screenshot-caption">History grid and filters</div>
-            </div>
-          </div>
         </div>
       </section>
 
       <section class="presentation-slide">
-        <div class="slide-layout">
-          <div class="slide-text">
-            <div class="slide-eyebrow">Alert Review</div>
-            <h2>Evidence-focused decisions</h2>
-            <ul class="slide-list">
-              <li><i class='bx bx-zoom-in'></i> Zoom evidence instantly</li>
-              <li><i class='bx bx-note'></i> Add notes before confirming</li>
-              <li><i class='bx bx-check-circle'></i> Confirm or decline in one step</li>
+        <div class="slide-eyebrow">الخصوصية والأمان</div>
+        <h2>سياسات قوية لحماية بيانات الطلاب</h2>
+        <p class="slide-subtitle">لأن النظام يتعامل مع صور وبيانات حساسة، صُممت طبقات الأمان لضمان الخصوصية ومنع أي
+          استخدام غير مصرح به.</p>
+        <div class="security-grid">
+          <div class="security-card">
+            <h3><i class='bx bx-shield'></i> الوصول المصرّح</h3>
+            <ul class="security-list">
+              <li>مصادقة JWT وصلاحيات حسب الدور</li>
+              <li>حماية واجهات API من الاستخدام غير المصرّح</li>
             </ul>
           </div>
-          <div class="slide-visual">
-            <div class="screenshot-frame">
-              <img src="static/assets/presentation/alert-review.png" alt="Alert review modal" class="screenshot-img" />
-              <div class="screenshot-caption">Review modal with evidence and notes</div>
+          <div class="security-card">
+            <h3><i class='bx bx-lock-alt'></i> حماية كلمات المرور</h3>
+            <ul class="security-list">
+              <li>تخزين مشفّر باستخدام Bcrypt Hashing</li>
+              <li>لا يمكن استرجاعها حتى عند تسرب القاعدة</li>
+            </ul>
+          </div>
+          <div class="security-card">
+            <h3><i class='bx bx-timer'></i> منع الهجمات</h3>
+            <ul class="security-list">
+              <li>تحديد المحاولات وقفل مؤقت عند الفشل</li>
+              <li>حماية من التخمين والهجمات المتكررة</li>
+            </ul>
+          </div>
+          <div class="security-card">
+            <h3><i class='bx bx-file'></i> التتبع والامتثال</h3>
+            <ul class="security-list">
+              <li>سجل تدقيق كامل للأحداث الحساسة</li>
+              <li>سياسات HTTP آمنة لمنع التخزين والهجمات</li>
+            </ul>
+          </div>
+        </div>
+        <div class="security-footnote">
+          <span><i class='bx bx-time-five'></i> احتفاظ آمن بالبيانات: حذف الصور تلقائيًا بعد 7 أيام وفق معايير
+            GDPR.</span>
+        </div>
+      </section>
+
+      <section class="presentation-slide">
+        <div class="slide-layout feature-layout">
+          <div class="slide-text">
+            <div class="slide-eyebrow">الميزات والوظائف الرئيسية</div>
+            <h2>منظومة شاملة لمراقبة الامتحان</h2>
+            <p class="slide-subtitle">وظائف عملية تغطي الكشف، التوثيق، والتحليل مع واجهة سهلة الاستخدام.</p>
+            <div class="feature-grid">
+              <div class="feature-card">
+                <i class='bx bx-mobile'></i>
+                <div>
+                  <h4>كشف الهواتف والعناصر الممنوعة</h4>
+                  <p>YOLOv11 للكشف اللحظي داخل القاعة.</p>
+                </div>
+              </div>
+              <div class="feature-card">
+                <i class='bx bx-user'></i>
+                <div>
+                  <h4>التحقق من هوية الطالب</h4>
+                  <p>منع الانتحال عبر Face Recognition.</p>
+                </div>
+              </div>
+              <div class="feature-card">
+                <i class='bx bx-body'></i>
+                <div>
+                  <h4>مراقبة وضعيات الرأس واليدين</h4>
+                  <p>OpenCV و MediaPipe لرصد السلوكيات المشبوهة.</p>
+                </div>
+              </div>
+              <div class="feature-card">
+                <i class='bx bx-card'></i>
+                <div>
+                  <h4>سجلات غش موثقة</h4>
+                  <p>تتضمن بيانات الطالب، الزمن، وصور الدليل.</p>
+                </div>
+              </div>
+              <div class="feature-card">
+                <i class='bx bx-export'></i>
+                <div>
+                  <h4>تصدير محاضر PDF</h4>
+                  <p>محضر رسمي جاهز للمراقب والإدارة.</p>
+                </div>
+              </div>
+              <div class="feature-card">
+                <i class='bx bx-filter'></i>
+                <div>
+                  <h4>بحث وفلترة متقدمة</h4>
+                  <p>حسب التاريخ، القسم، رقم القيد ونوع الغش.</p>
+                </div>
+              </div>
+              <div class="feature-card">
+                <i class='bx bx-chart'></i>
+                <div>
+                  <h4>إحصائيات وتقارير</h4>
+                  <p>أنماط الغش والأقسام الأكثر تكرارًا.</p>
+                </div>
+              </div>
+              <div class="feature-card">
+                <i class='bx bx-check-circle'></i>
+                <div>
+                  <h4>واجهة سهلة الاستخدام</h4>
+                  <p>تشغيل سريع دون تدريب مسبق.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-visual feature-visual">
+            <div class="feature-illustration">
+              <img src="static/assets/presentation/Data extraction-pana.svg" alt="عرض توضيحي لميزات النظام"
+                class="feature-illustration-img" />
             </div>
           </div>
         </div>
       </section>
 
       <section class="presentation-slide">
-        <div class="slide-eyebrow">Security & Privacy</div>
-        <h2>Built for trust and compliance</h2>
-        <div class="badge-grid">
-          <span><i class='bx bx-lock-alt'></i> Bcrypt Password Hashing</span>
-          <span><i class='bx bx-shield'></i> JWT Session Protection</span>
-          <span><i class='bx bx-data'></i> Local Evidence Storage</span>
-          <span><i class='bx bx-time-five'></i> 7-day Retention Policy</span>
-          <span><i class='bx bx-user-check'></i> Role-Based Access</span>
-          <span><i class='bx bx-file'></i> Audit Logging</span>
+        <div class="slide-eyebrow">مميزات الأداء</div>
+        <h2>دقة وسرعة مع خصوصية</h2>
+
+        <div class="performance-processor-container">
+          <!-- Connection Lines -->
+          <div class="circuit-line line-1"></div>
+          <div class="circuit-line line-2"></div>
+          <div class="circuit-line line-3"></div>
+          <div class="circuit-line line-4"></div>
+
+          <!-- Central Core -->
+          <div class="cpu-core">
+            <div class="pcard-badge">LIVE</div>
+            <i class='bx bx-chip'></i>
+            <h3>المعالج المركزي</h3>
+            <p>معالجة فورية < 200ms باستخدام YOLOv11s المستقر.</p>
+          </div>
+
+          <!-- Satellite Modules -->
+          <div class="cpu-module mod-top-left">
+            <i class='bx bx-history'></i>
+            <h3>سجلات ذكية</h3>
+            <p>أرشفة الأدلة وتصدير History Cards فوراً.</p>
+          </div>
+
+          <div class="cpu-module mod-top-right">
+            <i class='bx bx-face'></i>
+            <h3>التحقق الفوري</h3>
+            <p>التأكد من هوية الطالب عبر GhostFacenets.</p>
+          </div>
+
+          <div class="cpu-module mod-bottom-left">
+            <i class='bx bx-shield-alt-2'></i>
+            <h3>خصوصية GDPR</h3>
+            <p>سياسة التدمير الآمن للبيانات بعد 7 أيام.</p>
+          </div>
+
+          <div class="cpu-module mod-bottom-right">
+            <i class='bx bx-signal-5'></i>
+            <h3>كفاءة الموارد</h3>
+            <p>استهلاك منخفض للذاكرة يدعم الأLabات المدرسية.</p>
+          </div>
+        </div>
+
+        <div class="quick-mentions">
+          <div class="qtile"><i class='bx bx-layer'></i> قابلية التوسع</div>
+          <div class="qtile"><i class='bx bx-lock-alt'></i> مصادقة JWT</div>
+          <div class="qtile"><i class='bx bx-hdd'></i> Bcrypt Hashing</div>
+          <div class="qtile"><i class='bx bx-traffic-cone'></i> Rate Limiting</div>
         </div>
       </section>
 
       <section class="presentation-slide">
-        <div class="slide-eyebrow">Technology Stack</div>
-        <h2>Modern AI + Secure Web Architecture</h2>
-        <div class="tech-groups">
-          <div class="tech-group tech-group--ai">
-            <div class="tech-group-title">AI / Computer Vision</div>
-            <div class="tech-grid">
-              <div class="tech-card">
-                <img src="static/assets/presentation/Ultralytics%20YOLO11.png" alt="YOLOv11" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/MediaPipe.png" alt="MediaPipe" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/OpenCV.png" alt="OpenCV" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/Pytorch_logo.png" alt="PyTorch" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/NumPy_logo_2020.svg.png" alt="NumPy" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/DeepFace.jpg" alt="DeepFace" class="tech-icon" />
-              </div>
+        <div class="slide-eyebrow">الرؤية المستقبلية</div>
+        <h2>مسار التطوير (Roadmap)</h2>
+
+        <div class="roadmap-timeline-container">
+          <div class="roadmap-main-line"></div>
+
+          <div class="roadmap-item ritem-1">
+            <div class="ritem-dot"><i class='bx bx-devices'></i></div>
+            <div class="ritem-card">
+              <span class="ritem-tag tag-short">المدى القريب</span>
+              <h4>دعم الكاميرات المتعددة</h4>
+              <p>تغطية القاعات الكبيرة وإلغاء النقاط العمياء تماماً.</p>
             </div>
           </div>
 
-          <div class="tech-group">
-            <div class="tech-group-title">Backend</div>
-            <div class="tech-grid">
-              <div class="tech-card">
-                <img src="static/assets/presentation/py.png" alt="Python" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/fLASK.png" alt="Flask" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/SocketIO.png" alt="SocketIO" class="tech-icon" />
-              </div>
+          <div class="roadmap-item ritem-2">
+            <div class="ritem-dot"><i class='bx bx-stats'></i></div>
+            <div class="ritem-card">
+              <span class="ritem-tag tag-short">المدى القريب</span>
+              <h4>تحليلات متقدمة</h4>
+              <p>لوحات تحكم للإحصائيات الشاملة وأنماط سلوك الطلاب.</p>
             </div>
           </div>
 
-          <div class="tech-group">
-            <div class="tech-group-title">Frontend</div>
-            <div class="tech-grid">
-              <div class="tech-card">
-                <img src="static/assets/presentation/Html%20(2).png" alt="HTML" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/CSS.png" alt="CSS" class="tech-icon" />
-              </div>
-              <div class="tech-card">
-                <img src="static/assets/presentation/JS.png" alt="JavaScript" class="tech-icon" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-eyebrow">Demo Flow</div>
-        <h2>3-minute live walkthrough</h2>
-        <div class="step-grid">
-          <div class="step-card"><span>1</span> Login</div>
-          <div class="step-card"><span>2</span> Select Department</div>
-          <div class="step-card"><span>3</span> Start Pipeline</div>
-          <div class="step-card"><span>4</span> Review Alerts</div>
-          <div class="step-card"><span>5</span> Export Evidence</div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-eyebrow">Impact</div>
-        <h2>Cleaner workflow, stronger integrity</h2>
-        <div class="impact-metrics">
-          <div class="impact-metric">
-            <span class="metric-label">Evidence Readiness</span>
-            <span class="metric-value">Structured</span>
-          </div>
-          <div class="impact-metric">
-            <span class="metric-label">Review Workflow</span>
-            <span class="metric-value">Streamlined</span>
-          </div>
-          <div class="impact-metric">
-            <span class="metric-label">Audit Trail</span>
-            <span class="metric-value">Consistent</span>
-          </div>
-        </div>
-        <div class="impact-grid impact-grid--modern">
-          <div class="impact-card">
-            <h3><i class='bx bx-time-five'></i> Efficiency & Speed</h3>
-            <p>Automated prioritization of alerts using confidence scores dramatically reduces manual review time,
-              allowing proctors to focus only on genuine threats.</p>
-          </div>
-          <div class="impact-card">
-            <h3><i class='bx bx-search-alt'></i> Verifiable Integrity</h3>
-            <p>Every flagged incident is securely logged with high-resolution visual snapshots and timestamped metadata,
-              creating an irrefutable audit trail.</p>
-          </div>
-          <div class="impact-card">
-            <h3><i class='bx bx-server'></i> Scalable Architecture</h3>
-            <p>Optimized YOLO models allow a single generic server to process multiple high-definition streams in
-              real-time without significant latency.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="presentation-slide">
-        <div class="slide-eyebrow">Roadmap</div>
-        <h2>Recommendations & Future Work</h2>
-        <div class="pipeline-grid roadmap-grid">
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Multi-modal Fusion</div>
-              <div class="flow-node-desc">Integrating CV, Audio, and Eye Tracking for higher accuracy.</div>
-            </div>
-          </div>
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Continuous Learning</div>
-              <div class="flow-node-desc">Self-improving models that adapt based on new anomaly data.</div>
-            </div>
-          </div>
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Multi-Device Support</div>
-              <div class="flow-node-desc">Expanding secure exam support to tablets and mobile devices.</div>
-            </div>
-          </div>
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">GenAI Simulation</div>
-              <div class="flow-node-desc">Using Generative AI to create realistic cheat scenarios for training.</div>
-            </div>
-          </div>
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Context Awareness</div>
-              <div class="flow-node-desc">Smart filtering to reduce false positives (e.g., drinking water).</div>
+          <div class="roadmap-item ritem-3">
+            <div class="ritem-dot"><i class='bx bx-scan'></i></div>
+            <div class="ritem-card">
+              <span class="ritem-tag tag-med">المدى المتوسط</span>
+              <h4>تتبع نظرات العين</h4>
+              <p>تقنيات Gaze Tracking للكشف عن النظر للمواد المخفية.</p>
             </div>
           </div>
 
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Multi-Language</div>
-              <div class="flow-node-desc">UI Internationalization beyond English/Arabic.</div>
+          <div class="roadmap-item ritem-4">
+            <div class="ritem-dot"><i class='bx bx-mobile-alt'></i></div>
+            <div class="ritem-card">
+              <span class="ritem-tag tag-med">المدى المتوسط</span>
+              <h4>تطبيق جوال للمراقب</h4>
+              <p>تنبيهات فورية مع اهتزاز للمراقبين أثناء حركتهم.</p>
             </div>
           </div>
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Multi-Camera</div>
-              <div class="flow-node-desc">Unified tracking using multiple angles per student.</div>
+
+          <div class="roadmap-item ritem-5">
+            <div class="ritem-dot"><i class='bx bxs-graduation'></i></div>
+            <div class="ritem-card">
+              <span class="ritem-tag tag-long">المدى البعيد</span>
+              <h4>التكامل مع الـ LMS</h4>
+              <p>الربط مع Moodle و Canvas لمزامنة المخالفات آلياً.</p>
             </div>
           </div>
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Behavioral Analysis</div>
-              <div class="flow-node-desc">Long-term session monitoring to detect subtle anomaly patterns.</div>
-            </div>
-          </div>
-          <div class="flow-col">
-            <div class="flow-node">
-              <div class="flow-node-title">Advanced Settings</div>
-              <div class="flow-node-desc">Granular sensitivity controls and admin dashboards.</div>
+
+          <div class="roadmap-item ritem-6">
+            <div class="ritem-dot"><i class='bx bx-file'></i></div>
+            <div class="ritem-card">
+              <span class="ritem-tag tag-long">المدى البعيد</span>
+              <h4>تقارير آلية ذكية</h4>
+              <p>تقارير حوادث مولدة بالـ AI مع ملخصات نصية موثقة.</p>
             </div>
           </div>
         </div>
       </section>
 
       <section class="presentation-slide">
-        <div class="slide-eyebrow">Prepared By</div>
-        <h2>Smart Invigilator Team</h2>
-        <div class="credit-grid">
-          <div>
-            <p class="credit-title">Prepared by</p>
-            <p>Aladdin Abderrahim Ghribi</p>
-            <p>Malak Tarek Khalaf</p>
+        <div class="conclusion-container">
+          <h2 class="conclusion-accent">شكرًا لحسن استماعكم</h2>
+
+          <div class="qr-section">
+            <div class="qr-text">
+              <h4>استكشف الكود المصدري</h4>
+              <p>متاح لجميع الطلاب والأساتذة للاستفادة والبحث العلمي. <br> يمكنكم الوصول إلى المشروع كاملاً عبر GitHub.
+              </p>
+            </div>
+            <div class="qr-code-box">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/Aladdin-Ghribi/exam-cheat-detection.git"
+                alt="QR Code GitHub">
+            </div>
           </div>
-          <div>
-            <p class="credit-title">Supervisor</p>
-            <p>Abdulghani Abied</p>
+
+          <div class="conclusion-links">
+            <a href="https://github.com/Aladdin-Ghribi/exam-cheat-detection" target="_blank" class="concl-link">
+              <div class="c-icon-box"><i class='bx bxl-github'></i></div>
+              <span>GitHub Repo</span>
+            </a>
+            <div class="concl-link">
+              <div class="c-icon-box"><i class='bx bx-envelope'></i></div>
+              <span>Support Team</span>
+            </div>
+            <div class="concl-link">
+              <div class="c-icon-box"><i class='bx bx-globe'></i></div>
+              <span>Documentation</span>
+            </div>
           </div>
         </div>
-        <div class="closing-note">Thank you — Questions?</div>
       </section>
     </div>
 
@@ -659,8 +596,8 @@
       <div class="presentation-progress">
         <div class="presentation-progress-bar" id="presentationProgress"></div>
       </div>
-      <div class="presentation-counter" id="presentationCounter">1 / 15</div>
-      <div class="presentation-hint-bottom">Use Esc to exit | Arrow keys to navigate</div>
+      <div class="presentation-counter" id="presentationCounter">1 / 9</div>
+      <div class="presentation-hint-bottom">اضغط Esc للخروج | الأسهم للتنقل</div>
     </div>
   </div>
 
@@ -836,11 +773,11 @@
     }
 
     if (presentationNextBtn) {
-      presentationNextBtn.addEventListener('click', nextPresentationSlide);
+      presentationNextBtn.addEventListener('click', prevPresentationSlide);
     }
 
     if (presentationPrevBtn) {
-      presentationPrevBtn.addEventListener('click', prevPresentationSlide);
+      presentationPrevBtn.addEventListener('click', nextPresentationSlide);
     }
 
     document.addEventListener('keydown', (e) => {

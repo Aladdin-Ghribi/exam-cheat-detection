@@ -1,9 +1,6 @@
 from collections import deque
 from .suspicion_config import (
     SUSPICION_THRESHOLD,
-    HEAD_WEIGHT,
-    HANDS_FACE_WEIGHT,
-    HANDS_OBJECT_WEIGHT,
     SMOOTHING_FACTOR,
     HISTORY_LENGTH,
     HIGH_RISK_OBJECTS,
@@ -33,10 +30,8 @@ class SuspicionScorer:
         self.smoothing_factor = config.get(
             'smoothing_factor', SMOOTHING_FACTOR)
         self.history = {}
-        self.orientation_baseline = {}
-        self.baseline_ready_frames = 5
 
-        # Risk objects from config (static for now)
+        # Risk object lists
         self.high_risk_objects = HIGH_RISK_OBJECTS
         self.medium_risk_objects = MEDIUM_RISK_OBJECTS
 
@@ -116,12 +111,9 @@ class SuspicionScorer:
         Args:
             active_keys: Set of currently active keys
         """
-        tracked = set(self.history.keys()) | set(
-            self.orientation_baseline.keys())
-        for key in tracked:
+        for key in list(self.history.keys()):
             if key not in active_keys:
                 self.history.pop(key, None)
-                self.orientation_baseline.pop(key, None)
 
     def _smooth(self, key, raw):
         """
@@ -234,69 +226,6 @@ class SuspicionScorer:
                 0.4  # Max 40% contribution
 
         return min(1.0, score)  # Cap at 100%
-
-    def _scale_deviation(self, value, neutral, extreme):
-        """
-        Scale a deviation value to a suspicion score.
-        Args:
-            value: Deviation value
-            neutral: Neutral threshold
-            extreme: Extreme threshold
-        Returns:
-            Suspicion score
-        """
-        if value <= neutral:
-            return 0.0
-        return min(1.0, (value - neutral) / max(extreme - neutral, 1e-6))
-
-    def _update_head_baseline(self, key, yaw, pitch, roll):
-        """
-        Update the head orientation baseline.
-        Args:
-            key: Tracking key
-            yaw: Yaw angle
-            pitch: Pitch angle
-            roll: Roll angle (ignored)
-        Returns:
-            Updated baseline or None
-        """
-        if key is None:
-            return None
-
-        baseline = self.orientation_baseline.get(key)
-        if baseline is None:
-            self.orientation_baseline[key] = {
-                'yaw': yaw,
-                'pitch': pitch,
-                'roll': 0.0,  # Set baseline roll to 0
-                'frames': 1
-            }
-            return None
-
-        # Only update baseline if current orientation is reasonably neutral
-        if max(abs(yaw), abs(pitch)) > self.high_suspicious_gaze_threshold:
-            return baseline
-
-        frames = baseline.get('frames', 1)
-
-        # Adaptive blending based on deviation
-        def blend(axis, value):
-            delta = abs(value - baseline[axis])
-            if delta <= self.normal_gaze_threshold:
-                alpha = 0.4  # Faster adaptation for small changes
-            elif delta <= self.suspicious_gaze_threshold:
-                alpha = 0.25
-            else:
-                alpha = 0.1  # Slow adaptation for large changes
-            baseline[axis] = baseline[axis] * (1.0 - alpha) + value * alpha
-
-        blend('yaw', yaw)
-        blend('pitch', pitch)
-        # Ignoring roll baseline updates
-        # blend('roll', roll)
-        baseline['frames'] = min(frames + 1, 1500)
-
-        return baseline
 
     def _hand_face_component(self, hands):
         """

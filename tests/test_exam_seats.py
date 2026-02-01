@@ -1,3 +1,5 @@
+from src.detection.exam_seat_manager import ExamSeatManager
+from src.detection.yolo_detector import YOLODetector
 import os
 import sys
 import cv2
@@ -8,8 +10,6 @@ import numpy as np
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.detection.yolo_detector import YOLODetector
-from src.detection.exam_seat_manager import ExamSeatManager
 
 def test_exam_seats(source, save_output=False, output_path=None, config_path=None):
     """
@@ -77,7 +77,8 @@ def test_exam_seats(source, save_output=False, output_path=None, config_path=Non
 
         # Draw zones and assignments with pose landmarks
         show_poses = True  # Set to True to show pose landmarks
-        annotated_frame = seat_manager.draw_zones(frame, seat_result['zone_assignments'], show_poses)
+        annotated_frame = seat_manager.draw_zones(
+            frame, seat_result['zone_assignments'], show_poses)
 
         # Draw bounding boxes for people
         for detection in detections:
@@ -96,25 +97,30 @@ def test_exam_seats(source, save_output=False, output_path=None, config_path=Non
                 x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
                 # Draw bounding box
-                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+                cv2.rectangle(annotated_frame, (x1, y1),
+                              (x2, y2), (255, 0, 0), 2)
 
-                # Draw track ID if available
+                # Draw track ID
                 if 'track_id' in detection:
-                    cv2.putText(annotated_frame, f"ID: {detection['track_id']}", 
-                               (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                    cv2.putText(annotated_frame, f"ID: {detection['track_id']}",
+                                (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
-                # Draw stable position if available
+                # Draw stable position
                 if 'stable_position' in detection:
                     cx, cy = detection['stable_position']
-                    # Draw a larger, more visible point
-                    cv2.circle(annotated_frame, (cx, cy), 8, (0, 255, 255), -1)  # Yellow filled circle
-                    cv2.circle(annotated_frame, (cx, cy), 8, (0, 0, 0), 2)  # Black border
+                    # Draw stable point
+                    cv2.circle(annotated_frame, (cx, cy), 8,
+                               (0, 255, 255), -1)  # Yellow filled circle
+                    cv2.circle(annotated_frame, (cx, cy), 8,
+                               (0, 0, 0), 2)  # Black border
 
         # Print tracking info every 30 frames
         if frame_count % 30 == 0:
             print(f"Frame {frame_count}:")
-            print(f"  Tracked persons: {len([d for d in detections if d['class_id'] == 0 and 'track_id' in d])}")
-            print(f"  Zones: {len(seat_result['zones'])} (occupied: {sum(1 for z in seat_result['zones'].values() if z.get('occupied', False))})")
+            print(
+                f"  Tracked persons: {len([d for d in detections if d['class_id'] == 0 and 'track_id' in d])}")
+            print(
+                f"  Zones: {len(seat_result['zones'])} (occupied: {sum(1 for z in seat_result['zones'].values() if z.get('occupied', False))})")
 
             # Print seat assignments
             if seat_result['zone_assignments']:
@@ -152,16 +158,21 @@ def test_exam_seats(source, save_output=False, output_path=None, config_path=Non
     if writer:
         writer.release()
     cv2.destroyAllWindows()
-    
+
     # Close seat manager resources
     seat_manager.close()
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Test exam seat assignment for detected people')
-    parser.add_argument('--source', type=str, default=0, help='Video source (0 for webcam, path to video file)')
-    parser.add_argument('--save', action='store_true', help='Save output video')
+    parser = argparse.ArgumentParser(
+        description='Test exam seat assignment for detected people')
+    parser.add_argument('--source', type=str, default=0,
+                        help='Video source (0 for webcam, path to video file)')
+    parser.add_argument('--save', action='store_true',
+                        help='Save output video')
     parser.add_argument('--output', type=str, help='Output video path')
-    parser.add_argument('--config', type=str, help='Path to load/save seat configuration')
+    parser.add_argument('--config', type=str,
+                        help='Path to load/save seat configuration')
 
     args = parser.parse_args()
 
