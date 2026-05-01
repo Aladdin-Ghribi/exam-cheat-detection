@@ -1,0 +1,67 @@
+[project]
+name = "exam-cheat-detection"
+version = "0.1.0"
+description = "Privacy-first, real-time computer vision system for exam monitoring."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+
+dependencies = [
+  "tensorflow==2.16.1",
+  "tensorflow-intel==2.16.1; platform_system == 'Windows'",
+  "tf-keras==2.16.0",
+  "protobuf==4.25.3",
+  "ml-dtypes==0.3.2",
+  "tensorboard==2.16.2",
+  "keras==3.0.5",
+  "opencv-python==4.10.0.84",
+  "mediapipe==0.10.14",
+  "deepface==0.0.93",
+  "ultralytics==8.3.24",
+  "flask==3.0.3",
+  "flask-cors==4.0.1",
+  "flask-socketio==5.6.0",
+  "python-socketio>=5.12.0",
+  "numpy==1.26.4",
+  "pandas==2.2.2",
+  "pillow==10.4.0",
+  "python-dateutil==2.9.0",
+  "pytz==2024.1",
+  "requests==2.32.3",
+  "tqdm==4.66.5",
+  "python-dotenv==1.0.1",
+  "bcrypt>=5.0.0",
+  "PyJWT==2.10.1",
+]
+
+[project.optional-dependencies]
+cuda = [
+  "torch",
+  "torchvision",
+]
+cpu = [
+  "torch",
+  "torchvision",
+]
+
+[tool.uv]
+required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu121", marker = "extra == 'cuda'" },
+  { index = "pytorch-cpu", marker = "extra == 'cpu' and extra != 'cuda'" },
+]
+torchvision = [
+  { index = "pytorch-cu121", marker = "extra == 'cuda'" },
+  { index = "pytorch-cpu", marker = "extra == 'cpu' and extra != 'cuda'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

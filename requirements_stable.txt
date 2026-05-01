@@ -20,8 +20,8 @@ deepface==0.0.93
 ultralytics==8.3.24
 
 # PyTorch with CUDA (install separately with):
-# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-# For CPU-only: pip install torch torchvision
+# uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# For CPU-only: uv pip install torch torchvision
 
 # Web Framework
 flask==3.0.3
