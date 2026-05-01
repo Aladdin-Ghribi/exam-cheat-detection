@@ -76,26 +76,36 @@ graph TD
 git clone https://github.com/Aladdin-Ghribi/exam-cheat-detection.git
 cd exam-cheat-detection
 
-# 2. Create Virtual Environment
-python -m venv venv
-venv\Scripts\Activate.ps1
+# 2. Install uv (fast Python package manager)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# 3. Install Dependencies
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-pip install -r requirements_stable.txt
+# 3. Install and pin Python 3.11
+uv python install 3.11.9
+
+# 4. Create Virtual Environment
+uv venv --python 3.11.9
+.venv\Scripts\Activate.ps1
+
+# 5. Resolve + Install Dependencies
+# GPU (CUDA 12.1)
+uv lock
+uv sync --extra cuda
+
+# CPU-only
+# uv lock
+# uv sync --extra cpu
 ```
 
-**4. Launch Dashboard**
+**6. Launch Dashboard**
 ```
 python .\start_app.py
+or
+uv run python .\start_app.py
 ```
 
 ---
 
-##  Project Status (Week 11)
-
-✅ **Current Milestone**: Week 1 - 11 Complete
-🔜 **Next Up (Week 13)**: Full alert integration & final polish.
+##  Project Status (Completed)
 
 ---
 
