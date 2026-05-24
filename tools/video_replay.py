@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.detection.yolo_detector import YOLODetector
 from config import YOLO_MODEL
+from src.detection.suspicion_config import load_config
 
 
 class VideoReplayProcessor:
@@ -31,11 +32,13 @@ class VideoReplayProcessor:
             enable_seat_mapping: Enable seat mapping
         """
         print("🔧 Initializing detection pipeline...")
+        config = load_config()
         self.detector = YOLODetector(
             enable_pose=enable_pose,
             enable_tracking=enable_tracking,
             enable_seat_mapping=enable_seat_mapping
         )
+        self.alert_threshold_percent = float(config.get('suspicion_threshold', 20))
         print("✅ Detection pipeline ready")
         
         self.results = []
@@ -98,6 +101,7 @@ class VideoReplayProcessor:
         processing_times = []
         detections_per_frame = []
         suspicion_scores = []
+        frame_scores = []
         flagged_frames = []
         
         start_time = time.time()
@@ -119,24 +123,37 @@ class VideoReplayProcessor:
             detections_per_frame.append(len(detections))
             
             # Get max suspicion score
-            max_suspicion = 0
+            max_raw_suspicion = 0
+            max_smoothed_suspicion = 0
             for det in detections:
                 if 'behavior' in det and 'suspicion' in det['behavior']:
-                    score = det['behavior']['suspicion'].get('smoothed', 0)
-                    max_suspicion = max(max_suspicion, score)
-            
-            suspicion_scores.append(max_suspicion)
+                    suspicion = det['behavior']['suspicion']
+                    raw_score = suspicion.get('raw', 0)
+                    smoothed_score = suspicion.get('smoothed', 0)
+                    max_raw_suspicion = max(max_raw_suspicion, raw_score)
+                    max_smoothed_suspicion = max(max_smoothed_suspicion, smoothed_score)
+
+            suspicion_scores.append(max_smoothed_suspicion)
+            frame_scores.append({
+                'frame': frame_idx,
+                'timestamp': frame_idx / fps,
+                'raw_suspicion_score': max_raw_suspicion * 100,
+                'smoothed_suspicion_score': max_smoothed_suspicion * 100,
+                'detections': len(detections)
+            })
             
             # Check if frame should be flagged
-            if max_suspicion * 100 >= 20:  # Threshold from config
+            if max_smoothed_suspicion * 100 >= self.alert_threshold_percent:  # Threshold from config
                 flagged_frames.append({
                     'frame': frame_idx,
                     'timestamp': frame_idx / fps,
-                    'suspicion_score': max_suspicion * 100,
+                    'suspicion_score': max_smoothed_suspicion * 100,
                     'detections': len(detections)
                 })
             
             # Annotate frame
+            # Use smoothed suspicion as the displayed max suspicion
+            max_suspicion = max_smoothed_suspicion
             annotated_frame = self.detector.draw_detections(frame, detection_result)
             
             # Add frame info
@@ -196,6 +213,11 @@ class VideoReplayProcessor:
                 'max_suspicion_score': max(suspicion_scores) * 100 if suspicion_scores else 0,
                 'flagged_frames_count': len(flagged_frames),
                 'flagged_frames': flagged_frames
+            },
+            'frame_scores': frame_scores,
+            'evaluation': {
+                'threshold_percent': self.alert_threshold_percent,
+                'score_mode': 'smoothed'
             }
         }
         
@@ -308,7 +330,11 @@ def main():
         
         # Save individual report
         if result and args.report:
-            with open(args.report, 'w') as f:
+            # Ensure destination directory exists
+            report_path = Path(args.report)
+            if not report_path.parent.exists():
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(report_path, 'w') as f:
                 json.dump(result, f, indent=2)
             print(f"\n📊 Report saved: {args.report}")
 

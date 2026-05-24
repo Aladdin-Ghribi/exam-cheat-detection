@@ -336,10 +336,12 @@ dependencies = [
     { name = "mediapipe" },
     { name = "ml-dtypes" },
     { name = "numpy" },
+    { name = "nvidia-ml-py3" },
     { name = "opencv-python" },
     { name = "pandas" },
     { name = "pillow" },
     { name = "protobuf" },
+    { name = "psutil" },
     { name = "pyjwt" },
     { name = "python-dateutil" },
     { name = "python-dotenv" },
@@ -371,10 +373,12 @@ requires-dist = [
     { name = "mediapipe", specifier = "==0.10.14" },
     { name = "ml-dtypes", specifier = "==0.3.2" },
     { name = "numpy", specifier = "==1.26.4" },
+    { name = "nvidia-ml-py3", specifier = ">=7.352.0" },
     { name = "opencv-python", specifier = "==4.10.0.84" },
     { name = "pandas", specifier = "==2.2.2" },
     { name = "pillow", specifier = "==10.4.0" },
     { name = "protobuf", specifier = "==4.25.3" },
+    { name = "psutil", specifier = ">=7.2.2" },
     { name = "pyjwt", specifier = "==2.10.1" },
     { name = "python-dateutil", specifier = "==2.9.0" },
     { name = "python-dotenv", specifier = "==1.0.1" },
@@ -1089,6 +1093,12 @@ dependencies = [
 wheels = [
     { url = "https://files.pythonhosted.org/packages/65/5b/cfaeebf25cd9fdec14338ccb16f6b2c4c7fa9163aefcf057d86b9cc248bb/nvidia_cusparse_cu12-12.1.0.106-py3-none-manylinux1_x86_64.whl", hash = "sha256:f3b50f42cf363f86ab21f720998517a659a48131e8d538dc02f8768237bd884c", size = 195958278, upload-time = "2023-04-19T15:51:49.939Z" },
 ]
+
+[[package]]
+name = "nvidia-ml-py3"
+version = "7.352.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/64/cce82bddb80c0b0f5c703bbdafa94bfb69a1c5ad7a79cff00b482468f0d3/nvidia-ml-py3-7.352.0.tar.gz", hash = "sha256:390f02919ee9d73fe63a98c73101061a6b37fa694a793abf56673320f1f51277", size = 19494, upload-time = "2017-06-03T07:43:46.299Z" }
 
 [[package]]
 name = "nvidia-nccl-cu12"

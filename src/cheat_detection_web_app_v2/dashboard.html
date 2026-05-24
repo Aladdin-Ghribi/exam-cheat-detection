@@ -2116,12 +2116,12 @@
   <script>
     // Default settings values
     const DEFAULT_SETTINGS = {
-      suspicion_threshold: 23,
+      suspicion_threshold: 35,
       confidence_threshold: 0.5,
       yaw_threshold: 0,
       pitch_threshold: 13,
       roll_threshold: 0,
-      hand_face_threshold: 1.5,
+      hand_face_threshold: 3.0,
       hand_object_threshold: 55,
       render_fps: 30,
       device: "gpu",
@@ -2146,10 +2146,10 @@
       show_confidence: false,
       show_track_ids: false,
       head_weight: 0.75,
-      hands_face_weight: 0.15,
+      hands_face_weight: 0.05,
       hands_object_weight: 0.1,
-      smoothing_factor: 0.5,
-      history_length: 10,
+      smoothing_factor: 0.7,
+      history_length: 15,
       model_complexity: 0
     };
 

@@ -219,11 +219,38 @@ python tools/video_replay.py data/test_videos --batch --report results.json
 - Verify flagged frames match expected behaviors
 - Compare suspicion scores with annotations
 
+### 3b. Label Scenarios for Metrics
+
+Use interval labels when you want to evaluate precision and false-positive rate without hand-labeling every frame.
+1. Record one video per scenario with `tools/video_capture.py`.
+2. Replay the video once with `tools/video_replay.py` to generate a JSON report that includes `frame_scores`.
+3. Fill a CSV like `tools/labels_template.csv` with these columns:
+  - `video_path`: path to the source video
+  - `start_sec`: start of the labeled interval
+  - `end_sec`: end of the labeled interval
+  - `label`: `1` for cheating/suspicious, `0` for normal
+  - `scenario`: short name like `phone_usage` or `normal_exam`
+  - `notes`: optional comments
+4. Run the evaluator:
+
+```bash
+python tools/evaluate_labels.py --labels tools/labels_template.csv --report path/to/replay_report.json --threshold 20
+```
+
+The evaluator prints metrics for both raw and smoothed scores so you can fill the results table for "without smoothing" and "with smoothing" using the same labeled clips.
+
 ### 4. Iterate and Improve
 - Adjust detection thresholds based on results
 - Fine-tune scoring algorithms
 - Optimize performance bottlenecks
 - Add new test scenarios
+
+### Which tables matter most for your paper?
+
+- Keep the overall cheating-detection table in section 4.1.
+- Keep the smoothing-impact table in section 5.
+- You can drop the class-by-class object table in section 3.1 unless you run a separate labeled object-detection experiment.
+- If you do not have annotated ground truth, leave detection-accuracy cells marked as not measured rather than guessing values.
 
 ---
 

@@ -22,17 +22,17 @@ def load_config():
 
 
 # Main suspicion threshold (0-100 scale)
-SUSPICION_THRESHOLD = 15  # Can be overridden by config.json
+SUSPICION_THRESHOLD = 20  # Can be overridden by config.json
 
 
 # Scoring weights
 HEAD_WEIGHT = 0.75  # Weight for head orientation component
-HANDS_FACE_WEIGHT = 0.15  # Weight for hand-face proximity
-HANDS_OBJECT_WEIGHT = 0.10  # Weight for hand-object proximity
+HANDS_FACE_WEIGHT = 0.05  # Weight for hand-face proximity
+HANDS_OBJECT_WEIGHT = 0.07  # Weight for hand-object proximity
 
 # Smoothing parameters
-SMOOTHING_FACTOR = 0.5  # General smoothing factor
-HISTORY_LENGTH = 10  # Number of frames to track for smoothing
+SMOOTHING_FACTOR = 0.75  # General smoothing factor
+HISTORY_LENGTH = 20  # Number of frames to track for smoothing
 
 # Risk objects classification
 HIGH_RISK_OBJECTS = frozenset({

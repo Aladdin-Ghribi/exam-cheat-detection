@@ -1,11 +1,15 @@
 from collections import deque
+
 from .suspicion_config import (
-    SUSPICION_THRESHOLD,
-    SMOOTHING_FACTOR,
-    HISTORY_LENGTH,
+    HANDS_FACE_WEIGHT,
+    HANDS_OBJECT_WEIGHT,
+    HEAD_WEIGHT,
     HIGH_RISK_OBJECTS,
+    HISTORY_LENGTH,
     MEDIUM_RISK_OBJECTS,
-    load_config
+    SMOOTHING_FACTOR,
+    SUSPICION_THRESHOLD,
+    load_config,
 )
 
 
@@ -15,7 +19,7 @@ class SuspicionScorer:
         Initialize the SuspicionScorer with configuration from config.json.
 
         Args:
-            config: Optional dictionary with configuration values. 
+            config: Optional dictionary with configuration values.
                     If not provided, loads from config.json automatically.
         """
         # Load config from file if not provided
@@ -26,22 +30,35 @@ class SuspicionScorer:
         self._config = config
 
         # Smoothing parameters from config or defaults
-        self.history_length = config.get('history_length', HISTORY_LENGTH)
-        self.smoothing_factor = config.get(
-            'smoothing_factor', SMOOTHING_FACTOR)
+        self.history_length = config.get("history_length", HISTORY_LENGTH)
+        self.smoothing_factor = config.get("smoothing_factor", SMOOTHING_FACTOR)
         self.history = {}
 
         # Risk object lists
         self.high_risk_objects = HIGH_RISK_OBJECTS
         self.medium_risk_objects = MEDIUM_RISK_OBJECTS
 
+        # Confidence gate for object-based phone flags.
+        # Prevents a weak object label from becoming an automatic hard flag.
+        self.phone_hard_flag_confidence = config.get(
+            "phone_hard_flag_confidence", 0.9
+        )
+
         # Dynamic thresholds from config.json
-        self.yaw_threshold = config.get('yaw_threshold', 30)
-        self.pitch_threshold = config.get('pitch_threshold', 20)
+        self.yaw_threshold = config.get("yaw_threshold", 30)
+        self.pitch_threshold = config.get("pitch_threshold", 20)
         self.suspicion_threshold = config.get(
-            'suspicion_threshold', SUSPICION_THRESHOLD)
-        self.hand_face_threshold = config.get('hand_face_threshold', 2.0)
-        self.hand_object_threshold = config.get('hand_object_threshold', 55)
+            "suspicion_threshold", SUSPICION_THRESHOLD
+        )
+        self.hand_face_threshold = config.get("hand_face_threshold", 3.0)
+        self.hand_object_threshold = config.get("hand_object_threshold", 55)
+
+        # Scoring weights (allow overrides via config.json)
+        self.head_weight = config.get("head_weight", HEAD_WEIGHT)
+        self.hands_face_weight = config.get("hands_face_weight", HANDS_FACE_WEIGHT)
+        self.hands_object_weight = config.get(
+            "hands_object_weight", HANDS_OBJECT_WEIGHT
+        )
 
     def score_detection(self, detection):
         """
@@ -51,47 +68,41 @@ class SuspicionScorer:
         Returns:
             Dictionary with suspicion scores
         """
-        behavior = detection.get('behavior') or {}
+        behavior = detection.get("behavior") or {}
         key = self._make_key(detection)
         components = self._compute_components(detection, behavior, key)
 
-        # Simple scoring matching app.py logic
-        score = 0
+        # Weighted scoring (0.0 to 1.0)
+        head_score = components.get("head", 0.0)
+        hands_face_score = components.get("hands_face", 0.0)
+        hands_object_score = components.get("hands_object", 0.0)
 
-        # Head orientation (0-50 points)
-        if 'head_orientation' in behavior:
-            ho = behavior['head_orientation']
-            if ho is not None:
-                if abs(ho.get('yaw', 0)) > self.yaw_threshold:
-                    score += min(30, abs(ho['yaw']) - self.yaw_threshold)
-                if abs(ho.get('pitch', 0)) > self.pitch_threshold:
-                    score += min(20, abs(ho['pitch']) - self.pitch_threshold)
+        weight_sum = (
+            self.head_weight + self.hands_face_weight + self.hands_object_weight
+        )
+        if weight_sum <= 0:
+            raw = 0.0
+        else:
+            raw = (
+                head_score * self.head_weight
+                + hands_face_score * self.hands_face_weight
+                + hands_object_score * self.hands_object_weight
+            ) / weight_sum
 
-        # Hand proximity (0-100 points per hand for high-risk objects)
-        if 'hands' in behavior:
-            for side in ['left', 'right']:
-                hand = behavior['hands'].get(side, {})
-                if hand.get('visible'):
-                    if hand.get('near_object') and hand.get('object_class'):
-                        obj_class = hand.get('object_class', '').lower()
-                        if 'phone' in obj_class or 'book' in obj_class:
-                            score = 100  # Instant flag for phone/book
-                            break
-                        else:
-                            score += 40
-                    elif hand.get('near_face'):
-                        score += 15
-
-        # Convert to 0-1 scale
-        raw = min(1.0, score / 100.0)
+        # Hard-flag high-risk objects only when the object label is both strong
+        # and high-confidence; this avoids turning noisy hand motion into a phone alert.
+        hard_flag = hands_object_score >= 0.99
+        if hard_flag:
+            raw = 1.0
         smoothed = self._smooth(key, raw)
 
         # Create result
         result = {
-            'raw': raw,
-            'smoothed': smoothed,
-            'components': components,
-            'key': key
+            "raw": raw,
+            "smoothed": smoothed,
+            "components": components,
+            "hard_flag": hard_flag,
+            "key": key,
         }
 
         # Store in history
@@ -144,8 +155,9 @@ class SuspicionScorer:
             smoothed = previous * 0.7 + raw * 0.3
         else:  # Decreasing suspicion
             # More smoothing for decreases
-            smoothed = previous * self.smoothing_factor + \
-                raw * (1.0 - self.smoothing_factor)
+            smoothed = previous * self.smoothing_factor + raw * (
+                1.0 - self.smoothing_factor
+            )
 
         return max(0.0, min(1.0, smoothed))
 
@@ -157,14 +169,14 @@ class SuspicionScorer:
         Returns:
             Tracking key or None
         """
-        track_id = detection.get('track_id')
+        track_id = detection.get("track_id")
         if track_id is not None:
-            return ('track', track_id)
-        bbox = detection.get('bbox')
+            return ("track", track_id)
+        bbox = detection.get("bbox")
         if bbox and len(bbox) == 4:
             cx = (bbox[0] + bbox[2]) * 0.5
             cy = (bbox[1] + bbox[3]) * 0.5
-            return ('bbox', round(cx, 1), round(cy, 1))
+            return ("bbox", round(cx, 1), round(cy, 1))
         return None
 
     def _compute_components(self, detection, behavior, key):
@@ -177,16 +189,12 @@ class SuspicionScorer:
         Returns:
             Dictionary with component scores
         """
-        head = self._head_component(key, behavior.get('head_orientation'))
-        hands = behavior.get('hands') or {}
+        head = self._head_component(key, behavior.get("head_orientation"))
+        hands = behavior.get("hands") or {}
         face = self._hand_face_component(hands)
-        obj = self._hand_object_component(detection.get('bbox'), hands)
+        obj = self._hand_object_component(detection.get("bbox"), hands)
 
-        return {
-            'head': head,
-            'hands_face': face,
-            'hands_object': obj
-        }
+        return {"head": head, "hands_face": face, "hands_object": obj}
 
     def _head_component(self, key, orientation):
         """
@@ -206,9 +214,9 @@ class SuspicionScorer:
             return 0.0
 
         # These are "swapped" from math convention to match reality
-        yaw = float(orientation.get('yaw', 0.0))      # Actually: body roll
+        yaw = float(orientation.get("yaw", 0.0))  # Actually: body roll
         # Actually: head turn left/right
-        pitch = float(orientation.get('pitch', 0.0))
+        pitch = float(orientation.get("pitch", 0.0))
 
         score = 0.0
 
@@ -222,8 +230,7 @@ class SuspicionScorer:
         if abs(pitch) > self.pitch_threshold:
             pitch_excess = abs(pitch) - self.pitch_threshold
             # Scale to 0-1: 45° beyond threshold = 100%
-            score += min(1.0, pitch_excess / 45.0) * \
-                0.4  # Max 40% contribution
+            score += min(1.0, pitch_excess / 45.0) * 0.4  # Max 40% contribution
 
         return min(1.0, score)  # Cap at 100%
 
@@ -241,22 +248,22 @@ class SuspicionScorer:
         total = 0
         score_sum = 0.0
 
-        for side in ('left', 'right'):
+        for side in ("left", "right"):
             entry = hands.get(side)
-            if not entry or not entry.get('visible'):
+            if not entry or not entry.get("visible"):
                 continue
 
             total += 1
 
-            if entry.get('near_face'):
+            if entry.get("near_face"):
                 score_sum += 0.85  # High score for hands near face
                 continue
 
-            distance = entry.get('distance_to_face')
+            distance = entry.get("distance_to_face")
             if distance is None:
                 continue
 
-            threshold = entry.get('face_threshold')
+            threshold = entry.get("face_threshold")
             if threshold is None or threshold <= 0.0:
                 # Convert hand_face_threshold from UI (1.0-3.0) to internal scale (0.1-0.3)
                 threshold = self.hand_face_threshold / 10.0
@@ -301,33 +308,38 @@ class SuspicionScorer:
         expanded = threshold * 1.6
         max_score = 0.0
 
-        for side in ('left', 'right'):
+        for side in ("left", "right"):
             entry = hands.get(side)
-            if not entry or not entry.get('visible'):
+            if not entry or not entry.get("visible"):
                 continue
 
-            distance = entry.get('distance_to_object')
+            distance = entry.get("distance_to_object")
 
-            label = entry.get('object_class')
+            label = entry.get("object_class")
             if label:
-                label_norm = label.replace('_', ' ').lower()
+                label_norm = label.replace("_", " ").lower()
             else:
                 label_norm = None
 
             if label_norm and label_norm in self.high_risk_objects:
-                # Ensure high-risk objects get a very high score that converts to 100/100
-                return 0.99  # Slightly less than 1.0 to avoid rounding issues
+                object_confidence = float(entry.get("object_confidence") or 0.0)
+                if object_confidence >= self.phone_hard_flag_confidence:
+                    # Ensure only strong, high-confidence phone/book labels get a very high score.
+                    return 0.99  # Slightly less than 1.0 to avoid rounding issues
+                # Still count as suspicious, but do not force a hard flag on weak object labels.
+                max_score = max(max_score, 0.55 if entry.get("near_object") else 0.35)
+                continue
 
             if distance is None:
                 continue
 
             if label_norm and label_norm in self.medium_risk_objects:
-                if entry.get('near_object'):
+                if entry.get("near_object"):
                     max_score = max(max_score, 0.75)
                 else:
                     max_score = max(max_score, 0.45)
             else:
-                if entry.get('near_object'):
+                if entry.get("near_object"):
                     max_score = max(max_score, 0.6)
 
             if distance < threshold * 0.5:

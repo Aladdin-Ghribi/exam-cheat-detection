@@ -1214,8 +1214,9 @@ def get_config():
             return jsonify(json.load(f))
     return jsonify({
         'suspicion_threshold': SUSPICION_THRESHOLD,
-        'model_size': 'medium',
-        'confidence_threshold': 0.4
+        'model_size': 'large',
+        'confidence_threshold': 0.6,
+        'img_processing_size': 1280
     })
 
 
@@ -1341,6 +1342,21 @@ def update_config():
                 print(
                     f"Updating hand-object threshold from {detector.suspicion_scorer.hand_object_threshold} to {new_hand_object_threshold}")
                 detector.suspicion_scorer.hand_object_threshold = new_hand_object_threshold
+
+    # Update object-confidence gates for phone/book labels if changed
+    if 'cheating_object_min_confidence' in config:
+        new_object_confidence = float(config['cheating_object_min_confidence'])
+        if hasattr(detector, 'cheating_object_min_confidence') and detector.cheating_object_min_confidence != new_object_confidence:
+            print(
+                f"Updating cheating-object min confidence from {detector.cheating_object_min_confidence} to {new_object_confidence}")
+            detector.cheating_object_min_confidence = new_object_confidence
+
+    if 'phone_hard_flag_confidence' in config:
+        new_phone_confidence = float(config['phone_hard_flag_confidence'])
+        if hasattr(detector, 'suspicion_scorer') and detector.suspicion_scorer.phone_hard_flag_confidence != new_phone_confidence:
+            print(
+                f"Updating phone hard-flag confidence from {detector.suspicion_scorer.phone_hard_flag_confidence} to {new_phone_confidence}")
+            detector.suspicion_scorer.phone_hard_flag_confidence = new_phone_confidence
 
     # Update smoothing factor if changed (Advanced settings)
     if 'smoothing_factor' in config:
@@ -1988,20 +2004,22 @@ def init_data_files():
             "yaw_threshold": 30,
             "pitch_threshold": 20,
             "roll_threshold": 45,
-            "hand_face_threshold": 2.0,
+            "hand_face_threshold": 3.0,
             "hand_object_threshold": 55,
+            "cheating_object_min_confidence": 0.8,
+            "phone_hard_flag_confidence": 0.9,
             "render_fps": 30,
 
             # Device setting
             "device": "gpu" if torch.cuda.is_available() else "cpu",
 
             # Model settings
-            "model_size": "medium",
+            "model_size": "large",
             "yolo_model": YOLO_MODEL,
             "img_size_gpu": IMG_SIZE_GPU,
             "img_size_cpu": IMG_SIZE_CPU,
             "img_size_nano": IMG_SIZE_NANO,
-            "img_processing_size": IMG_SIZE_GPU if torch.cuda.is_available() else IMG_SIZE_CPU,
+            "img_processing_size": 1280 if torch.cuda.is_available() else IMG_SIZE_CPU,
 
             # Performance
             "enable_frame_skipping": ENABLE_FRAME_SKIPPING,

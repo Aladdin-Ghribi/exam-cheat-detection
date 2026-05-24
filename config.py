@@ -8,7 +8,7 @@ SAMPLES_DIR = os.path.join(DATA_DIR, "samples")
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output")
 
 # Model Selection
-YOLO_MODEL = "yolo11l.pt"  # Upgrade to Large for distance
+YOLO_MODEL = "yolo11l.pt"  # Large is the biggest model bundled in this repo
 YOLO_MODEL_OPTIONS = {
     "nano": "yolo11n.pt",
     "small": "yolo11s.pt",
@@ -17,8 +17,8 @@ YOLO_MODEL_OPTIONS = {
 }
 
 # Inference
-CONFIDENCE_THRESHOLD = 0.5
-IMG_SIZE_GPU = 1024    # Optimal for RTX 3070 stability at 1080p
+CONFIDENCE_THRESHOLD = 0.6
+IMG_SIZE_GPU = 1280    # Higher-resolution default for small-object discrimination
 IMG_SIZE_CPU = 640
 IMG_SIZE_NANO = 320
 USE_HALF_PRECISION = False

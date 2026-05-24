@@ -31,6 +31,8 @@ dependencies = [
   "python-dotenv==1.0.1",
   "bcrypt>=5.0.0",
   "PyJWT==2.10.1",
+  "nvidia-ml-py3>=7.352.0",
+  "psutil>=7.2.2",
 ]
 
 [project.optional-dependencies]

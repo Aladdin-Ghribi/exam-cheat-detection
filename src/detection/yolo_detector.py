@@ -30,8 +30,8 @@ CHEATING_RELATED_CLASSES = {
 PERSON_CLASS_ID = 0
 
 # Minimum confidence specifically for cheating objects (phones, books, etc.)
-# Higher than general CONFIDENCE_THRESHOLD to reduce false positives
-CHEATING_OBJECT_MIN_CONFIDENCE = 0.5
+# Higher than general CONFIDENCE_THRESHOLD to reduce false positives.
+CHEATING_OBJECT_MIN_CONFIDENCE = 0.8
 
 
 class YOLODetector:
@@ -45,10 +45,15 @@ class YOLODetector:
         self.model = YOLO(model_path)
         self.model.overrides['verbose'] = False  # Disable all verbose output
 
+        config = load_config()
+
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.model_size = model_size
         self.img_size = self._get_img_size()
+        self.cheating_object_min_confidence = float(
+            config.get('cheating_object_min_confidence', CHEATING_OBJECT_MIN_CONFIDENCE)
+        )
         self.target_class_ids = [PERSON_CLASS_ID] + \
             list(CHEATING_RELATED_CLASSES.values())
         self.CHEATING_RELATED_CLASSES = CHEATING_RELATED_CLASSES
@@ -181,16 +186,44 @@ class YOLODetector:
         print(f"Switched to {model_size} model ({model_path})")
         return True
 
-    def detect_frame(self, frame):
+    def detect_frame(self, frame, metrics=None):
         """Run detection on a single frame with frame skipping support."""
         start_time = time.time()
+        t_total_start = time.perf_counter()
         self.frame_count += 1
+        skipped = False
 
         # Check if we should skip this frame
         if self.enable_frame_skipping and self.skip_frames > 0:
             self.skip_frames -= 1
-            return self.last_detections if self.last_detections else {'detections': [], 'seat_assignments': None}
+            skipped = True
+            result = self.last_detections if self.last_detections else {
+                'detections': [],
+                'seat_assignments': None
+            }
+            if metrics is not None:
+                detections = result.get('detections', []) if result else []
+                persons = sum(1 for d in detections if d.get('class_id') == PERSON_CLASS_ID)
+                objects = max(0, len(detections) - persons)
+                metrics.append({
+                    'frame_index': self.frame_count,
+                    'skipped': True,
+                    'num_detections': len(detections),
+                    'num_persons': persons,
+                    'num_objects': objects,
+                    'infer_ms': 0.0,
+                    'post_ms': 0.0,
+                    'filter_ms': 0.0,
+                    'tracking_ms': 0.0,
+                    'pose_ms': 0.0,
+                    'face_ms': 0.0,
+                    'behavior_ms': 0.0,
+                    'evidence_ms': 0.0,
+                    'total_ms': (time.perf_counter() - t_total_start) * 1000.0
+                })
+            return result
 
+        t_infer_start = time.perf_counter()
         results = self.model.predict(
             source=frame,
             conf=CONFIDENCE_THRESHOLD,
@@ -200,8 +233,10 @@ class YOLODetector:
             half=False,
             verbose=False
         )
+        t_infer_end = time.perf_counter()
 
         detections = []
+        pose_ms = 0.0
         if results[0].boxes is not None:
             for box, cls_id_tensor, conf_tensor in zip(
                 results[0].boxes.xyxy,
@@ -213,8 +248,8 @@ class YOLODetector:
                 x1, y1, x2, y2 = box.tolist()
                 if cls_id in self.target_class_ids:
                     # Skip low-confidence cheating objects (phones, books, etc.)
-                    # to reduce false positives
-                    if cls_id != PERSON_CLASS_ID and conf < CHEATING_OBJECT_MIN_CONFIDENCE:
+                    # to reduce false positives from weak class assignments.
+                    if cls_id != PERSON_CLASS_ID and conf < self.cheating_object_min_confidence:
                         continue
 
                     detection = {
@@ -227,22 +262,35 @@ class YOLODetector:
                         person_img = frame[int(y1):int(y2), int(x1):int(x2)]
                         if person_img.size > 0:
                             track_id = None
+                            t_pose_start = time.perf_counter()
                             pose_result = self.pose_detector.detect(
                                 person_img, track_id)
+                            t_pose_end = time.perf_counter()
+                            pose_ms += (t_pose_end - t_pose_start) * 1000.0
                             detection['pose'] = pose_result
 
                     detections.append(detection)
 
+        t_post_end = time.perf_counter()
+
         # Filter out duplicate/overlapping person detections
         detections = self._filter_overlapping_persons(detections)
+        t_filter_end = time.perf_counter()
 
+        tracking_ms = 0.0
+        face_ms = 0.0
         if self.enable_tracking:
+            t_track_start = time.perf_counter()
             detections = self.tracker.update(detections)
+            t_track_end = time.perf_counter()
+            tracking_ms = (t_track_end - t_track_start) * 1000.0
 
             # Face recognition
             # After tracking is updated, attempt to identify each person
             # Process at most one face per frame to limit CPU load
             face_processed_this_frame = False
+
+            t_face_start = time.perf_counter()
 
             for det in detections:
                 if det.get('class_id') == PERSON_CLASS_ID:
@@ -325,16 +373,31 @@ class YOLODetector:
                             det['primary_id'] = f'TRACK_{track_id}'
                             det['id_confidence'] = 1.0
 
+            t_face_end = time.perf_counter()
+            face_ms = (t_face_end - t_face_start) * 1000.0
+
         seat_assignments = None
+        seat_ms = 0.0
         if self.enable_seat_mapping:
+            t_seat_start = time.perf_counter()
             seat_result = self.seat_manager.update(detections)
             seat_assignments = seat_result['zone_assignments']
+            t_seat_end = time.perf_counter()
+            seat_ms = (t_seat_end - t_seat_start) * 1000.0
 
+        behavior_ms = 0.0
         if self.enable_pose:
+            t_behavior_start = time.perf_counter()
             self._annotate_behavior(detections, frame)
+            t_behavior_end = time.perf_counter()
+            behavior_ms = (t_behavior_end - t_behavior_start) * 1000.0
 
+        evidence_ms = 0.0
         if self.auto_save_enabled:
+            t_evidence_start = time.perf_counter()
             self.evidence_saver.process_frame(frame, detections)
+            t_evidence_end = time.perf_counter()
+            evidence_ms = (t_evidence_end - t_evidence_start) * 1000.0
 
         result = {
             'detections': detections,
@@ -354,6 +417,27 @@ class YOLODetector:
         # Remove aggressive cleanup that causes the "stutter" every 30 frames
         # Only clear cache if we see an actual memory warning in app.py
         pass
+
+        if metrics is not None:
+            persons = sum(1 for d in detections if d.get('class_id') == PERSON_CLASS_ID)
+            objects = max(0, len(detections) - persons)
+            metrics.append({
+                'frame_index': self.frame_count,
+                'skipped': skipped,
+                'num_detections': len(detections),
+                'num_persons': persons,
+                'num_objects': objects,
+                'infer_ms': (t_infer_end - t_infer_start) * 1000.0,
+                'post_ms': (t_post_end - t_infer_end) * 1000.0,
+                'filter_ms': (t_filter_end - t_post_end) * 1000.0,
+                'tracking_ms': tracking_ms,
+                'pose_ms': pose_ms,
+                'face_ms': face_ms,
+                'behavior_ms': behavior_ms,
+                'evidence_ms': evidence_ms,
+                'seat_ms': seat_ms,
+                'total_ms': (time.perf_counter() - t_total_start) * 1000.0
+            })
 
         return result
 
@@ -434,6 +518,7 @@ class YOLODetector:
             'near_object': False,
             'distance_to_object': None,
             'object_class': None,
+            'object_confidence': None,
             'position': None,
             'global_position': None,
             'visible': False
@@ -461,6 +546,7 @@ class YOLODetector:
         entry['global_position'] = global_point
         min_distance = None
         closest_class = None
+        closest_confidence = None
         threshold = min(width, height) * 0.2
         if threshold <= 0:
             threshold = 30.0
@@ -469,11 +555,13 @@ class YOLODetector:
             if min_distance is None or distance < min_distance:
                 min_distance = distance
                 closest_class = self._class_label(obj['class_id'])
+                closest_confidence = float(obj.get('confidence', 0.0))
         if min_distance is not None and closest_class is not None:
             entry['distance_to_object'] = min_distance
             if min_distance <= threshold:
                 entry['near_object'] = True
                 entry['object_class'] = closest_class
+                entry['object_confidence'] = closest_confidence
         return entry
 
     def _point_to_bbox_distance(self, point, bbox):
@@ -614,3 +702,36 @@ class YOLODetector:
         )
         print(f"Pose detector reinitialized with complexity {complexity}")
         return True
+
+    def draw_detections(self, frame, detection_result):
+        """
+        Draw detections onto a frame. Compatible with tools/video_replay.py which
+        passes the full detection result dict returned by `detect_frame`.
+        """
+        # Accept either the raw detections list or the result dict
+        if detection_result is None:
+            return frame
+        if isinstance(detection_result, dict):
+            detections = detection_result.get('detections', [])
+        else:
+            detections = detection_result
+
+        for det in detections:
+            bbox = det.get('bbox')
+            if not bbox or len(bbox) != 4:
+                continue
+            x1, y1, x2, y2 = map(int, bbox)
+            class_id = det.get('class_id')
+            if class_id == PERSON_CLASS_ID:
+                color = (0, 255, 0)
+                behavior = det.get('behavior', {})
+                suspicion = behavior.get('suspicion', {})
+                score = suspicion.get('smoothed', 0.0)
+                label = f"person {score * 100:.0f}%"
+            else:
+                color = (0, 165, 255)
+                label = self._class_label(class_id)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, label, (x1, max(20, y1 - 8)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        return frame
